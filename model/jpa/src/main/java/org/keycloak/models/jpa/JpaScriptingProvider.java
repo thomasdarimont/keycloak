@@ -11,7 +11,6 @@ import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 import javax.script.ScriptEngineManager;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 
@@ -69,7 +68,7 @@ public class JpaScriptingProvider extends AbstractJsr223ScriptingProvider {
         entity.setRealmId(realm.getId());
         entity.setName(script.getName());
         entity.setCode(script.getCode());
-        entity.setComment(script.getComment());
+        entity.setDescription(script.getDescription());
         entity.setType(script.getType());
 
         em.persist(entity);

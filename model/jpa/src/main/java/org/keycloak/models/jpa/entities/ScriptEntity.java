@@ -44,8 +44,8 @@ public class ScriptEntity {
     @Column(name = "SCRIPT_CODE", length = 2048)
     private String code;
 
-    @Column(name = "SCRIPT_COMMENT", length = 2048)
-    private String comment;
+    @Column(name = "SCRIPT_DESCRIPTION", length = 2048)
+    private String description;
 
     public String getId() {
         return id;
@@ -87,11 +87,11 @@ public class ScriptEntity {
         this.code = code;
     }
 
-    public String getComment() {
-        return comment;
+    public String getDescription() {
+        return description;
     }
 
-    public void setComment(String comment) {
-        this.comment = comment;
+    public void setDescription(String description) {
+        this.description = description;
     }
 }

@@ -15,14 +15,14 @@ public class Script implements ScriptModel {
 
     private String code;
 
-    private String comment;
+    private String description;
 
-    public Script(String id, String name, String type, String code, String comment) {
+    public Script(String id, String name, String type, String code, String description) {
         this.id = id;
         this.name = name;
         this.type = type;
         this.code = code;
-        this.comment = comment;
+        this.description = description;
     }
 
     @Override
@@ -62,12 +62,12 @@ public class Script implements ScriptModel {
     }
 
     @Override
-    public String getComment() {
-        return comment;
+    public String getDescription() {
+        return description;
     }
 
-    public void setComment(String comment) {
-        this.comment = comment;
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     @Override
@@ -76,7 +76,7 @@ public class Script implements ScriptModel {
                 "name='" + name + '\'' +
                 ", type='" + type + '\'' +
                 ", code='" + code + '\'' +
-                ", comment='" + comment + '\'' +
+                ", description='" + description + '\'' +
                 '}';
     }
 }

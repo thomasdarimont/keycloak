@@ -47,7 +47,7 @@ public class ScriptAdapter implements ScriptModel {
     }
 
     @Override
-    public String getComment() {
-        return script.getComment();
+    public String getDescription() {
+        return script.getDescription();
     }
 }

@@ -11,7 +11,7 @@ public class ScriptEntity extends AbstractIdentifiableEntity {
 
     private String code;
 
-    private String comment;
+    private String description;
 
     public String getName() {
         return name;
@@ -37,12 +37,12 @@ public class ScriptEntity extends AbstractIdentifiableEntity {
         this.code = code;
     }
 
-    public String getComment() {
-        return comment;
+    public String getDescription() {
+        return description;
     }
 
-    public void setComment(String comment) {
-        this.comment = comment;
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     @Override
@@ -51,7 +51,7 @@ public class ScriptEntity extends AbstractIdentifiableEntity {
                 "name='" + name + '\'' +
                 ", type='" + type + '\'' +
                 ", code='" + code + '\'' +
-                ", comment='" + comment + '\'' +
+                ", description='" + description + '\'' +
                 '}';
     }
 }

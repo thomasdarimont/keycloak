@@ -18,10 +18,5 @@ public interface ScriptingProvider extends Provider {
 
     ScriptModel saveScript(ScriptModel script);
 
-    InvocableScript loadScript(ScriptModel script, ScriptBindingsConfigurer bindingsConfigurer);
-
-    interface ScriptBindingsConfigurer {
-
-        void configureBindings(Bindings bindings);
-    }
+    InvocableScript prepareScript(ScriptModel script, ScriptBindingsConfigurer bindingsConfigurer);
 }

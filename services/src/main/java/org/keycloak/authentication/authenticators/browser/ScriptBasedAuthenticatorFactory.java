@@ -12,8 +12,9 @@ import org.keycloak.provider.ProviderConfigProperty;
 import java.util.List;
 
 import static java.util.Arrays.asList;
-import static org.keycloak.authentication.authenticators.browser.ScriptBasedAuthenticator.SCRIPT_SOURCE;
 import static org.keycloak.authentication.authenticators.browser.ScriptBasedAuthenticator.SCRIPT_NAME;
+import static org.keycloak.authentication.authenticators.browser.ScriptBasedAuthenticator.SCRIPT_DESCRIPTION;
+import static org.keycloak.authentication.authenticators.browser.ScriptBasedAuthenticator.SCRIPT_SOURCE;
 import static org.keycloak.provider.ProviderConfigProperty.SCRIPT_TYPE;
 import static org.keycloak.provider.ProviderConfigProperty.STRING_TYPE;
 
@@ -96,11 +97,17 @@ public class ScriptBasedAuthenticatorFactory implements AuthenticatorFactory {
     @Override
     public List<ProviderConfigProperty> getConfigProperties() {
 
-        ProviderConfigProperty scriptName = new ProviderConfigProperty();
-        scriptName.setType(STRING_TYPE);
-        scriptName.setName(SCRIPT_NAME);
-        scriptName.setLabel("Script Name");
-        scriptName.setHelpText("The name of the script used to authenticate.");
+        ProviderConfigProperty name = new ProviderConfigProperty();
+        name.setType(STRING_TYPE);
+        name.setName(SCRIPT_NAME);
+        name.setLabel("Script Name");
+        name.setHelpText("The name of the script used to authenticate.");
+
+        ProviderConfigProperty description = new ProviderConfigProperty();
+        description.setType(STRING_TYPE);
+        description.setName(SCRIPT_DESCRIPTION);
+        description.setLabel("Script Description");
+        description.setHelpText("The description of the script used to authenticate.");
 
         ProviderConfigProperty script = new ProviderConfigProperty();
         script.setType(SCRIPT_TYPE);
@@ -109,6 +116,6 @@ public class ScriptBasedAuthenticatorFactory implements AuthenticatorFactory {
         script.setDefaultValue("//enter your script here");
         script.setHelpText("The script used to authenticate.");
 
-        return asList(scriptName, script);
+        return asList(name, description, script);
     }
 }

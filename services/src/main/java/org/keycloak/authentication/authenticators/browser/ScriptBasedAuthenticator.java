@@ -22,6 +22,7 @@ public class ScriptBasedAuthenticator implements Authenticator {
 
     static final String SCRIPT_SOURCE = "scriptSource";
     static final String SCRIPT_NAME = "scriptName";
+    static final String SCRIPT_DESCRIPTION = "scriptDescription";
 
     static final String CONTEXT = "context";
     static final String REALM = "realm";
@@ -57,10 +58,11 @@ public class ScriptBasedAuthenticator implements Authenticator {
 
         String scriptName = config.get(SCRIPT_NAME);
         String scriptCode = config.get(SCRIPT_SOURCE);
+        String scriptDescription = config.get(SCRIPT_DESCRIPTION);
 
-        Script script = new Script(null, scriptName, "text/javascript", scriptCode, "");
+        Script script = new Script(null, scriptName, "text/javascript", scriptCode, scriptDescription);
 
-        return context.getSession().scripting().loadScript(script, (bindings -> {
+        return context.getSession().scripting().prepareScript(script, (bindings -> {
             bindings.put(CONTEXT, context);
             bindings.put(REALM, context.getRealm());
             bindings.put(USER, context.getUser());

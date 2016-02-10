@@ -13,5 +13,5 @@ public interface ScriptModel {
 
     String getCode();
 
-    String getComment();
+    String getDescription();
 }

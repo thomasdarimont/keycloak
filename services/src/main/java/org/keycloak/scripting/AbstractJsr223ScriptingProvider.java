@@ -21,7 +21,7 @@ public abstract class AbstractJsr223ScriptingProvider implements ScriptingProvid
     }
 
     @Override
-    public InvocableScript loadScript(ScriptModel script, ScriptBindingsConfigurer bindingsConfigurer) {
+    public InvocableScript prepareScript(ScriptModel script, ScriptBindingsConfigurer bindingsConfigurer) {
 
         ScriptEngine engine = lookupScriptEngineFor(script);
 
