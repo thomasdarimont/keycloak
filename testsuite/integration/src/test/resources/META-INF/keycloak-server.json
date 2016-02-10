@@ -92,5 +92,12 @@
             "async": "${keycloak.connectionsInfinispan.async:true}",
             "sessionsOwners": "${keycloak.connectionsInfinispan.sessionsOwners:2}"
         }
+    },
+
+    "scripting": {
+
+        "jpa": {
+
+        }
     }
 }
