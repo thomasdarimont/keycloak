@@ -59,6 +59,7 @@ public class InitialProvidersTest extends AbstractAuthenticationTest {
         result.add(newClientProvider("auth-conditional-otp-form", "Conditional OTP Form", "Validates a OTP on a separate OTP form. Only shown if required based on the configured conditions."));
         result.add(newClientProvider("auth-cookie", "Cookie", "Validates the SSO cookie set by the auth server."));
         result.add(newClientProvider("auth-otp-form", "OTP Form", "Validates a OTP on a separate OTP form."));
+        result.add(newClientProvider("auth-script-based", "Script based Authentication", "Script based authentication."));
         result.add(newClientProvider("auth-spnego", "Kerberos", "Initiates the SPNEGO protocol.  Most often used with Kerberos."));
         result.add(newClientProvider("auth-username-password-form", "Username Password Form", "Validates a username and password from login form."));
         result.add(newClientProvider("direct-grant-validate-otp", "OTP", "Validates the one time password supplied as a 'totp' form parameter in direct grant request"));

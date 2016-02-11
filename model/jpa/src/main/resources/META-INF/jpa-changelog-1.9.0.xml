@@ -81,7 +81,7 @@
             <column name="SCRIPT_NAME" type="VARCHAR(255)"/>
             <column name="SCRIPT_CODE" type="VARCHAR(2048)"/>
             <column name="SCRIPT_TYPE" type="VARCHAR(255)"/>
-            <column name="SCRIPT_COMMENT" type="VARCHAR(2048)"/>
+            <column name="SCRIPT_DESCRIPTION" type="VARCHAR(2048)"/>
         </createTable>
     </changeSet>
 </databaseChangeLog>

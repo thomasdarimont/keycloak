@@ -8,7 +8,9 @@ import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.scripting.InvocableScript;
 import org.keycloak.scripting.Script;
+import org.keycloak.scripting.ScriptBindingsConfigurer;
 
+import javax.script.Bindings;
 import java.util.Map;
 
 /**
@@ -52,23 +54,28 @@ public class ScriptBasedAuthenticator implements Authenticator {
         }
     }
 
-    private InvocableScript getInvocableScript(AuthenticationFlowContext context) throws Exception {
+    private InvocableScript getInvocableScript(final AuthenticationFlowContext context) throws Exception {
 
         Map<String, String> config = context.getAuthenticatorConfig().getConfig();
 
-        String scriptName = config.get(SCRIPT_NAME);
+        final String scriptName = config.get(SCRIPT_NAME);
         String scriptCode = config.get(SCRIPT_SOURCE);
         String scriptDescription = config.get(SCRIPT_DESCRIPTION);
 
         Script script = new Script(null, scriptName, "text/javascript", scriptCode, scriptDescription);
 
-        return context.getSession().scripting().prepareScript(script, (bindings -> {
-            bindings.put(CONTEXT, context);
-            bindings.put(REALM, context.getRealm());
-            bindings.put(USER, context.getUser());
-            bindings.put(SCRIPT_NAME, scriptName);
-            bindings.put(LOG, LOGGER);
-        }));
+        return context.getSession().scripting().prepareScript(script, new ScriptBindingsConfigurer(){
+
+            @Override
+            public void configureBindings(Bindings bindings) {
+
+                bindings.put(CONTEXT, context);
+                bindings.put(REALM, context.getRealm());
+                bindings.put(USER, context.getUser());
+                bindings.put(SCRIPT_NAME, scriptName);
+                bindings.put(LOG, LOGGER);
+            }
+        });
     }
 
     @Override

@@ -10,6 +10,8 @@ import org.keycloak.scripting.AbstractJsr223ScriptingProvider;
 import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 import javax.script.ScriptEngineManager;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static java.util.stream.Collectors.toList;
@@ -37,7 +39,17 @@ public class JpaScriptingProvider extends AbstractJsr223ScriptingProvider {
         TypedQuery<ScriptEntity> query = em.createNamedQuery(ScriptEntity.GET_ALL_SCRIPTS_BY_REALM, ScriptEntity.class);
         query.setParameter("realmId", realm.getId());
 
-        return query.getResultList().stream().map(se -> new ScriptAdapter(session, realm, em, se)).collect(toList());
+        List<ScriptEntity> scripts = query.getResultList();
+        if (scripts.isEmpty()){
+            return Collections.emptyList();
+        }
+
+        List<ScriptModel> scriptAdapters = new ArrayList<>(scripts.size());
+        for (ScriptEntity script : scripts){
+            scriptAdapters.add(new ScriptAdapter(session, realm, em, script));
+        }
+
+        return scriptAdapters;
     }
 
     @Override
@@ -50,7 +62,7 @@ public class JpaScriptingProvider extends AbstractJsr223ScriptingProvider {
         query.setParameter("realmId", realm.getId());
 
         List<ScriptEntity> entities = query.getResultList();
-        if (entities.size() == 0) {
+        if (entities.isEmpty()) {
             return null;
         }
 
