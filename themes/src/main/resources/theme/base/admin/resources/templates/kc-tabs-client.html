@@ -8,6 +8,12 @@
 
     <ul class="nav nav-tabs nav-tabs-pf"  data-ng-hide="create && !path[4]">
         <li ng-class="{active: !path[4]}"><a href="#/realms/{{realm.realm}}/clients/{{client.id}}">{{:: 'settings' | translate}}</a></li>
+
+        <li ng-class="{active: path[4] == 'attributes'}">
+            <a href="#/realms/{{realm.realm}}/clients/{{client.id}}/attributes">{{:: 'attributes' | translate}}</a>
+            <kc-tooltip>{{:: 'client-attributes.tooltip' | translate}}</kc-tooltip>
+        </li>
+
         <li ng-class="{active: path[4] == 'credentials'}" data-ng-show="!client.publicClient && client.protocol != 'saml'"><a href="#/realms/{{realm.realm}}/clients/{{client.id}}/credentials">{{:: 'credentials' | translate}}</a></li>
         <li ng-class="{active: path[4] == 'saml'}" data-ng-show="client.protocol == 'saml' && (client.attributes['saml.client.signature'] == 'true' || client.attributes['saml.encrypt'] == 'true')"><a href="#/realms/{{realm.realm}}/clients/{{client.id}}/saml/keys">{{:: 'saml-keys' | translate}}</a></li>
         <li ng-class="{active: path[4] == 'roles'}"><a href="#/realms/{{realm.realm}}/clients/{{client.id}}/roles">{{:: 'roles' | translate}}</a></li>

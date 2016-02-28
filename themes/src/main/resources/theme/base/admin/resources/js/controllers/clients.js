@@ -42,6 +42,49 @@ module.controller('ClientRoleListCtrl', function($scope, $location, realm, clien
     });
 });
 
+module.controller('ClientAttributesCtrl', function($scope, $location, realm, client, $route, Notifications, Client, Dialog) {
+    $scope.realm = realm;
+    $scope.client = angular.copy(client);
+
+    $scope.$watch('client', function() {
+        if (!angular.equals($scope.client, client)) {
+            $scope.changed = true;
+        }
+    }, true);
+
+    $scope.save = function() {
+
+        Client.update({
+            realm : realm.realm,
+            client : $scope.client.id
+        }, $scope.client, function() {
+            $scope.changed = false;
+            client = angular.copy($scope.client);
+            Notifications.success("Your changes have been saved to the client.");
+        });
+    };
+
+    $scope.reset = function() {
+        $scope.client = angular.copy(client);
+        $scope.changed = false;
+    };
+
+    $scope.addAttribute = function() {
+        $scope.client.attributes[$scope.newAttribute.key] = $scope.newAttribute.value;
+        delete $scope.newAttribute;
+    };
+
+    $scope.removeAttribute = function(key) {
+        delete $scope.client.attributes[key];
+    };
+
+    $scope.$watch(function() {
+        return $location.path();
+    }, function() {
+        $scope.path = $location.path().substring(1).split("/");
+    });
+});
+
 module.controller('ClientCredentialsCtrl', function($scope, $location, realm, client, clientAuthenticatorProviders, clientConfigProperties, Client, ClientRegistrationAccessToken, Notifications) {
     $scope.realm = realm;
     $scope.client = angular.copy(client);

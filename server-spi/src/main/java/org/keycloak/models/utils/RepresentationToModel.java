@@ -970,7 +970,14 @@ public class RepresentationToModel {
         resource.updateClient();
 
         if (rep.getProtocol() != null) resource.setProtocol(rep.getProtocol());
+
         if (rep.getAttributes() != null) {
+
+            // Remove existing attributes
+            for(String key : resource.getAttributes().keySet()){
+                resource.removeAttribute(key);
+            }
+
             for (Map.Entry<String, String> entry : rep.getAttributes().entrySet()) {
                 resource.setAttribute(entry.getKey(), entry.getValue());
             }

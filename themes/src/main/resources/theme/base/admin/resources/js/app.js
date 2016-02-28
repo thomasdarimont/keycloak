@@ -1101,6 +1101,18 @@ module.config([ '$routeProvider', function($routeProvider) {
             },
             controller : 'ClientRoleListCtrl'
         })
+        .when('/realms/:realm/clients/:client/attributes', {
+            templateUrl : resourceUrl + '/partials/client-attributes.html',
+            resolve : {
+                realm : function(RealmLoader) {
+                    return RealmLoader();
+                },
+                client : function(ClientLoader) {
+                    return ClientLoader();
+                }
+            },
+            controller : 'ClientAttributesCtrl'
+        })
         .when('/realms/:realm/clients/:client/revocation', {
             templateUrl : resourceUrl + '/partials/client-revocation.html',
             resolve : {
