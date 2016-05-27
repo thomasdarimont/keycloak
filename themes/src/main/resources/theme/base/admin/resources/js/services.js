@@ -1711,3 +1711,13 @@ module.factory('DefaultGroups', function($resource) {
         }
     });
 });
+
+
+module.factory('Dashboard', function($resource) {
+    return $resource(authUrl + '/admin/realms/:realm/dashboard', {
+        realm : '@realm'
+    });
+});
+
+
+

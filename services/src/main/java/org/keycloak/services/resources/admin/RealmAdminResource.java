@@ -314,6 +314,15 @@ public class RealmAdminResource {
         }
     }
 
+    @Path("dashboard")
+    public DashboardResource dashboard(){
+
+        DashboardResource dashboard = new DashboardResource(realm);
+        ResteasyProviderFactory.getInstance().injectProperties(dashboard);
+
+        return dashboard;
+    }
+
     /**
      * Base path for managing users in this realm.
      *

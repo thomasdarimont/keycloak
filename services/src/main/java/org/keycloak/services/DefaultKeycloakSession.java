@@ -17,6 +17,7 @@
 package org.keycloak.services;
 
 import org.keycloak.models.*;
+import org.keycloak.models.analytics.AnalyticsProvider;
 import org.keycloak.models.cache.CacheRealmProvider;
 import org.keycloak.models.cache.CacheUserProvider;
 import org.keycloak.provider.Provider;
@@ -37,6 +38,7 @@ public class DefaultKeycloakSession implements KeycloakSession {
     private RealmProvider model;
     private UserProvider userModel;
     private ScriptingProvider scriptingProvider;
+    private AnalyticsProvider analyticsProvider;
     private UserSessionProvider sessionProvider;
     private UserFederationManager federationManager;
     private KeycloakContext context;
@@ -153,6 +155,16 @@ public class DefaultKeycloakSession implements KeycloakSession {
             sessionProvider = getProvider(UserSessionProvider.class);
         }
         return sessionProvider;
+    }
+
+    @Override
+    public AnalyticsProvider analytics() {
+
+        if(analyticsProvider == null){
+            analyticsProvider = getProvider(AnalyticsProvider.class);
+        }
+
+        return analyticsProvider;
     }
 
     public void close() {

@@ -476,6 +476,14 @@ module.factory('AuthenticationConfigLoader', function(Loader, AuthenticationConf
     });
 });
 
+module.factory('DashboardLoader', function(Loader, Dashboard, $route, $q) {
+    return Loader.get(Dashboard, function() {
+        return {
+            realm : $route.current.params.realm
+        }
+    });
+});
+
 module.factory('GroupListLoader', function(Loader, Groups, $route, $q) {
     return Loader.query(Groups, function() {
         return {

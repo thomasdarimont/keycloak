@@ -41,9 +41,13 @@
     <script src="${resourceUrl}/lib/ui-ace/src-min-noconflict/mode-javascript.js"></script>
     <script src="${resourceUrl}/lib/ui-ace/ui-ace.min.js"></script>
 
+    <script src="${resourceUrl}/lib/d3/js/d3.min.js"></script>
+    <script src="${resourceUrl}/lib/cal-heatmap/js/cal-heatmap.min.js"></script>
+
     <script src="${authUrl}/js/${resourceVersion}/keycloak.js" type="text/javascript"></script>
 
     <script src="${resourceUrl}/js/app.js" type="text/javascript"></script>
+    <script src="${resourceUrl}/js/controllers/dashboard.js" type="text/javascript"></script>
     <script src="${resourceUrl}/js/controllers/realm.js" type="text/javascript"></script>
     <script src="${resourceUrl}/js/controllers/clients.js" type="text/javascript"></script>
     <script src="${resourceUrl}/js/controllers/users.js" type="text/javascript"></script>

@@ -41,6 +41,7 @@
     <div class="nav-category" data-ng-show="current.realm">
         <h2>{{:: 'manage' | translate}}</h2>
         <ul class="nav nav-pills nav-stacked">
+            <li data-ng-show="access.viewUsers" data-ng-class="(path[2] == 'userSummary' || path[1] == 'dashboard') && 'active'"><a href="#/realms/{{realm.realm}}/dashboard"><span class="pficon pficon-trend-up"></span> {{:: 'dashboard' | translate}}</a></li>
             <li data-ng-show="access.viewUsers" data-ng-class="(path[2] == 'groups' || path[1] == 'group') && 'active'"><a href="#/realms/{{realm.realm}}/groups"><span class="pficon pficon-users"></span> {{:: 'groups' | translate}}</a></li>
             <li data-ng-show="access.viewUsers" data-ng-class="(path[2] == 'users' || path[1] == 'user') && 'active'"><a href="#/realms/{{realm.realm}}/users"><span class="pficon pficon-user"></span> {{:: 'users' | translate}}</a></li>
             <li data-ng-show="access.viewRealm" data-ng-class="(path[2] == 'sessions') && 'active'"><a href="#/realms/{{realm.realm}}/sessions/realm"><i class="fa fa-clock-o"></i> {{:: 'sessions' | translate}}</a></li>

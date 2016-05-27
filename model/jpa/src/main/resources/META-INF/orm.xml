@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<entity-mappings xmlns="http://xmlns.jcp.org/xml/ns/persistence/orm"
+                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence/orm http://xmlns.jcp.org/xml/ns/persistence/orm_2_1.xsd"
+                 version="2.1">
+
+    <named-native-query name="getUserSummaryByRealm" result-set-mapping="userSummary">
+        <query>
+<![CDATA[
+            select
+            realm_id as realmId
+            , loginCount
+            , registerCount
+            , activeUsersCount
+            , totalUserCount
+            from dashboard_summary
+            where realm_id = :realm_id
+]]>
+        </query>
+    </named-native-query>
+
+    <sql-result-set-mapping name="userSummary" >
+        <constructor-result target-class="org.keycloak.models.analytics.UserSummary">
+            <column name="realmId" class="java.lang.String"/>
+            <column name="loginCount" class="java.lang.Long"/>
+            <column name="registerCount" class="java.lang.Long"/>
+            <column name="activeUsersCount" class="java.lang.Long"/>
+            <column name="totalUserCount" class="java.lang.Long"/>
+        </constructor-result>
+    </sql-result-set-mapping>
+
+    <named-native-query name="getLatestEventsByRealmAndTypeAndLimit" result-set-mapping="analyticsEvent">
+        <query>
+<![CDATA[
+
+            select
+             realm_id as realmId
+            ,user_id as userId
+            ,username
+            ,event_type as eventType
+            ,event_order as eventOrder
+            ,event_timestamp as eventTimestamp
+            from analytics_latest_events ale
+            where
+                ale.realm_id = :realm_id
+            and ale.event_type = :event_type
+            and event_order <= :event_limit
+]]>
+        </query>
+    </named-native-query>
+
+
+    <sql-result-set-mapping name="analyticsEvent" >
+        <constructor-result target-class="org.keycloak.models.analytics.AnalyticsEvent">
+            <column name="realmId" class="java.lang.String"/>
+            <column name="userId" class="java.lang.String"/>
+            <column name="username" class="java.lang.String"/>
+            <column name="eventType" class="java.lang.String"/>
+            <column name="eventOrder" class="java.lang.Long"/>
+            <column name="eventTimestamp" class="java.util.Date"/>
+        </constructor-result>
+    </sql-result-set-mapping>
+
+
+    <named-native-query name="getDailyAggregatedEventsByRealm" result-set-mapping="aggregatedEvent">
+        <query>
+<![CDATA[
+            select
+             realm_id  as realmId
+            ,event_type as eventType
+            ,event_date as eventDate
+            ,event_count as eventCount
+            from analytics_event_count
+            where realm_id = :realm_id
+            and event_type = :event_type
+            and event_date between :start_date and :end_date
+            order by event_date
+]]>
+        </query>
+    </named-native-query>
+
+
+    <sql-result-set-mapping name="aggregatedEvent" >
+        <constructor-result target-class="org.keycloak.models.analytics.AggregatedEvent">
+            <column name="realmId" class="java.lang.String"/>
+            <column name="eventType" class="java.lang.String"/>
+            <column name="eventDate" class="java.util.Date"/>
+            <column name="eventCount" class="java.lang.Long"/>
+        </constructor-result>
+    </sql-result-set-mapping>
+</entity-mappings>

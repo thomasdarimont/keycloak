@@ -17,6 +17,7 @@
 
 package org.keycloak.models;
 
+import org.keycloak.models.analytics.AnalyticsProvider;
 import org.keycloak.provider.Provider;
 import org.keycloak.scripting.ScriptingProvider;
 
@@ -82,4 +83,9 @@ public interface KeycloakSession {
      * Keycloak scripting support.
      */
     ScriptingProvider scripting();
+
+    /**
+     * Keycloak analytics.
+     */
+    AnalyticsProvider analytics();
 }

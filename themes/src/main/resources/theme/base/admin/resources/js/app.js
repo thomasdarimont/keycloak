@@ -665,6 +665,18 @@ module.config([ '$routeProvider', function($routeProvider) {
             },
             controller : 'GroupListCtrl'
         })
+        .when('/realms/:realm/dashboard', {
+            templateUrl : resourceUrl + '/partials/dashboard.html',
+            resolve : {
+                realm : function(RealmLoader) {
+                    return RealmLoader();
+                },
+                dashboard : function(DashboardLoader) {
+                    return DashboardLoader();
+                }
+            },
+            controller : 'DashboardCtrl'
+        })
         .when('/create/group/:realm/parent/:parentId', {
             templateUrl : resourceUrl + '/partials/create-group.html',
             resolve : {
