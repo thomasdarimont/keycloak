@@ -73,16 +73,17 @@
     </div>
 
 
-    <div class="container-fluid">
-        <div>
+    <div class="row">
+        <div class="col-xs-12 col-sm-6 col-md-4">
             <h2>Latest Logins</h2>
-            <table class="table table-striped table-bordered">
+            <table class="table table-striped">
                 <thead>
                 <tr>
                     <!--<th>{{:: 'userId' | translate}}</th>-->
                     <th class="w-15">{{:: 'username' | translate}}</th>
                     <!--<th>{{:: 'eventTimestamp' | translate}}</th>-->
                     <th class="w-15">{{:: 'login at' | translate}}</th>
+                    <th class="w-15">{{:: 'last visit' | translate}}</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -90,13 +91,14 @@
                     <!--<td>{{dataPoint.userId}}</td>-->
                     <td><a href="../users/{{dataPoint.userId}}">{{dataPoint.username}}</a></td>
                     <td>{{dataPoint.eventTimestamp|date:'mediumTime'}}</td>
+                    <td>{{(dataPoint.previousEventTimestamp|date:'mediumTime') || 'never'}}</td>
                 </tr>
                 </tbody>
             </table>
         </div>
-        <div>
+        <div class="col-xs-12 col-sm-6 col-md-4">
             <h2>New Registrations</h2>
-            <table class="table table-striped table-bordered">
+            <table class="table table-striped">
                 <thead>
                 <tr>
                     <!--<th>{{:: 'userId' | translate}}</th>-->
@@ -115,8 +117,6 @@
             </table>
         </div>
     </div>
-
-
 </div>
 
 <kc-menu></kc-menu>

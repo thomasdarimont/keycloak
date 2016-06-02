@@ -28,6 +28,8 @@ module.controller('DashboardCtrl', function($scope, $route, realm, Dashboard, da
         , "cellSize": "12"
         , "legend": [10, 20, 30, 40]
         , "data": result
+        , "empty": "No logins {connector} {date}"
+        , "filled": "{count} Logins {connector} {date}"
         , "start": previousMonth
     });
     //

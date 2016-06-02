@@ -1,8 +1,14 @@
-module.controller('GlobalCtrl', function($scope, $http, Auth, Current, $location, Notifications, ServerInfo) {
+module.controller('GlobalCtrl', function($scope, $http, Auth, Current, $location, Notifications, ServerInfo, $templateCache) {
     $scope.authUrl = authUrl;
     $scope.resourceUrl = resourceUrl;
     $scope.auth = Auth;
     $scope.serverInfo = ServerInfo.get();
+
+    if($location.search().clearCache){
+        $scope.$on('$viewContentLoaded', function() {
+            $templateCache.removeAll();
+        });
+    }
 
     function getAccess(role) {
         if (!Current.realm) {
