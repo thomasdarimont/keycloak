@@ -13,14 +13,16 @@ public class AnalyticsEvent {
     private String eventType;
     private long eventOrder;
     private Date eventTimestamp;
+    private Date previousEventTimestamp;
 
-    public AnalyticsEvent(String realmId, String userId, String username, String eventType, long eventOrder, Date eventTimestamp) {
-        this.realmId = realmId.intern();
+    public AnalyticsEvent(String realmId, String userId, String username, String eventType, long eventOrder, Date eventTimestamp, Date previousEventTimestamp) {
+        this.realmId = realmId;
         this.userId = userId;
         this.username = username;
-        this.eventType = eventType.intern();
+        this.eventType = eventType;
         this.eventOrder = eventOrder;
         this.eventTimestamp = eventTimestamp;
+        this.previousEventTimestamp = previousEventTimestamp;
     }
 
     public String getRealmId() {
@@ -69,5 +71,13 @@ public class AnalyticsEvent {
 
     public void setEventTimestamp(Date eventTimestamp) {
         this.eventTimestamp = eventTimestamp;
+    }
+
+    public Date getPreviousEventTimestamp() {
+        return previousEventTimestamp;
+    }
+
+    public void setPreviousEventTimestamp(Date previousEventTimestamp) {
+        this.previousEventTimestamp = previousEventTimestamp;
     }
 }

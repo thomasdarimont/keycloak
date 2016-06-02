@@ -40,6 +40,7 @@
             ,event_type as eventType
             ,event_order as eventOrder
             ,event_timestamp as eventTimestamp
+            ,prev_event_timestamp as previousEventTimestamp
             from analytics_latest_events ale
             where
                 ale.realm_id = :realm_id
@@ -58,6 +59,7 @@
             <column name="eventType" class="java.lang.String"/>
             <column name="eventOrder" class="java.lang.Long"/>
             <column name="eventTimestamp" class="java.util.Date"/>
+            <column name="previousEventTimestamp" class="java.util.Date"/>
         </constructor-result>
     </sql-result-set-mapping>
 
