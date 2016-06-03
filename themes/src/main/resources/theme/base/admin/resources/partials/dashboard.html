@@ -7,8 +7,9 @@
             <!-- Important:  if you need to nest additional .row within a .row.row-cards-pf, do *not* use .row-cards-pf on the nested .row  -->
             <div class="col-xs-6 col-sm-4 col-md-2">
                 <div class="card-pf card-pf-accented card-pf-aggregate-status" style="height: 89px;">
-                    <h2 class="card-pf-title" style="height: 17px;">
-                        <span class="fa fa-shield"></span><span class="card-pf-aggregate-status-count">{{userSummary.totalUserCount}}</span>
+                    <h2 class="card-pf-title" style="height: 17px;" tooltip="All time">
+                        <span class="fa fa-shield"></span>
+                        <span class="card-pf-aggregate-status-count">{{userSummary.totalUserCount}}</span>
                         Total Users
                     </h2>
                     <div class="card-pf-body" style="height: 50px;">
@@ -26,25 +27,24 @@
             <div class="col-xs-6 col-sm-4 col-md-2">
                 <div class="card-pf card-pf-accented card-pf-aggregate-status" style="height: 89px;">
                     <h2 class="card-pf-title" style="height: 17px;">
-                        <a href="#"><span class="fa fa-shield"></span><span class="card-pf-aggregate-status-count">{{userSummary.activeUsersCount}}</span>
+                        <a href="#" tooltip="Last 30 days"><span class="fa fa-shield"></span><span class="card-pf-aggregate-status-count">{{userSummary.activeUsersCount}}</span>
                             Active Users</a>
                     </h2>
-                    <div class="card-pf-body" style="height: 50px;">
-                    </div>
+                    <div class="card-pf-body" style="height: 50px;"/>
                 </div>
 
             </div>
             <div class="col-xs-6 col-sm-4 col-md-2">
                 <div class="card-pf card-pf-accented card-pf-aggregate-status" style="height: 89px;">
                     <h2 class="card-pf-title" style="height: 17px;">
-                        <a href="#"><span class="fa fa-shield"></span><span class="card-pf-aggregate-status-count">{{userSummary.loginCount}}</span>
+                        <a href="#" tooltip="Last 7 days"><span class="fa fa-shield"></span><span class="card-pf-aggregate-status-count">{{userSummary.loginCount}}</span>
                             Logins</a>
                     </h2>
                     <div class="card-pf-body" style="height: 50px;">
                         <p class="card-pf-aggregate-status-notifications">
-                            <span class="card-pf-aggregate-status-notification"><a href="#"><span
+                            <span class="card-pf-aggregate-status-notification"><a href="#" tooltip="Blocked accounts"><span
                                     class="pficon pficon-error-circle-o"></span>4</a></span>
-                            <span class="card-pf-aggregate-status-notification"><a href="#"><span
+                            <span class="card-pf-aggregate-status-notification"><a href="#" tooltip="Failed logins"><span
                                     class="pficon pficon-warning-triangle-o"></span>1</a></span>
                         </p>
                     </div>
@@ -54,12 +54,12 @@
             <div class="col-xs-6 col-sm-4 col-md-2">
                 <div class="card-pf card-pf-accented card-pf-aggregate-status" style="height: 89px;">
                     <h2 class="card-pf-title" style="height: 17px;">
-                        <a href="#"><span class="fa fa-shield"></span><span class="card-pf-aggregate-status-count">{{userSummary.registerCount}}</span>
+                        <a href="#" tooltip="Last 7 days"><span class="fa fa-shield"></span><span class="card-pf-aggregate-status-count">{{userSummary.registerCount}}</span>
                             Registrations</a>
                     </h2>
                     <div class="card-pf-body" style="height: 50px;">
                         <p class="card-pf-aggregate-status-notifications">
-                            <a href="#"><span class="card-pf-aggregate-status-notification"><span
+                            <a href="#" tooltip="Last 7 days"><span class="card-pf-aggregate-status-notification"><span
                                     class="pficon pficon-error-circle-o"></span>1</span></a>
                         </p>
                     </div>
@@ -69,9 +69,7 @@
     </div>
 
     <h2>Logins along the year</h2>
-    <div id="cal-heatmap" class="container-fluid">
-    </div>
-
+    <div id="cal-heatmap" class="container-fluid"/>
 
     <div class="row">
         <div class="col-xs-12 col-sm-6 col-md-4">
@@ -79,19 +77,16 @@
             <table class="table table-striped">
                 <thead>
                 <tr>
-                    <!--<th>{{:: 'userId' | translate}}</th>-->
                     <th class="w-15">{{:: 'username' | translate}}</th>
-                    <!--<th>{{:: 'eventTimestamp' | translate}}</th>-->
                     <th class="w-15">{{:: 'login at' | translate}}</th>
                     <th class="w-15">{{:: 'last visit' | translate}}</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr ng-repeat="dataPoint in latestUserLogins.dataPoints">
-                    <!--<td>{{dataPoint.userId}}</td>-->
                     <td><a href="../users/{{dataPoint.userId}}">{{dataPoint.username}}</a></td>
-                    <td>{{dataPoint.eventTimestamp|date:'mediumTime'}}</td>
-                    <td>{{(dataPoint.previousEventTimestamp|date:'mediumTime') || 'never'}}</td>
+                    <td>{{dataPoint.eventTimestamp|date:'short'}}</td>
+                    <td>{{(dataPoint.previousEventTimestamp|date:'short') || 'never'}}</td>
                 </tr>
                 </tbody>
             </table>
@@ -101,17 +96,14 @@
             <table class="table table-striped">
                 <thead>
                 <tr>
-                    <!--<th>{{:: 'userId' | translate}}</th>-->
                     <th class="w-15">{{:: 'username' | translate}}</th>
-                    <!--<th>{{:: 'eventTimestamp' | translate}}</th>-->
-                    <th class="w-15">{{:: 'Registered at' | translate}}</th>
+                    <th class="w-15">{{:: 'registered at' | translate}}</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr ng-repeat="dataPoint in latestUserRegistrations.dataPoints">
-                    <!--<td>{{dataPoint.userId}}</td>-->
                     <td><a href="../users/{{dataPoint.userId}}">{{dataPoint.username}}</a></td>
-                    <td>{{dataPoint.eventTimestamp|date:'mediumTime'}}</td>
+                    <td>{{dataPoint.eventTimestamp|date:'short'}}</td>
                 </tr>
                 </tbody>
             </table>
