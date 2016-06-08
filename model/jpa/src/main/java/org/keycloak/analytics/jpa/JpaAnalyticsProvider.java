@@ -2,8 +2,6 @@ package org.keycloak.analytics.jpa;
 
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
-import org.keycloak.models.analytics.AggregatedEvent;
-import org.keycloak.models.analytics.AnalyticsEvent;
 import org.keycloak.models.analytics.AnalyticsProvider;
 import org.keycloak.models.analytics.TimeSeries;
 import org.keycloak.models.analytics.UserSummary;
@@ -11,6 +9,7 @@ import org.keycloak.models.analytics.UserSummary;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import java.util.Date;
+import java.util.List;
 
 /**
  * Created by tom on 27.05.16.
@@ -21,11 +20,9 @@ public class JpaAnalyticsProvider implements AnalyticsProvider {
     private static final String QUERY_LATEST_EVENTS = "getLatestEventsByRealmAndTypeAndLimit";
     private static final String QUERY_GET_DAILY_AGGREGATED_EVENTS = "getDailyAggregatedEventsByRealm";
 
-    private final KeycloakSession session;
     private final EntityManager em;
 
-    public JpaAnalyticsProvider(KeycloakSession session, EntityManager em) {
-        this.session = session;
+    public JpaAnalyticsProvider(EntityManager em) {
         this.em = em;
     }
 
@@ -35,7 +32,12 @@ public class JpaAnalyticsProvider implements AnalyticsProvider {
         Query userSummaryQuery = em.createNamedQuery(QUERY_USER_SUMMARY_BY_REALM);
         userSummaryQuery.setParameter("realm_id", realm.getId());
 
-        return UserSummary.class.cast(userSummaryQuery.getSingleResult());
+        List<UserSummary> optionalUserSummaries = userSummaryQuery.getResultList();
+        if (optionalUserSummaries.isEmpty()) {
+            return new UserSummary(realm.getId(), 0, 0, 0, 0);
+        }
+
+        return UserSummary.class.cast(optionalUserSummaries.get(0));
     }
 
     @Override

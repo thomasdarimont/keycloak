@@ -34,7 +34,7 @@ public class JpaAnalyticsProviderFactory implements AnalyticsProviderFactory {
     @Override
     public AnalyticsProvider create(KeycloakSession session) {
         EntityManager em = session.getProvider(JpaConnectionProvider.class).getEntityManager();
-        return new JpaAnalyticsProvider(session, em);
+        return new JpaAnalyticsProvider(em);
     }
 
     @Override
