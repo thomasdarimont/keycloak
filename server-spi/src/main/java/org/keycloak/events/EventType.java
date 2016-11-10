@@ -59,6 +59,8 @@ public enum EventType {
     UPDATE_PROFILE_ERROR(true),
     UPDATE_PASSWORD(true),
     UPDATE_PASSWORD_ERROR(true),
+    VERIFY_TOTP(true),
+    VERIFY_TOTP_ERROR(true),
     UPDATE_TOTP(true),
     UPDATE_TOTP_ERROR(true),
     VERIFY_EMAIL(true),

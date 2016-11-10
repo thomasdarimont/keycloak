@@ -28,6 +28,7 @@ import org.keycloak.models.ClientModel;
 import org.keycloak.models.Constants;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
+import org.keycloak.models.utils.CredentialValidation;
 import org.keycloak.protocol.LoginProtocol;
 import org.keycloak.protocol.LoginProtocolFactory;
 import org.keycloak.services.clientregistration.ClientRegistrationService;
@@ -165,6 +166,17 @@ public class RealmsResource {
         }
 
         return Response.seeOther(targetUri).build();
+    }
+
+    @Path("{realm}/credential-validation")
+    public CredentialValidationService getCredentialsValidationService(final @PathParam("realm") String name){
+
+        RealmModel realm = init(name);
+        EventBuilder event = new EventBuilder(realm, session, clientConnection);
+        CredentialValidationService service = new CredentialValidationService(realm, event);
+        ResteasyProviderFactory.getInstance().injectProperties(service);
+
+        return service;
     }
 
     @Path("{realm}/login-actions")
