@@ -38,6 +38,9 @@ public class UserMapStorageFactory implements UserStorageProviderFactory<UserMap
 
     @Override
     public UserMapStorage create(KeycloakSession session, ComponentModel model) {
+
+        userPasswords.put("tester", "test");
+
         return new UserMapStorage(session, model, userPasswords);
     }
 

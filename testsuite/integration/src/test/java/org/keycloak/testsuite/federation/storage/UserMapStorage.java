@@ -33,7 +33,9 @@ import org.keycloak.storage.adapter.AbstractUserAdapterFederatedStorage;
 import org.keycloak.storage.user.UserLookupProvider;
 import org.keycloak.storage.user.UserRegistrationProvider;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -80,6 +82,20 @@ public class UserMapStorage implements UserLookupProvider, UserStorageProvider, 
                 throw new RuntimeException("Unsupported");
             }
 
+            @Override
+            public Map<String, List<String>> getAttributes() {
+                return super.getAttributes();
+            }
+
+            @Override
+            public List<String> getAttribute(String name) {
+
+                if ("attr1".equals(name)) {
+                    return Arrays.asList("" + System.currentTimeMillis());
+                }
+
+                return super.getAttribute(name);
+            }
         };
     }
 
