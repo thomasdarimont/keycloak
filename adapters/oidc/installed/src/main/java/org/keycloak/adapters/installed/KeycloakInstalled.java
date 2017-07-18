@@ -24,6 +24,7 @@ import org.keycloak.adapters.KeycloakDeploymentBuilder;
 import org.keycloak.adapters.ServerRequest;
 import org.keycloak.adapters.rotation.AdapterRSATokenVerifier;
 import org.keycloak.common.VerificationException;
+import org.keycloak.common.util.KeycloakUriBuilder;
 import org.keycloak.jose.jws.JWSInput;
 import org.keycloak.jose.jws.JWSInputException;
 import org.keycloak.representations.AccessToken;
@@ -43,6 +44,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -53,10 +56,18 @@ public class KeycloakInstalled {
 
     private static final String KEYCLOAK_JSON = "META-INF/keycloak.json";
 
+    private static final String LOGIN_STATUS_PARAM = "login-status";
+
+    private static final String ERROR_DESCRIPTION_PARAM = "error-description";
+
     private KeycloakDeployment deployment;
 
-    private enum Status {
-        LOGGED_MANUAL, LOGGED_DESKTOP
+    private enum LoginMode {
+        MANUAL, DESKTOP
+    }
+
+    public enum LoginStatus {
+        LOGGED_IN, LOGGED_OUT
     }
 
     private String tokenString;
@@ -64,15 +75,41 @@ public class KeycloakInstalled {
     private IDToken idToken;
     private AccessToken token;
     private String refreshToken;
-    private Status status;
+    private LoginMode loginMode;
+    private LoginStatus loginStatus;
+
+    private HttpResponseWriter httpResponseWriter = DefaultHttpResponseWriter.INSTANCE;
+
+    private Locale locale;
 
     public KeycloakInstalled() {
-        InputStream config = Thread.currentThread().getContextClassLoader().getResourceAsStream(KEYCLOAK_JSON);
-        deployment = KeycloakDeploymentBuilder.build(config);
+        this(Thread.currentThread().getContextClassLoader().getResourceAsStream(KEYCLOAK_JSON));
     }
 
     public KeycloakInstalled(InputStream config) {
-        deployment = KeycloakDeploymentBuilder.build(config);
+
+        this.deployment = KeycloakDeploymentBuilder.build(config);
+        this.locale = Locale.getDefault();
+    }
+
+    public Locale getLocale() {
+        return locale;
+    }
+
+    public void setLocale(Locale locale) {
+        this.locale = Objects.requireNonNull(locale, "locale");
+    }
+
+    public HttpResponseWriter getHttpResponseWriter() {
+        return httpResponseWriter;
+    }
+
+    public void setHttpResponseWriter(HttpResponseWriter httpResponseWriter) {
+        this.httpResponseWriter = Objects.requireNonNull(httpResponseWriter, "httpResponseWriter");
+    }
+
+    public LoginStatus getLoginStatus() {
+        return loginStatus;
     }
 
     public void login() throws IOException, ServerRequest.HttpFailure, VerificationException, InterruptedException, OAuthErrorException, URISyntaxException {
@@ -92,7 +129,7 @@ public class KeycloakInstalled {
     }
 
     public void logout() throws IOException, InterruptedException, URISyntaxException {
-        if (status == Status.LOGGED_DESKTOP) {
+        if (loginMode == LoginMode.DESKTOP) {
             logoutDesktop();
         }
 
@@ -104,14 +141,17 @@ public class KeycloakInstalled {
 
         refreshToken = null;
 
-        status = null;
+        loginMode = null;
     }
 
     public void loginDesktop() throws IOException, VerificationException, OAuthErrorException, URISyntaxException, ServerRequest.HttpFailure, InterruptedException {
         CallbackListener callback = new CallbackListener();
         callback.start();
 
-        String redirectUri = "http://localhost:" + callback.server.getLocalPort();
+        String redirectUri = KeycloakUriBuilder.fromUri("http://localhost:" + callback.server.getLocalPort()) //
+          .queryParam(LOGIN_STATUS_PARAM, LoginStatus.LOGGED_IN.name()) //
+          .build().toString();
+
         String state = UUID.randomUUID().toString();
 
         String authUrl = deployment.getAuthUrl().clone()
@@ -120,6 +160,7 @@ public class KeycloakInstalled {
                 .queryParam(OAuth2Constants.REDIRECT_URI, redirectUri)
                 .queryParam(OAuth2Constants.STATE, state)
                 .queryParam(OAuth2Constants.SCOPE, OAuth2Constants.SCOPE_OPENID)
+                .queryParam(OAuth2Constants.UI_LOCALES_PARAM, locale.getLanguage())
                 .build().toString();
 
         Desktop.getDesktop().browse(new URI(authUrl));
@@ -140,14 +181,16 @@ public class KeycloakInstalled {
 
         processCode(callback.code, redirectUri);
 
-        status = Status.LOGGED_DESKTOP;
+        loginMode = LoginMode.DESKTOP;
     }
 
     private void logoutDesktop() throws IOException, URISyntaxException, InterruptedException {
         CallbackListener callback = new CallbackListener();
         callback.start();
 
-        String redirectUri = "http://localhost:" + callback.server.getLocalPort();
+        String redirectUri = KeycloakUriBuilder.fromUri("http://localhost:" + callback.server.getLocalPort()) //
+          .queryParam(LOGIN_STATUS_PARAM, LoginStatus.LOGGED_OUT.name()) //
+          .build().toString();
 
         String logoutUrl = deployment.getLogoutUrl()
                 .queryParam(OAuth2Constants.REDIRECT_URI, redirectUri)
@@ -170,13 +213,16 @@ public class KeycloakInstalled {
         CallbackListener callback = new CallbackListener();
         callback.start();
 
-        String redirectUri = "urn:ietf:wg:oauth:2.0:oob";
+        String redirectUri = KeycloakUriBuilder.fromUri("urn:ietf:wg:oauth:2.0:oob") //
+          .queryParam(LOGIN_STATUS_PARAM, LoginStatus.LOGGED_IN.name()) //
+          .build().toString();
 
         String authUrl = deployment.getAuthUrl().clone()
                 .queryParam(OAuth2Constants.RESPONSE_TYPE, OAuth2Constants.CODE)
                 .queryParam(OAuth2Constants.CLIENT_ID, deployment.getResourceName())
                 .queryParam(OAuth2Constants.REDIRECT_URI, redirectUri)
                 .queryParam(OAuth2Constants.SCOPE, OAuth2Constants.SCOPE_OPENID)
+                .queryParam(OAuth2Constants.UI_LOCALES_PARAM, locale.getLanguage())
                 .build().toString();
 
         printer.println("Open the following URL in a browser. After login copy/paste the code back and press <enter>");
@@ -187,7 +233,7 @@ public class KeycloakInstalled {
         String code = readCode(reader);
         processCode(code, redirectUri);
 
-        status = Status.LOGGED_MANUAL;
+        loginMode = LoginMode.MANUAL;
     }
 
     public String getTokenString() throws VerificationException, IOException, ServerRequest.HttpFailure {
@@ -244,6 +290,8 @@ public class KeycloakInstalled {
         return Desktop.isDesktopSupported();
     }
 
+
+
     public KeycloakDeployment getDeployment() {
         return deployment;
     }
@@ -289,45 +337,86 @@ public class KeycloakInstalled {
 
         @Override
         public void run() {
-            try {
-                Socket socket = server.accept();
+
+            try (Socket socket = server.accept()){
 
                 BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                String request = br.readLine();
+                String requestLine = br.readLine();
 
-                String url = request.split(" ")[1];
-                if (url.indexOf('?') >= 0) {
-                    url = url.split("\\?")[1];
-                    String[] params = url.split("&");
-
-                    for (String param : params) {
-                        String[] p = param.split("=");
-                        if (p[0].equals(OAuth2Constants.CODE)) {
-                            code = p[1];
-                        } else if (p[0].equals(OAuth2Constants.ERROR)) {
-                            error = p[1];
-                        } else if (p[0].equals("error-description")) {
-                            errorDescription = p[1];
-                        } else if (p[0].equals(OAuth2Constants.STATE)) {
-                            state = p[1];
-                        }
-                    }
-                }
+                String requestPath = requestLine.split(" ")[1];
+                parseUrlParameters(requestPath);
 
                 PrintWriter pw = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()));
-                pw.println("Please close window and return to application");
+                httpResponseWriter.write(pw, KeycloakInstalled.this);
                 pw.flush();
-
-                socket.close();
             } catch (IOException e) {
                 errorException = e;
             }
 
             try {
                 server.close();
-            } catch (IOException e) {
+            } catch (IOException ignored) {
+            }
+        }
+
+        private void parseUrlParameters(String url) {
+
+            if (url.indexOf('?') < 0) {
+                return;
+            }
+
+            String query = url.split("\\?")[1];
+            String[] params = query.split("&");
+
+            for (String param : params) {
+                String[] keyValue = param.split("=");
+                switch (keyValue[0]) {
+                    case OAuth2Constants.CODE:
+                        code = keyValue[1];
+                        break;
+                    case OAuth2Constants.ERROR:
+                        error = keyValue[1];
+                        break;
+                    case ERROR_DESCRIPTION_PARAM:
+                        errorDescription = keyValue[1];
+                        break;
+                    case OAuth2Constants.STATE:
+                        state = keyValue[1];
+                        break;
+                    case LOGIN_STATUS_PARAM:
+                        loginStatus = LoginStatus.valueOf(keyValue[1].toUpperCase());
+                        break;
+                    default:
+                        //ignore
+                }
             }
         }
     }
 
+    public interface HttpResponseWriter {
+        void write(PrintWriter responseWriter, KeycloakInstalled keycloak);
+    }
+
+    private static class DefaultHttpResponseWriter implements HttpResponseWriter {
+
+        private static final HttpResponseWriter INSTANCE = new DefaultHttpResponseWriter();
+
+        @Override
+        public void write(PrintWriter responseWriter, KeycloakInstalled keycloak) {
+
+            responseWriter.println("HTTP/1.1 200 OK");
+            responseWriter.println();
+
+            switch(keycloak.getLoginStatus()) {
+                case LOGGED_IN:
+                    responseWriter.println("<html><h1>Login completed.</h1><div>Please close this browser tab.</div></html>");
+                    break;
+                case LOGGED_OUT:
+                    responseWriter.println("<html><h1>Logout completed.</h1><div>Please close this browser tab.</div></html>");
+                    break;
+                default:
+                    //ignore
+            }
+        }
+    }
 }
