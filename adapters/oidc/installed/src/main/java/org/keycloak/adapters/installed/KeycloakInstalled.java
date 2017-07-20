@@ -40,6 +40,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Reader;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URI;
@@ -148,7 +149,7 @@ public class KeycloakInstalled {
         CallbackListener callback = new CallbackListener();
         callback.start();
 
-        String redirectUri = KeycloakUriBuilder.fromUri("http://localhost:" + callback.server.getLocalPort()) //
+        String redirectUri = KeycloakUriBuilder.fromUri("http://127.0.0.1:" + callback.server.getLocalPort()) //
           .queryParam(LOGIN_STATUS_PARAM, LoginStatus.LOGGED_IN.name()) //
           .build().toString();
 
@@ -188,7 +189,7 @@ public class KeycloakInstalled {
         CallbackListener callback = new CallbackListener();
         callback.start();
 
-        String redirectUri = KeycloakUriBuilder.fromUri("http://localhost:" + callback.server.getLocalPort()) //
+        String redirectUri = KeycloakUriBuilder.fromUri("http://127.0.0.1:" + callback.server.getLocalPort()) //
           .queryParam(LOGIN_STATUS_PARAM, LoginStatus.LOGGED_OUT.name()) //
           .build().toString();
 
@@ -332,7 +333,9 @@ public class KeycloakInstalled {
         private String state;
 
         public CallbackListener() throws IOException {
-            server = new ServerSocket(0);
+            // using the loopback address instead of localhost
+            // as recommended https://tools.ietf.org/html/draft-ietf-oauth-native-apps-12#section-8.3
+            server = new ServerSocket(0, 1, InetAddress.getByName(null));
         }
 
         @Override
