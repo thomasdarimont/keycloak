@@ -31,6 +31,38 @@
                     </div>
                 </div>
 
+                <script>
+                  (function(){
+                      //IE-shim for reportValidity
+                      if (!HTMLFormElement.prototype.reportValidity) {
+                        HTMLFormElement.prototype.reportValidity = function() {
+                          if (this.checkValidity()) {
+                            return true;
+                          }
+                          var btn = document.createElement('button');
+                          this.appendChild(btn);
+                          btn.click();
+                          this.removeChild(btn);
+                          return false;
+                        }
+                      }
+
+                      $password = document.getElementById("password");
+                      $password.addEventListener('keydown', function(event) {
+                        var capsLockEnabled = event.getModifierState && event.getModifierState('CapsLock');
+                        if (capsLockEnabled) {
+                            $password.setCustomValidity('${msg("capslockWarning")}');
+                            $password.reportValidity();
+                        } else {
+                            // clears validation
+                            $password.setCustomValidity("");
+                        }
+
+                        return true;
+                      });
+                  })();
+                </script>
+
                 <div class="${properties.kcFormGroupClass!}">
                     <div id="kc-form-options" class="${properties.kcFormOptionsClass!}">
                         <#if realm.rememberMe && !usernameEditDisabled??>
