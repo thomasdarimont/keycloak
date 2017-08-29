@@ -60,6 +60,10 @@ public class Urls {
         return accountBase(baseUri).path(AccountService.class, "passwordPage").build(realmName);
     }
 
+    public static URI mergeAccountsPage(URI baseUri, String realmName) {
+        return accountBase(baseUri).path(AccountService.class, "mergeAccounts").build(realmName);
+    }
+
     public static URI accountFederatedIdentityPage(URI baseUri, String realmName) {
         return accountBase(baseUri).path(AccountService.class, "federatedIdentityPage").build(realmName);
     }

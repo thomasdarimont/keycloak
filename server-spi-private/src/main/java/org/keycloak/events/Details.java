@@ -66,4 +66,7 @@ public interface Details {
 
     String EXISTING_USER = "previous_user";
 
+    String OTHER_USER_ID = "other_user_id";
+    String OTHER_USERNAME = "other_username";
+
 }

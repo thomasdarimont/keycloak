@@ -73,6 +73,14 @@ public class Messages {
 
     public static final String IDENTITY_PROVIDER_DIFFERENT_USER_MESSAGE = "identityProviderDifferentUserMessage";
 
+    public static final String ACCOUNTS_MERGED_MESSAGE = "accountsMerged";
+
+    public static final String MERGE_ACCOUNTS_ERROR_BAD_CREDENTIALS_MESSAGE = "mergeAccountsErrorBadCredentials";
+
+    public static final String MERGE_ACCOUNTS_ERROR_INVALID_OPERATION_MESSAGE = "mergeAccountsErrorInvalidOperation";
+
+    public static final String MERGE_ACCOUNTS_ERROR_OTP_REQUIRED_MESSAGE = "mergeAccountsErrorOtpRequired";
+
     public static final String CONFIGURE_TOTP = "configureTotpMessage";
 
     public static final String UPDATE_PROFILE = "updateProfileMessage";

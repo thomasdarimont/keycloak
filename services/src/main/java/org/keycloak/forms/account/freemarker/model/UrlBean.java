@@ -56,6 +56,10 @@ public class UrlBean {
         return Urls.accountPasswordPage(baseQueryURI, realm).toString();
     }
 
+    public String getMergeAccountsUrl() {
+        return Urls.mergeAccountsPage(baseQueryURI, realm).toString();
+    }
+
     public String getSocialUrl() {
         return Urls.accountFederatedIdentityPage(baseQueryURI, realm).toString();
     }

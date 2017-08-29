@@ -125,7 +125,9 @@ public enum EventType {
     CLIENT_INITIATED_ACCOUNT_LINKING(true),
     CLIENT_INITIATED_ACCOUNT_LINKING_ERROR(true),
     TOKEN_EXCHANGE(true),
-    TOKEN_EXCHANGE_ERROR(true);
+    TOKEN_EXCHANGE_ERROR(true),
+
+    ACCOUNTS_MERGED(true);
 
     private boolean saveByDefault;
 

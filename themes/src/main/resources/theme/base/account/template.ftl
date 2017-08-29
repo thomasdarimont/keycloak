@@ -61,6 +61,7 @@
                 <li class="<#if active=='sessions'>active</#if>"><a href="${url.sessionsUrl}">${msg("sessions")}</a></li>
                 <li class="<#if active=='applications'>active</#if>"><a href="${url.applicationsUrl}">${msg("applications")}</a></li>
                 <#if features.log><li class="<#if active=='log'>active</#if>"><a href="${url.logUrl}">${msg("log")}</a></li></#if>
+                <li class="<#if active=='mergeAccounts'>active</#if>"><a href="${url.mergeAccountsUrl}">${msg("mergeAccounts")}</a></li>
             </ul>
         </div>
 

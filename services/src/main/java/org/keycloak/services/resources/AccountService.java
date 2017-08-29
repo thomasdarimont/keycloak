@@ -34,11 +34,13 @@ import org.keycloak.models.AccountRoles;
 import org.keycloak.models.AuthenticatedClientSessionModel;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.FederatedIdentityModel;
+import org.keycloak.models.GroupModel;
 import org.keycloak.models.IdentityProviderModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.ModelDuplicateException;
 import org.keycloak.models.ModelException;
 import org.keycloak.models.RealmModel;
+import org.keycloak.models.UserCredentialManager;
 import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.UserSessionModel;
@@ -62,17 +64,23 @@ import org.keycloak.storage.ReadOnlyException;
 import org.keycloak.util.JsonSerialization;
 import org.keycloak.utils.MediaType;
 
-import javax.ws.rs.*;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.OPTIONS;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
-
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -718,6 +726,125 @@ public class AccountService extends AbstractSecuredLocalService {
 
         setReferrerOnPage();
         return account.setPasswordSet(true).setSuccess(Messages.ACCOUNT_PASSWORD_UPDATED).createResponse(AccountPages.PASSWORD);
+    }
+
+    @Path("merge-accounts")
+    @GET
+    public Response mergeAccountsPage() {
+        return forwardToPage("mergeAccounts", AccountPages.MERGE_ACCOUNTS);
+    }
+
+    @Path("merge-accounts")
+    @POST
+    public Response mergeAccounts(MultivaluedMap<String, String> formData) {
+
+        if (auth == null) {
+            return login("merge-accounts");
+        }
+
+        require(AccountRoles.MANAGE_ACCOUNT);
+        csrfCheck(formData);
+        UserModel user = auth.getUser();
+
+        String otherUsername = formData.getFirst("username");
+        String otherPassword = formData.getFirst("password");
+        String otherOtp = formData.getFirst("otp");
+
+        if (user.getUsername().equals(otherUsername)) {
+            // user account cannot be merged with itself
+            return account.setError(Messages.MERGE_ACCOUNTS_ERROR_INVALID_OPERATION_MESSAGE)
+                          .createResponse(AccountPages.MERGE_ACCOUNTS);
+        }
+
+        if ("admin".equals(otherUsername)) {
+            // admin account cannot be merged
+            return account.setError(Messages.MERGE_ACCOUNTS_ERROR_INVALID_OPERATION_MESSAGE)
+                          .createResponse(AccountPages.MERGE_ACCOUNTS);
+        }
+
+        UserModel otherUser = session.users().getUserByUsername(otherUsername, realm);
+        UserCredentialManager userCredentialManager = session.userCredentialManager();
+
+        if (!userCredentialManager.isValid(realm, otherUser, UserCredentialModel.password(otherPassword))) {
+            return account.setError(Messages.MERGE_ACCOUNTS_ERROR_BAD_CREDENTIALS_MESSAGE)
+                          .createResponse(AccountPages.MERGE_ACCOUNTS);
+        }
+
+        CredentialModel otpCredential = null;
+        for (CredentialModel cm : userCredentialManager.getStoredCredentials(realm, otherUser)) {
+            if (cm.getType().equals(CredentialModel.OTP) || cm.getType().equals(CredentialModel.TOTP) || cm.getType().equals(CredentialModel.HOTP)) {
+                otpCredential = cm;
+                break;
+            }
+        }
+
+        if (otpCredential != null && (otherOtp == null || otherOtp.trim().isEmpty())) {
+            //TODO ask for 2nd factor...
+            return account.setError(Messages.MERGE_ACCOUNTS_ERROR_OTP_REQUIRED_MESSAGE)
+                          .createResponse(AccountPages.MERGE_ACCOUNTS);
+        }
+
+        if (otpCredential != null && !userCredentialManager.isValid(realm, otherUser, UserCredentialModel.otp(otpCredential.getType(), otherOtp))) {
+            return account.setError(Messages.MERGE_ACCOUNTS_ERROR_BAD_CREDENTIALS_MESSAGE)
+                          .createResponse(AccountPages.MERGE_ACCOUNTS);
+        }
+
+        // disable other user
+        otherUser.setEnabled(false);
+
+        //logout other user
+        session.sessions().removeUserSessions(realm, otherUser);
+
+        // merge user profile
+        if (user.getFirstName() == null || user.getFirstName().trim().isEmpty()){
+            user.setFirstName(otherUser.getFirstName());
+        }
+
+        if (user.getLastName() == null || user.getLastName().trim().isEmpty()){
+            user.setLastName(otherUser.getLastName());
+        }
+
+        if (user.getEmail() == null || user.getEmail().trim().isEmpty()){
+            user.setEmail(otherUser.getEmail());
+            user.setEmailVerified(otherUser.isEmailVerified());
+
+            // need to obscure other user email to not trip over unique email-constraint
+            otherUser.setEmail(otherUser.getEmail() + otherUsername.hashCode());
+        }
+
+        // TODO find out how to merge user attributes
+        // TODO find out how to merge user consents
+        // TODO find out how linked identities
+
+        // merge roles
+        otherUser.getRoleMappings().forEach(user::grantRole);
+        otherUser.getRealmRoleMappings().forEach(user::grantRole);
+
+        // merge groups
+        for (GroupModel group : otherUser.getGroups()) {
+            user.joinGroup(group);
+        }
+
+        // TODO find more explicit way to record merged user ids
+        List<String> mergedUserIds = user.getAttribute("mergedUserIds");
+        if (mergedUserIds == null) {
+            mergedUserIds = new ArrayList<>();
+        } else {
+            mergedUserIds = new ArrayList<>(mergedUserIds);
+        }
+        mergedUserIds.add(otherUser.getId());
+        user.setAttribute("mergedUserIds", mergedUserIds);
+
+        // TODO figure out how to handle merged user account... delete it for now...
+        session.users().removeUser(realm, otherUser);
+
+        event.event(EventType.ACCOUNTS_MERGED).client(auth.getClient()).user(auth.getUser())
+          .detail(Details.USERNAME, auth.getUser().getUsername())
+          .detail(Details.OTHER_USER_ID, otherUser.getId())
+          .detail(Details.OTHER_USERNAME, otherUser.getUsername())
+          .success();
+
+        return account.setSuccess(Messages.ACCOUNTS_MERGED_MESSAGE).createResponse(AccountPages.MERGE_ACCOUNTS);
     }
 
     @Path("federated-identity-update")

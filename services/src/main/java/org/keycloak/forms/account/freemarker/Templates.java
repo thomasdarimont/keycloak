@@ -40,6 +40,8 @@ public class Templates {
                 return "sessions.ftl";
             case APPLICATIONS:
                 return "applications.ftl";
+            case MERGE_ACCOUNTS:
+                return "mergeAccounts.ftl";
             default:
                 throw new IllegalArgumentException();
         }
