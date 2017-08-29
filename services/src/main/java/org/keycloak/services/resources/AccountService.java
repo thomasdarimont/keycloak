@@ -81,6 +81,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -731,7 +732,7 @@ public class AccountService extends AbstractSecuredLocalService {
     @Path("merge-accounts")
     @GET
     public Response mergeAccountsPage() {
-        return forwardToPage("mergeAccounts", AccountPages.MERGE_ACCOUNTS);
+        return forwardToPage("merge-accounts", AccountPages.MERGE_ACCOUNTS);
     }
 
     @Path("merge-accounts")
@@ -763,6 +764,12 @@ public class AccountService extends AbstractSecuredLocalService {
         }
 
         UserModel otherUser = session.users().getUserByUsername(otherUsername, realm);
+
+        if (otherUser == null) {
+            return account.setError(Messages.MERGE_ACCOUNTS_ERROR_USER_NOT_FOUND_MESSAGE)
+              .createResponse(AccountPages.MERGE_ACCOUNTS);
+        }
+
         UserCredentialManager userCredentialManager = session.userCredentialManager();
 
         if (!userCredentialManager.isValid(realm, otherUser, UserCredentialModel.password(otherPassword))) {
@@ -781,6 +788,7 @@ public class AccountService extends AbstractSecuredLocalService {
         if (otpCredential != null && (otherOtp == null || otherOtp.trim().isEmpty())) {
             //TODO ask for 2nd factor...
             return account.setError(Messages.MERGE_ACCOUNTS_ERROR_OTP_REQUIRED_MESSAGE)
+                          .setPageAttributes(Collections.singletonMap("otpRequired", true))
                           .createResponse(AccountPages.MERGE_ACCOUNTS);
         }
 

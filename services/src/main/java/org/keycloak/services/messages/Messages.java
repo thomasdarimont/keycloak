@@ -81,6 +81,8 @@ public class Messages {
 
     public static final String MERGE_ACCOUNTS_ERROR_OTP_REQUIRED_MESSAGE = "mergeAccountsErrorOtpRequired";
 
+    public static final String MERGE_ACCOUNTS_ERROR_USER_NOT_FOUND_MESSAGE = "mergeAccountsErrorUserNotFound";
+
     public static final String CONFIGURE_TOTP = "configureTotpMessage";
 
     public static final String UPDATE_PROFILE = "updateProfileMessage";

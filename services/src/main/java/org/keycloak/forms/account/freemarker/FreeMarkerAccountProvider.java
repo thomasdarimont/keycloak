@@ -88,6 +88,7 @@ public class FreeMarkerAccountProvider implements AccountProvider {
     private HttpHeaders headers;
 
     private UriInfo uriInfo;
+    private Map<String, Object> pageAttributes;
 
     private List<FormMessage> messages = null;
     private MessageType messageType = MessageType.ERROR;
@@ -204,6 +205,10 @@ public class FreeMarkerAccountProvider implements AccountProvider {
                 break;
             case PASSWORD:
                 attributes.put("password", new PasswordBean(passwordSet));
+                break;
+            case MERGE_ACCOUNTS:
+                attributes.put("accountMerge", pageAttributes);
+                break;
         }
 
         try {
@@ -317,6 +322,12 @@ public class FreeMarkerAccountProvider implements AccountProvider {
         this.identityProviderEnabled = identityProviderEnabled;
         this.eventsEnabled = eventsEnabled;
         this.passwordUpdateSupported = passwordUpdateSupported;
+        return this;
+    }
+
+    @Override
+    public AccountProvider setPageAttributes(Map<String, Object> pageAttributes) {
+        this.pageAttributes = pageAttributes;
         return this;
     }
 

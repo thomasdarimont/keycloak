@@ -29,6 +29,7 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
@@ -68,4 +69,6 @@ public interface AccountProvider extends Provider {
     AccountProvider setStateChecker(String stateChecker);
 
     AccountProvider setFeatures(boolean social, boolean events, boolean passwordUpdateSupported);
+
+    AccountProvider setPageAttributes(Map<String, Object> pageAttributes);
 }

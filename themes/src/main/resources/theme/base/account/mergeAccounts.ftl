@@ -10,6 +10,10 @@
   </div>
 </div>
 
+<div class="row">
+    <p>Enter the credentials of the user account you like like to merge.</p>
+</div>
+
 <form action="${url.mergeAccountsUrl}" class="form-horizontal" method="post">
   <input type="text" readonly value="this is not a login form" style="display: none;">
   <input type="password" readonly value="this is not a login form" style="display: none;">
@@ -20,7 +24,7 @@
     </div>
 
     <div class="col-sm-10 col-md-10">
-      <input type="text" class="form-control" id="username" name="username" autofocus autocomplete="off">
+      <input type="text" class="form-control" id="username" name="username" autofocus autocomplete="off" required>
     </div>
   </div>
 
@@ -31,19 +35,21 @@
     </div>
 
     <div class="col-sm-10 col-md-10">
-      <input type="password" class="form-control" id="password" name="password" autofocus autocomplete="off">
+      <input type="password" class="form-control" id="password" name="password" autofocus autocomplete="off" required>
     </div>
   </div>
 
-  <div class="form-group">
-    <div class="col-sm-2 col-md-2">
-      <label for="otp" class="control-label">${msg("otp")}</label>
-    </div>
+   <#if (accountMerge.otpRequired)!false>
+   <div class="form-group">
+     <div class="col-sm-2 col-md-2">
+       <label for="otp" class="control-label">${msg("authenticatorCode")}</label>
+     </div>
 
-    <div class="col-sm-10 col-md-10">
-      <input type="text" class="form-control" id="otp" name="otp" autofocus autocomplete="off">
-    </div>
-  </div>
+     <div class="col-sm-10 col-md-10">
+       <input type="text" class="form-control" id="otp" name="otp" autofocus autocomplete="off">
+     </div>
+   </div>
+   </#if>
 
   <input type="hidden" id="stateChecker" name="stateChecker" value="${stateChecker?html}">
 
