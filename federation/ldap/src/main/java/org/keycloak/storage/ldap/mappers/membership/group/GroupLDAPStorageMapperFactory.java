@@ -198,6 +198,12 @@ public class GroupLDAPStorageMapperFactory extends AbstractLDAPStorageMapperFact
                 .helpText("If this flag is true, then during sync of groups from LDAP to Keycloak, we will keep just those Keycloak groups, which still exists in LDAP. Rest will be deleted")
                 .type(ProviderConfigProperty.BOOLEAN_TYPE)
                 .defaultValue("false")
+                .add()
+                .property().name(GroupMapperConfig.LDAP_GROUPS_PATH)
+                .label("Groups Path")
+                .helpText("Keycloak group path the LDAP groups are added to")
+                .type(ProviderConfigProperty.STRING_TYPE)
+                .defaultValue("/")
                 .add();
         return config.build();
     }
