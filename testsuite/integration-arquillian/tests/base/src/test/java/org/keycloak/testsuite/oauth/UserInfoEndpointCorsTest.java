@@ -70,6 +70,63 @@ public class UserInfoEndpointCorsTest extends AbstractKeycloakTest {
         assertNotCors(userInfoResponse);
     }
 
+
+    @Test
+    public void userInfoCorsRequestWithMissingTokenShouldFailWithNoCors() throws Exception {
+
+        oauth.realm("test");
+        oauth.clientId("test-app2");
+        oauth.redirectUri(VALID_CORS_URL + "/realms/master/app");
+
+        OAuthClient.AccessTokenResponse accessTokenResponse = oauth.doGrantAccessTokenRequest(null, "test-user@localhost", "password");
+
+        WebTarget userInfoTarget =  UserInfoClientUtil.getUserInfoWebTarget(javax.ws.rs.client.ClientBuilder.newClient());
+        Response userInfoResponse = userInfoTarget.request()
+                .header("Origin", VALID_CORS_URL) // manually trigger CORS handling
+                .get();
+
+        assertNotCors(userInfoResponse);
+    }
+
+    @Test
+    public void userInfoRequestWithInvalidTokenShouldFailWithNoCors() throws Exception {
+
+        oauth.realm("test");
+        oauth.clientId("test-app2");
+        oauth.redirectUri(VALID_CORS_URL + "/realms/master/app");
+
+        OAuthClient.AccessTokenResponse accessTokenResponse = oauth.doGrantAccessTokenRequest(null, "test-user@localhost", "password");
+
+        WebTarget userInfoTarget =  UserInfoClientUtil.getUserInfoWebTarget(javax.ws.rs.client.ClientBuilder.newClient());
+        Response userInfoResponse = userInfoTarget.request()
+                .header(HttpHeaders.AUTHORIZATION, "bearer INVALID" + accessTokenResponse.getAccessToken())
+                .header("Origin", VALID_CORS_URL) // manually trigger CORS handling
+                .get();
+
+        assertNotCors(userInfoResponse);
+    }
+
+    @Test
+    public void userInfoRequestWithValidTokenReferringToInvalidSessionShouldFailWithCors() throws Exception {
+
+        oauth.realm("test");
+        oauth.clientId("test-app2");
+        oauth.redirectUri(VALID_CORS_URL + "/realms/master/app");
+
+        OAuthClient.AccessTokenResponse accessTokenResponse = oauth.doGrantAccessTokenRequest(null, "test-user@localhost", "password");
+
+        // logout user / invalidate session
+        oauth.doLogout(accessTokenResponse.getRefreshToken(), null);
+
+        WebTarget userInfoTarget =  UserInfoClientUtil.getUserInfoWebTarget(javax.ws.rs.client.ClientBuilder.newClient());
+        Response userInfoResponse = userInfoTarget.request()
+                .header(HttpHeaders.AUTHORIZATION, "bearer " + accessTokenResponse.getAccessToken())
+                .header("Origin", VALID_CORS_URL) // manually trigger CORS handling
+                .get();
+
+        assertCors(userInfoResponse);
+    }
+
     private static void assertCors(Response response) {
         assertEquals("true", response.getHeaders().getFirst("Access-Control-Allow-Credentials"));
         assertEquals(VALID_CORS_URL, response.getHeaders().getFirst("Access-Control-Allow-Origin"));

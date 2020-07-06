@@ -43,6 +43,7 @@ import org.keycloak.models.UserSessionModel;
 import org.keycloak.protocol.oidc.OIDCAdvancedConfigWrapper;
 import org.keycloak.protocol.oidc.OIDCLoginProtocol;
 import org.keycloak.representations.AccessToken;
+import org.keycloak.services.CorsErrorResponseException;
 import org.keycloak.services.ErrorResponseException;
 import org.keycloak.services.Urls;
 import org.keycloak.services.managers.AppAuthManager;
@@ -57,6 +58,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.OPTIONS;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
@@ -84,6 +86,7 @@ public class UserInfoEndpoint {
     private final org.keycloak.protocol.oidc.TokenManager tokenManager;
     private final AppAuthManager appAuthManager;
     private final RealmModel realm;
+    private Cors cors;
 
     public UserInfoEndpoint(org.keycloak.protocol.oidc.TokenManager tokenManager, RealmModel realm) {
         this.realm = realm;
@@ -121,13 +124,19 @@ public class UserInfoEndpoint {
         return issueUserInfo(accessToken);
     }
 
-    private ErrorResponseException newUnauthorizedErrorResponseException(String oauthError, String errorMessage) {
+    private WebApplicationException newUnauthorizedErrorResponseException(String oauthError, String errorMessage) {
         // See: https://openid.net/specs/openid-connect-core-1_0.html#UserInfoError
         response.getOutputHeaders().put(HttpHeaders.WWW_AUTHENTICATE, Collections.singletonList(String.format("Bearer realm=\"%s\", error=\"%s\", error_description=\"%s\"", realm.getName(), oauthError, errorMessage)));
-        return new ErrorResponseException(oauthError, errorMessage, Response.Status.UNAUTHORIZED);
+        if (cors == null) {
+            return new ErrorResponseException(oauthError, errorMessage, Response.Status.UNAUTHORIZED);
+        }
+        return new CorsErrorResponseException(cors, oauthError, errorMessage, Response.Status.UNAUTHORIZED);
     }
 
     private Response issueUserInfo(String tokenString) {
+
+        cors = Cors.add(request).auth().allowedMethods("POST").exposedHeaders(Cors.ACCESS_CONTROL_ALLOW_METHODS);
+
         EventBuilder event = new EventBuilder(realm, session, clientConnection)
                 .event(EventType.USER_INFO_REQUEST)
                 .detail(Details.AUTH_METHOD, Details.VALIDATE_ACCESS_TOKEN);
@@ -154,6 +163,8 @@ public class UserInfoEndpoint {
                 throw new ErrorResponseException(OAuthErrorException.INVALID_REQUEST, "Client not found", Response.Status.BAD_REQUEST);
             }
 
+            cors.allowedOrigins(session, clientModel);
+
             TokenVerifier.createWithoutSignature(token)
                     .withChecks(NotBeforeCheck.forModel(clientModel))
                     .verify();
@@ -164,7 +175,7 @@ public class UserInfoEndpoint {
 
 	    if (!clientModel.getProtocol().equals(OIDCLoginProtocol.LOGIN_PROTOCOL)) {
             event.error(Errors.INVALID_CLIENT);
-            throw new ErrorResponseException(Errors.INVALID_CLIENT, "Wrong client protocol.", Response.Status.BAD_REQUEST);
+            throw new CorsErrorResponseException(cors, Errors.INVALID_CLIENT, "Wrong client protocol.", Response.Status.BAD_REQUEST);
         }
 
         session.getContext().setClient(clientModel);
@@ -173,7 +184,7 @@ public class UserInfoEndpoint {
 
         if (!clientModel.isEnabled()) {
             event.error(Errors.CLIENT_DISABLED);
-            throw new ErrorResponseException(OAuthErrorException.INVALID_REQUEST, "Client disabled", Response.Status.BAD_REQUEST);
+            throw new CorsErrorResponseException(cors, OAuthErrorException.INVALID_REQUEST, "Client disabled", Response.Status.BAD_REQUEST);
         }
 
         UserSessionModel userSession = findValidSession(token, event, clientModel);
@@ -181,7 +192,7 @@ public class UserInfoEndpoint {
         UserModel userModel = userSession.getUser();
         if (userModel == null) {
             event.error(Errors.USER_NOT_FOUND);
-            throw new ErrorResponseException(OAuthErrorException.INVALID_REQUEST, "User not found", Response.Status.BAD_REQUEST);
+            throw new CorsErrorResponseException(cors, OAuthErrorException.INVALID_REQUEST, "User not found", Response.Status.BAD_REQUEST);
         }
 
         event.user(userModel)
@@ -243,7 +254,7 @@ public class UserInfoEndpoint {
 
         event.success();
 
-        return Cors.add(request, responseBuilder).auth().allowedOrigins(session, clientModel).build();
+        return cors.builder(responseBuilder).build();
     }
 
 
