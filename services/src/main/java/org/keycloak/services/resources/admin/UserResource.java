@@ -18,8 +18,6 @@ package org.keycloak.services.resources.admin;
 
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.annotations.cache.NoCache;
-import javax.ws.rs.BadRequestException;
-import javax.ws.rs.NotFoundException;
 import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.authentication.actiontoken.execactions.ExecuteActionsActionToken;
@@ -73,13 +71,17 @@ import org.keycloak.services.resources.account.AccountFormService;
 import org.keycloak.services.resources.admin.permissions.AdminPermissionEvaluator;
 import org.keycloak.services.validation.Validation;
 import org.keycloak.storage.ReadOnlyException;
+import org.keycloak.userprofile.utils.UserProfileUpdateHelper;
+import org.keycloak.userprofile.profile.represenations.UserRepresentationUserProfile;
+import org.keycloak.userprofile.validation.UserUpdateEvent;
 import org.keycloak.utils.ProfileHelper;
 
+import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
-import javax.ws.rs.NotSupportedException;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -114,9 +116,9 @@ import static org.keycloak.models.ImpersonationSessionNote.IMPERSONATOR_USERNAME
 /**
  * Base resource for managing users
  *
- * @resource Users
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
  * @version $Revision: 1 $
+ * @resource Users
  */
 public class UserResource {
     private static final Logger logger = Logger.getLogger(UserResource.class);
@@ -156,17 +158,6 @@ public class UserResource {
 
         auth.users().requireManage(user);
         try {
-            Set<String> attrsToRemove;
-            if (rep.getAttributes() != null) {
-                attrsToRemove = new HashSet<>(user.getAttributes().keySet());
-                attrsToRemove.removeAll(rep.getAttributes().keySet());
-                attrsToRemove.remove(UserModel.FIRST_NAME);
-                attrsToRemove.remove(UserModel.LAST_NAME);
-                attrsToRemove.remove(UserModel.EMAIL);
-                attrsToRemove.remove(UserModel.USERNAME);
-            } else {
-                attrsToRemove = Collections.emptySet();
-            }
 
             if (rep.isEnabled() != null && rep.isEnabled()) {
                 UserLoginFailureModel failureModel = session.sessions().getUserLoginFailure(realm, user.getId());
@@ -175,7 +166,7 @@ public class UserResource {
                 }
             }
 
-            updateUserFromRep(user, rep, attrsToRemove, realm, session, true);
+            updateUserFromRep(user, rep, session, true);
             RepresentationToModel.createCredentials(rep, session, realm, user, true);
             adminEvent.operation(OperationType.UPDATE).resourcePath(session.getContext().getUri()).representation(rep).success();
 
@@ -198,20 +189,9 @@ public class UserResource {
         }
     }
 
-    public static void updateUserFromRep(UserModel user, UserRepresentation rep, Set<String> attrsToRemove, RealmModel realm, KeycloakSession session, boolean removeMissingRequiredActions) {
-        if (rep.getUsername() != null && realm.isEditUsernameAllowed() && !realm.isRegistrationEmailAsUsername()) {
-            user.setUsername(rep.getUsername());
-        }
-        if (rep.getEmail() != null) {
-            String email = rep.getEmail();
-            user.setEmail(email);
-            if(realm.isRegistrationEmailAsUsername()) {
-                user.setUsername(email);
-            }
-        }
-        if (rep.getEmail() == "") user.setEmail(null);
-        if (rep.getFirstName() != null) user.setFirstName(rep.getFirstName());
-        if (rep.getLastName() != null) user.setLastName(rep.getLastName());
+    public static void updateUserFromRep(UserModel user, UserRepresentation rep, KeycloakSession session, boolean removeMissingRequiredActions) {
+
+        UserProfileUpdateHelper.update(UserUpdateEvent.UserResource, session, user, new UserRepresentationUserProfile(rep));
 
         if (rep.isEnabled() != null) user.setEnabled(rep.isEnabled());
         if (rep.isEmailVerified() != null) user.setEmailVerified(rep.isEmailVerified());
@@ -243,20 +223,8 @@ public class UserResource {
                 }
             }
         }
-
-        if (rep.getAttributes() != null) {
-            for (Map.Entry<String, List<String>> attr : rep.getAttributes().entrySet()) {
-                List<String> currentValue = user.getAttribute(attr.getKey());
-                if (currentValue == null || currentValue.size() != attr.getValue().size() || !currentValue.containsAll(attr.getValue())) {
-                    user.setAttribute(attr.getKey(), attr.getValue());
-                }
-            }
-
-            for (String attr : attrsToRemove) {
-                user.removeAttribute(attr);
-            }
-        }
     }
+
 
     /**
      * Get representation of the user
@@ -323,10 +291,10 @@ public class UserResource {
         result.put("sameRealm", sameRealm);
         result.put("redirect", redirect.toString());
         event.event(EventType.IMPERSONATE)
-             .session(userSession)
-             .user(user)
-             .detail(Details.IMPERSONATOR_REALM, authenticatedRealm.getName())
-             .detail(Details.IMPERSONATOR, impersonator).success();
+                .session(userSession)
+                .user(user)
+                .detail(Details.IMPERSONATOR_REALM, authenticatedRealm.getName())
+                .detail(Details.IMPERSONATOR, impersonator).success();
 
         return result;
     }
@@ -482,9 +450,9 @@ public class UserResource {
 
             Map<String, Object> currentRep = new HashMap<>();
             currentRep.put("clientId", client.getClientId());
-            currentRep.put("grantedClientScopes", (rep==null ? Collections.emptyList() : rep.getGrantedClientScopes()));
-            currentRep.put("createdDate", (rep==null ? null : rep.getCreatedDate()));
-            currentRep.put("lastUpdatedDate", (rep==null ? null : rep.getLastUpdatedDate()));
+            currentRep.put("grantedClientScopes", (rep == null ? Collections.emptyList() : rep.getGrantedClientScopes()));
+            currentRep.put("createdDate", (rep == null ? null : rep.getCreatedDate()));
+            currentRep.put("lastUpdatedDate", (rep == null ? null : rep.getLastUpdatedDate()));
 
             List<Map<String, String>> additionalGrants = new LinkedList<>();
             if (hasOfflineToken) {
@@ -536,7 +504,6 @@ public class UserResource {
      * Remove all user sessions associated with the user
      *
      * Also send notification to all clients that have an admin URL to invalidate the sessions for the particular user.
-     *
      */
     @Path("logout")
     @POST
@@ -573,7 +540,7 @@ public class UserResource {
     public RoleMapperResource getRoleMappings() {
         AdminPermissionEvaluator.RequirePermissionCheck manageCheck = () -> auth.users().requireMapRoles(user);
         AdminPermissionEvaluator.RequirePermissionCheck viewCheck = () -> auth.users().requireView(user);
-        RoleMapperResource resource =  new RoleMapperResource(realm, auth, user, adminEvent, manageCheck, viewCheck);
+        RoleMapperResource resource = new RoleMapperResource(realm, auth, user, adminEvent, manageCheck, viewCheck);
         ResteasyProviderFactory.getInstance().injectProperties(resource);
         return resource;
 
@@ -640,7 +607,7 @@ public class UserResource {
     @Path("credentials")
     @NoCache
     @Produces(MediaType.APPLICATION_JSON)
-    public List<CredentialRepresentation> credentials(){
+    public List<CredentialRepresentation> credentials() {
         auth.users().requireManage(user);
         List<CredentialModel> models = session.userCredentialManager().getStoredCredentials(realm, user);
         models.forEach(c -> c.setSecretData(null));
@@ -668,7 +635,6 @@ public class UserResource {
 
     /**
      * Remove a credential for a user
-     *
      */
     @Path("credentials/{credentialId}")
     @DELETE
@@ -704,22 +670,24 @@ public class UserResource {
 
     /**
      * Move a credential to a first position in the credentials list of the user
+     *
      * @param credentialId The credential to move
      */
     @Path("credentials/{credentialId}/moveToFirst")
     @POST
-    public void moveCredentialToFirst(final @PathParam("credentialId") String credentialId){
+    public void moveCredentialToFirst(final @PathParam("credentialId") String credentialId) {
         moveCredentialAfter(credentialId, null);
     }
 
     /**
      * Move a credential to a position behind another credential
+     *
      * @param credentialId The credential to move
      * @param newPreviousCredentialId The credential that will be the previous element in the list. If set to null, the moved credential will be the first element in the list.
      */
     @Path("credentials/{credentialId}/moveAfter/{newPreviousCredentialId}")
     @POST
-    public void moveCredentialAfter(final @PathParam("credentialId") String credentialId, final @PathParam("newPreviousCredentialId") String newPreviousCredentialId){
+    public void moveCredentialAfter(final @PathParam("credentialId") String credentialId, final @PathParam("newPreviousCredentialId") String newPreviousCredentialId) {
         auth.users().requireManage(user);
         CredentialModel credential = session.userCredentialManager().getStoredCredentialById(realm, user, credentialId);
         if (credential == null) {
@@ -783,12 +751,12 @@ public class UserResource {
 
         if (!user.isEnabled()) {
             throw new WebApplicationException(
-                ErrorResponse.error("User is disabled", Status.BAD_REQUEST));
+                    ErrorResponse.error("User is disabled", Status.BAD_REQUEST));
         }
 
         if (redirectUri != null && clientId == null) {
             throw new WebApplicationException(
-                ErrorResponse.error("Client id missing", Status.BAD_REQUEST));
+                    ErrorResponse.error("Client id missing", Status.BAD_REQUEST));
         }
 
         if (clientId == null) {
@@ -799,7 +767,7 @@ public class UserResource {
         if (client == null) {
             logger.debugf("Client %s doesn't exist", clientId);
             throw new WebApplicationException(
-                ErrorResponse.error("Client doesn't exist", Status.BAD_REQUEST));
+                    ErrorResponse.error("Client doesn't exist", Status.BAD_REQUEST));
         }
         if (!client.isEnabled()) {
             logger.debugf("Client %s is not enabled", clientId);
@@ -812,7 +780,7 @@ public class UserResource {
             redirect = RedirectUtils.verifyRedirectUri(session, redirectUri, client);
             if (redirect == null) {
                 throw new WebApplicationException(
-                    ErrorResponse.error("Invalid redirect uri.", Status.BAD_REQUEST));
+                        ErrorResponse.error("Invalid redirect uri.", Status.BAD_REQUEST));
             }
         }
 
@@ -829,10 +797,10 @@ public class UserResource {
             String link = builder.build(realm.getName()).toString();
 
             this.session.getProvider(EmailTemplateProvider.class)
-              .setAttribute(Constants.TEMPLATE_ATTR_REQUIRED_ACTIONS, token.getRequiredActions())
-              .setRealm(realm)
-              .setUser(user)
-              .sendExecuteActions(link, TimeUnit.SECONDS.toMinutes(lifespan));
+                    .setAttribute(Constants.TEMPLATE_ATTR_REQUIRED_ACTIONS, token.getRequiredActions())
+                    .setRealm(realm)
+                    .setUser(user)
+                    .sendExecuteActions(link, TimeUnit.SECONDS.toMinutes(lifespan));
 
             //audit.user(user).detail(Details.EMAIL, user.getEmail()).detail(Details.CODE_ID, accessCode.getCodeId()).success();
 
@@ -878,7 +846,7 @@ public class UserResource {
 
         if (Objects.nonNull(search) && Objects.nonNull(firstResult) && Objects.nonNull(maxResults)) {
             results = ModelToRepresentation.searchForGroupByName(user, !briefRepresentation, search.trim(), firstResult, maxResults);
-        } else if(Objects.nonNull(firstResult) && Objects.nonNull(maxResults)) {
+        } else if (Objects.nonNull(firstResult) && Objects.nonNull(maxResults)) {
             results = ModelToRepresentation.toGroupHierarchy(user, !briefRepresentation, firstResult, maxResults);
         } else {
             results = ModelToRepresentation.toGroupHierarchy(user, !briefRepresentation);
@@ -918,7 +886,7 @@ public class UserResource {
         auth.groups().requireManageMembership(group);
 
         try {
-            if (user.isMemberOf(group)){
+            if (user.isMemberOf(group)) {
                 user.leaveGroup(group);
                 adminEvent.operation(OperationType.DELETE).resource(ResourceType.GROUP_MEMBERSHIP).representation(ModelToRepresentation.toRepresentation(group, true)).resourcePath(session.getContext().getUri()).success();
             }
@@ -939,7 +907,7 @@ public class UserResource {
             throw new NotFoundException("Group not found");
         }
         auth.groups().requireManageMembership(group);
-        if (!user.isMemberOf(group)){
+        if (!user.isMemberOf(group)) {
             user.joinGroup(group);
             adminEvent.operation(OperationType.CREATE).resource(ResourceType.GROUP_MEMBERSHIP).representation(ModelToRepresentation.toRepresentation(group, true)).resourcePath(session.getContext().getUri()).success();
         }

@@ -26,11 +26,14 @@ import org.keycloak.policy.PasswordPolicyManagerProvider;
 import org.keycloak.policy.PolicyError;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.services.messages.Messages;
+import org.keycloak.userprofile.validation.AttributeValidationResult;
+import org.keycloak.userprofile.validation.UserProfileValidationResult;
 
 import javax.ws.rs.core.MultivaluedMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class Validation {
 
@@ -40,7 +43,7 @@ public class Validation {
     public static final String FIELD_FIRST_NAME = "firstName";
     public static final String FIELD_PASSWORD = "password";
     public static final String FIELD_USERNAME = "username";
-    
+
     // Actually allow same emails like angular. See ValidationTest.testEmailValidation()
     private static final Pattern EMAIL_PATTERN = Pattern.compile("[a-zA-Z0-9!#$%&'*+/=?^_`{|}~.-]+@[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)*");
 
@@ -78,10 +81,10 @@ public class Validation {
             if (err != null)
                 errors.add(new FormMessage(FIELD_PASSWORD, err.getMessage(), err.getParameters()));
         }
-        
+
         return errors;
     }
-    
+
     private static void addError(List<FormMessage> errors, String field, String message){
         errors.add(new FormMessage(field, message));
     }
@@ -89,10 +92,10 @@ public class Validation {
     public static List<FormMessage> validateUpdateProfileForm(RealmModel realm, MultivaluedMap<String, String> formData) {
         return validateUpdateProfileForm(realm, formData, realm.isEditUsernameAllowed());
     }
-    
+
     public static List<FormMessage> validateUpdateProfileForm(RealmModel realm, MultivaluedMap<String, String> formData, boolean userNameRequired) {
         List<FormMessage> errors = new ArrayList<>();
-        
+
         if (!realm.isRegistrationEmailAsUsername() && userNameRequired && isBlank(formData.getFirst(FIELD_USERNAME))) {
             addError(errors, FIELD_USERNAME, Messages.MISSING_USERNAME);
         }
@@ -113,31 +116,31 @@ public class Validation {
 
         return errors;
     }
-    
+
     /**
      * Validate if user object contains all mandatory fields.
-     * 
+     *
      * @param realm user is for
      * @param user to validate
      * @return true if user object contains all mandatory values, false if some mandatory value is missing
      */
     public static boolean validateUserMandatoryFields(RealmModel realm, UpdateProfileContext user){
-        return!(isBlank(user.getFirstName()) || isBlank(user.getLastName()) || isBlank(user.getEmail()));        
+        return!(isBlank(user.getFirstName()) || isBlank(user.getLastName()) || isBlank(user.getEmail()));
     }
 
     /**
      * Check if string is empty (null or lenght is 0)
-     * 
+     *
      * @param s to check
      * @return true if string is empty
      */
     public static boolean isEmpty(String s) {
         return s == null || s.length() == 0;
     }
-    
+
     /**
      * Check if string is blank (null or lenght is 0 or contains only white characters)
-     * 
+     *
      * @param s to check
      * @return true if string is blank
      */
@@ -150,4 +153,12 @@ public class Validation {
     }
 
 
+    public static List<FormMessage> getFormErrorsFromValidation(UserProfileValidationResult results) {
+        List<FormMessage> errors = new ArrayList<>();
+        for (AttributeValidationResult result : results.getErrors()) {
+            result.getFailedValidations().forEach(o -> addError(errors, result.getField(), o.getErrorType()));
+        }
+        return errors;
+
+    }
 }
