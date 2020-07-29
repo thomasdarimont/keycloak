@@ -28,6 +28,8 @@ import java.util.Map;
  */
 public interface UserProfile {
 
+    String getId();
+
     Map<String, List<String>> getAttributes();
 
     String getFirstAttribute(String name);

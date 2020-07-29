@@ -21,7 +21,6 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.utils.KeycloakModelUtils;
-import org.keycloak.userprofile.StoredUserProfile;
 import org.keycloak.userprofile.validation.UserUpdateEvent;
 
 import java.util.Collections;

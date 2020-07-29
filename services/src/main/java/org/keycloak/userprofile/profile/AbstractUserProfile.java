@@ -18,7 +18,7 @@
 package org.keycloak.userprofile.profile;
 
 import org.keycloak.userprofile.UserProfile;
-import org.keycloak.userprofile.StoredUserProfile;
+import org.keycloak.userprofile.utils.StoredUserProfile;
 
 import java.util.Collections;
 import java.util.List;

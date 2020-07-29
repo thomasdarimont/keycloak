@@ -26,6 +26,6 @@ public interface UserProfileContext {
 
     boolean isCreate();
     UserUpdateEvent getUpdateEvent();
-    StoredUserProfile getCurrent();
+    UserProfile getCurrent();
     UserProfile getUpdated();
 }

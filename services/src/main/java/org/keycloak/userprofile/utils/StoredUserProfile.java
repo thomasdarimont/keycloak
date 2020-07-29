@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.keycloak.userprofile;
+package org.keycloak.userprofile.utils;
 
 import org.keycloak.userprofile.UserProfile;
 
@@ -28,8 +28,6 @@ import java.util.List;
  * @author <a href="mailto:markus.till@bosch.io">Markus Till</a>
  */
 public interface StoredUserProfile extends UserProfile {
-
-    String getId();
 
     void setSingleAttribute(String name, String value);
 

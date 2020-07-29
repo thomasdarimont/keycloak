@@ -17,7 +17,7 @@
 
 package org.keycloak.userprofile.profile;
 
-import org.keycloak.userprofile.StoredUserProfile;
+import org.keycloak.userprofile.utils.StoredUserProfile;
 import org.keycloak.userprofile.UserProfile;
 import org.keycloak.userprofile.UserProfileContext;
 import org.keycloak.userprofile.validation.UserUpdateEvent;
@@ -52,7 +52,7 @@ public class DefaultUserProfileContext implements UserProfileContext {
     }
 
     @Override
-    public StoredUserProfile getCurrent() {
+    public UserProfile getCurrent() {
         return currentUserProfile;
     }
 
