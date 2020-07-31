@@ -21,7 +21,6 @@ import org.keycloak.authentication.requiredactions.util.UpdateProfileContext;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.PasswordPolicy;
 import org.keycloak.models.RealmModel;
-import org.keycloak.models.UserModel;
 import org.keycloak.models.utils.FormMessage;
 import org.keycloak.policy.PasswordPolicyManagerProvider;
 import org.keycloak.policy.PolicyError;
@@ -29,13 +28,15 @@ import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.validation.ValidationContext;
 import org.keycloak.validation.ValidationProvider;
-import org.keycloak.validation.ValidationResult;
 
 import javax.ws.rs.core.MultivaluedMap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
+
+import static org.keycloak.validation.ValidationContext.ValidationContextKey;
+import static org.keycloak.validation.ValidationContext.ValidationTarget.*;
 
 public class Validation {
 
@@ -95,10 +96,9 @@ public class Validation {
         return validateUpdateProfileForm(realm, formData, realm.isEditUsernameAllowed(), validationProvider);
     }
 
-    public static List<FormMessage> validateUpdateProfileForm(RealmModel realm, MultivaluedMap<String, String> formData, boolean userNameRequired, ValidationProvider validationProvider) {
+    public static List<FormMessage> validateUpdateProfileForm(RealmModel realm, MultivaluedMap<String, String> formData, boolean userNameRequired, ValidationProvider validation) {
 
-        ValidationContext context = new ValidationContext(realm, "update-profile", UserModel.class, Collections.singletonMap("userNameRequired", userNameRequired));
-
+        ValidationContext context = new ValidationContext(realm, ValidationContextKey.PROFILE_UPDATE, Collections.singletonMap("userNameRequired", userNameRequired));
         List<FormMessage> errors = new ArrayList<>();
 
 //        if (!realm.isRegistrationEmailAsUsername() && userNameRequired && isBlank(formData.getFirst(FIELD_USERNAME))) {
@@ -120,21 +120,17 @@ public class Validation {
 //            addError(errors, FIELD_EMAIL, Messages.INVALID_EMAIL);
 //        }
 
-        validationProvider.validate(FIELD_USERNAME, formData, context).onError(res -> {
-            res.getErrors().forEach(p -> addError(errors, FIELD_USERNAME, p.getMessage()));
-        });
+        validation.validate(User.USERNAME, formData.getFirst(FIELD_USERNAME), context)
+                .onError(res -> res.getErrors().forEach(p -> addError(errors, FIELD_USERNAME, p.getMessage())));
 
-        validationProvider.validate(FIELD_FIRST_NAME, formData, context).onError(res -> {
-            res.getErrors().forEach(p -> addError(errors, FIELD_FIRST_NAME, p.getMessage()));
-        });
+        validation.validate(User.FIRSTNAME, formData.getFirst(FIELD_FIRST_NAME), context)
+                .onError(res -> res.getErrors().forEach(p -> addError(errors, FIELD_FIRST_NAME, p.getMessage())));
 
-        validationProvider.validate(FIELD_LAST_NAME, formData, context).onError(res -> {
-            res.getErrors().forEach(p -> addError(errors, FIELD_LAST_NAME, p.getMessage()));
-        });
+        validation.validate(User.LASTNAME, formData.getFirst(FIELD_LAST_NAME), context)
+                .onError(res -> res.getErrors().forEach(p -> addError(errors, FIELD_LAST_NAME, p.getMessage())));
 
-        validationProvider.validate(FIELD_EMAIL, formData, context).onError(res -> {
-            res.getErrors().forEach(p -> addError(errors, FIELD_EMAIL, p.getMessage()));
-        });
+        validation.validate(User.EMAIL, formData.getFirst(FIELD_EMAIL), context)
+                .onError(res -> res.getErrors().forEach(p -> addError(errors, FIELD_EMAIL, p.getMessage())));
 
         return errors;
     }

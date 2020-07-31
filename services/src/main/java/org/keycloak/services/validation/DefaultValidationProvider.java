@@ -7,7 +7,6 @@ import org.keycloak.validation.validator.Validator;
 import org.keycloak.validation.validator.ValidatorRegistry;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class DefaultValidationProvider implements ValidationProvider {
 
@@ -18,9 +17,9 @@ public class DefaultValidationProvider implements ValidationProvider {
     }
 
     @Override
-    public <T> ValidationResult validate(String key, T target, ValidationContext context) {
+    public <V> ValidationResult validate(String key, V value, ValidationContext context) {
 
-        List<Validator> validators = filterValidators(validatorRegistry.getValidators(context), key);
+        List<Validator> validators = validatorRegistry.getValidators(context, key);
 
         if (validators == null || validators.isEmpty()) {
             return null;
@@ -29,18 +28,10 @@ public class DefaultValidationProvider implements ValidationProvider {
         ValidationResult result = ValidationResult.OK;
 
         for (Validator validator : validators) {
-            ValidationResult current = validator.validate(key, target, context);
+            ValidationResult current = validator.validate(key, value, context);
             result = new ValidationResult(result, current);
         }
 
         return result;
-    }
-
-    private List<Validator> filterValidators(List<Validator> validators, String key) {
-        if (validators == null || validators.isEmpty()) {
-            return null;
-        }
-
-        return validators.stream().filter(v -> v.getKey().equals(key)).collect(Collectors.toList());
     }
 }

@@ -1,21 +1,50 @@
 package org.keycloak.services.validation.validators;
 
-import org.keycloak.models.UserModel;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.services.validation.Validation;
+import org.keycloak.validation.ValidationContext.ValidationContextKey;
 import org.keycloak.validation.ValidationProblem;
-import org.keycloak.validation.validator.DelegatingValidator;
 import org.keycloak.validation.validator.ValidatorProvider;
 import org.keycloak.validation.validator.ValidatorRegistry;
+import org.keycloak.validation.validator.WrappingValidator;
 
-import javax.ws.rs.core.MultivaluedMap;
+import static org.keycloak.validation.ValidationContext.ValidationTarget.User;
 
 public class DefaultValidatorProvider implements ValidatorProvider {
 
     @Override
     public void register(ValidatorRegistry validatorRegistry) {
 
-        DelegatingValidator emailValidator = DelegatingValidator.forNamedProperty(Validation.FIELD_EMAIL, UserModel.class, this::extractEmail, (context, key, value, problems) -> {
+        // TODO add additional validators
+
+        validatorRegistry.register(User.USERNAME, createUsernameValidator(), 1000.0, ValidationContextKey.PROFILE_UPDATE, ValidationContextKey.REGISTRATION);
+        validatorRegistry.register(User.EMAIL, createEmailValidator(), 1100.0, ValidationContextKey.PROFILE_UPDATE, ValidationContextKey.REGISTRATION);
+        validatorRegistry.register(User.FIRSTNAME, createFirstnameValidator(), 1200.0, ValidationContextKey.PROFILE_UPDATE);
+        validatorRegistry.register(User.LASTNAME, createLastnameValidator(), 1300.0, ValidationContextKey.PROFILE_UPDATE);
+    }
+
+    protected WrappingValidator createLastnameValidator() {
+        return WrappingValidator.<String>of((context, key, value, problems) -> {
+            if (Validation.isBlank(value)) {
+                problems.add(ValidationProblem.error(key, Messages.MISSING_LAST_NAME));
+                return false;
+            }
+            return true;
+        });
+    }
+
+    protected WrappingValidator createFirstnameValidator() {
+        return WrappingValidator.<String>of((context, key, value, problems) -> {
+            if (Validation.isBlank(value)) {
+                problems.add(ValidationProblem.error(key, Messages.MISSING_FIRST_NAME));
+                return false;
+            }
+            return true;
+        });
+    }
+
+    protected WrappingValidator createEmailValidator() {
+        return WrappingValidator.<String>of((context, key, value, problems) -> {
 
             if (Validation.isBlank(value)) {
                 problems.add(ValidationProblem.error(key, Messages.MISSING_EMAIL));
@@ -28,74 +57,18 @@ public class DefaultValidatorProvider implements ValidatorProvider {
             }
 
             return true;
-        }, 1010.0);
+        });
+    }
 
-        DelegatingValidator usernameValidator = DelegatingValidator.forNamedProperty(Validation.FIELD_USERNAME, UserModel.class, this::extractUsername, (context, key, value, problems) -> {
-            if (!context.getRealm().isRegistrationEmailAsUsername() && context.getAttributeBoolean("userNameRequired") && Validation.isBlank(value)) {
+    protected WrappingValidator createUsernameValidator() {
+        return WrappingValidator.<String>of((context, key, value, problems) -> {
+            if (!context.getRealm().isRegistrationEmailAsUsername()
+                    && context.getAttributeBoolean("userNameRequired")
+                    && Validation.isBlank(value)) {
                 problems.add(ValidationProblem.error(key, Messages.MISSING_USERNAME));
                 return false;
             }
             return true;
-        }, 1000.0);
-
-        DelegatingValidator firstnameValidator = DelegatingValidator.forNamedProperty(Validation.FIELD_FIRST_NAME, UserModel.class, this::extractFirstname, (context, key, value, problems) -> {
-            if (Validation.isBlank(value)) {
-                problems.add(ValidationProblem.error(key, Messages.MISSING_FIRST_NAME));
-                return false;
-            }
-            return true;
-        }, 1000.0);
-
-        DelegatingValidator lastnameValidator = DelegatingValidator.forNamedProperty(Validation.FIELD_LAST_NAME, UserModel.class, this::extractLastname, (context, key, value, problems) -> {
-            if (Validation.isBlank(value)) {
-                problems.add(ValidationProblem.error(key, Messages.MISSING_LAST_NAME));
-                return false;
-            }
-            return true;
-        }, 1000.0);
-
-        // TODO add additional validators
-
-        validatorRegistry.register(UserModel.class, firstnameValidator);
-        validatorRegistry.register(UserModel.class, lastnameValidator);
-        validatorRegistry.register(UserModel.class, emailValidator);
-        validatorRegistry.register(UserModel.class, usernameValidator);
-    }
-
-    protected String extractEmail(Object o) {
-        if (o instanceof UserModel) {
-            return ((UserModel) o).getEmail();
-        } else if (o instanceof MultivaluedMap) { // Form Posts
-            return ((MultivaluedMap<String, String>) o).getFirst(Validation.FIELD_EMAIL);
-        }
-        return null;
-    }
-
-    protected String extractUsername(Object o) {
-        if (o instanceof UserModel) {
-            return ((UserModel) o).getUsername();
-        } else if (o instanceof MultivaluedMap) { // Form Posts
-            return ((MultivaluedMap<String, String>) o).getFirst(Validation.FIELD_USERNAME);
-        }
-        return null;
-    }
-
-    protected String extractLastname(Object o) {
-        if (o instanceof UserModel) {
-            return ((UserModel) o).getLastName();
-        } else if (o instanceof MultivaluedMap) { // Form Posts
-            return ((MultivaluedMap<String, String>) o).getFirst(Validation.FIELD_LAST_NAME);
-        }
-        return null;
-    }
-
-
-    protected String extractFirstname(Object o) {
-        if (o instanceof UserModel) {
-            return ((UserModel) o).getFirstName();
-        } else if (o instanceof MultivaluedMap) { // Form Posts
-            return ((MultivaluedMap<String, String>) o).getFirst(Validation.FIELD_FIRST_NAME);
-        }
-        return null;
+        });
     }
 }

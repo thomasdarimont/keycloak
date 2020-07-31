@@ -7,6 +7,7 @@ import org.keycloak.provider.ProviderFactory;
 import org.keycloak.services.validation.validators.DefaultValidatorRegistry;
 import org.keycloak.validation.ValidationProvider;
 import org.keycloak.validation.ValidationProviderFactory;
+import org.keycloak.validation.validator.Validator;
 import org.keycloak.validation.validator.ValidatorProvider;
 import org.keycloak.validation.validator.ValidatorRegistry;
 
@@ -33,7 +34,8 @@ public class DefaultValidationProviderFactory implements ValidationProviderFacto
     }
 
     protected ValidatorRegistry createValidatorRegistry(KeycloakSessionFactory keycloakSessionFactory) {
-        ValidatorRegistry validatorRegistry = new DefaultValidatorRegistry();
+
+        DefaultValidatorRegistry validatorRegistry = new DefaultValidatorRegistry();
 
         KeycloakSession keycloakSession = keycloakSessionFactory.create();
         List<ProviderFactory> providerFactories = keycloakSessionFactory.getProviderFactories(ValidatorProvider.class);
@@ -42,6 +44,7 @@ public class DefaultValidationProviderFactory implements ValidationProviderFacto
             ValidatorProvider validatorProvider = (ValidatorProvider) providerFactory.create(keycloakSession);
             validatorProvider.register(validatorRegistry);
         }
+
         return validatorRegistry;
     }
 

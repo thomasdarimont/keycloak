@@ -20,7 +20,7 @@ import org.keycloak.provider.Provider;
 
 public interface ValidationProvider extends Provider {
 
-    <T> ValidationResult validate(String key, T target, ValidationContext context);
+    <V> ValidationResult validate(String key, V value, ValidationContext context);
 
     @Override
     default void close() {

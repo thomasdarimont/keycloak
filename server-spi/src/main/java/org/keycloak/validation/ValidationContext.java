@@ -7,23 +7,50 @@ import java.util.Map;
 
 public class ValidationContext {
 
+    public static String USER_USERNAME_VALIDATION_KEY = "user.username";
+
+    public static String USER_EMAIL_VALIDATION_KEY = "user.email";
+
+    public static String USER_FIRSTNAME_VALIDATION_KEY = "user.firstname";
+
+    public static String USER_LASTNAME_VALIDATION_KEY = "user.lastname";
+
+    public interface ValidationContextKey {
+
+        String PROFILE_UPDATE = "user-profile-update";
+
+        String REGISTRATION = "user-registration";
+    }
+
+    public interface ValidationTarget {
+
+        interface User {
+
+            String USERNAME = "user.username";
+
+            String EMAIL = "user.email";
+
+            String FIRSTNAME = "user.firstname";
+
+            String LASTNAME = "user.lastname";
+
+        }
+    }
+
     private final RealmModel realm;
 
     // user registration, user profile update, client registration, realm creation
     private final String contextKey;
 
-    private final Class<?> targetType;
-
     private final Map<String, Object> attributes;
 
-    public ValidationContext(RealmModel realm, String contextKey, Class<?> targetType) {
-        this(realm, contextKey, targetType, Collections.emptyMap());
+    public ValidationContext(RealmModel realm, String contextKey) {
+        this(realm, contextKey, Collections.emptyMap());
     }
 
-    public ValidationContext(RealmModel realm, String contextKey, Class<?> targetType, Map<String, Object> attributes) {
+    public ValidationContext(RealmModel realm, String contextKey, Map<String, Object> attributes) {
         this.realm = realm;
         this.contextKey = contextKey;
-        this.targetType = targetType;
         this.attributes = attributes;
     }
 
@@ -33,10 +60,6 @@ public class ValidationContext {
 
     public String getContextKey() {
         return contextKey;
-    }
-
-    public Class<?> getTargetType() {
-        return targetType;
     }
 
     public Map<String, Object> getAttributes() {

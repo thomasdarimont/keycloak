@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface ValidatorRegistry {
 
-    List<Validator> getValidators(ValidationContext context);
+    List<Validator> getValidators(ValidationContext context, String key);
 
-    void register(Class<?> targetType, Validator validator);
+    void register(String key, Validator validator, double order, String... contextKeys);
 }
