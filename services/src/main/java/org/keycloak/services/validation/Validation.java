@@ -33,7 +33,6 @@ import javax.ws.rs.core.MultivaluedMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class Validation {
 
@@ -151,7 +150,6 @@ public class Validation {
     public static boolean isEmailValid(String email) {
         return EMAIL_PATTERN.matcher(email).matches();
     }
-
 
     public static List<FormMessage> getFormErrorsFromValidation(UserProfileValidationResult results) {
         List<FormMessage> errors = new ArrayList<>();
