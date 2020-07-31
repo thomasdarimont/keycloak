@@ -79,6 +79,7 @@ import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.storage.ReadOnlyException;
 import org.keycloak.util.JsonSerialization;
 import org.keycloak.utils.CredentialHelper;
+import org.keycloak.validation.ValidationProvider;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
@@ -361,7 +362,8 @@ public class AccountFormService extends AbstractSecuredLocalService {
 
         event.event(EventType.UPDATE_PROFILE).client(auth.getClient()).user(auth.getUser());
 
-        List<FormMessage> errors = Validation.validateUpdateProfileForm(realm, formData);
+        ValidationProvider validationProvider = session.getProvider(ValidationProvider.class);
+        List<FormMessage> errors = Validation.validateUpdateProfileForm(realm, formData, validationProvider);
         if (errors != null && !errors.isEmpty()) {
             setReferrerOnPage();
             return account.setErrors(Status.OK, errors).setProfileFormData(formData).createResponse(AccountPages.ACCOUNT);

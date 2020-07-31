@@ -21,14 +21,19 @@ import org.keycloak.authentication.requiredactions.util.UpdateProfileContext;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.PasswordPolicy;
 import org.keycloak.models.RealmModel;
+import org.keycloak.models.UserModel;
 import org.keycloak.models.utils.FormMessage;
 import org.keycloak.policy.PasswordPolicyManagerProvider;
 import org.keycloak.policy.PolicyError;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.services.messages.Messages;
+import org.keycloak.validation.ValidationContext;
+import org.keycloak.validation.ValidationProvider;
+import org.keycloak.validation.ValidationResult;
 
 import javax.ws.rs.core.MultivaluedMap;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -40,7 +45,7 @@ public class Validation {
     public static final String FIELD_FIRST_NAME = "firstName";
     public static final String FIELD_PASSWORD = "password";
     public static final String FIELD_USERNAME = "username";
-    
+
     // Actually allow same emails like angular. See ValidationTest.testEmailValidation()
     private static final Pattern EMAIL_PATTERN = Pattern.compile("[a-zA-Z0-9!#$%&'*+/=?^_`{|}~.-]+@[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)*");
 
@@ -78,66 +83,86 @@ public class Validation {
             if (err != null)
                 errors.add(new FormMessage(FIELD_PASSWORD, err.getMessage(), err.getParameters()));
         }
-        
+
         return errors;
     }
-    
+
     private static void addError(List<FormMessage> errors, String field, String message){
         errors.add(new FormMessage(field, message));
     }
 
-    public static List<FormMessage> validateUpdateProfileForm(RealmModel realm, MultivaluedMap<String, String> formData) {
-        return validateUpdateProfileForm(realm, formData, realm.isEditUsernameAllowed());
+    public static List<FormMessage> validateUpdateProfileForm(RealmModel realm, MultivaluedMap<String, String> formData, ValidationProvider validationProvider) {
+        return validateUpdateProfileForm(realm, formData, realm.isEditUsernameAllowed(), validationProvider);
     }
-    
-    public static List<FormMessage> validateUpdateProfileForm(RealmModel realm, MultivaluedMap<String, String> formData, boolean userNameRequired) {
+
+    public static List<FormMessage> validateUpdateProfileForm(RealmModel realm, MultivaluedMap<String, String> formData, boolean userNameRequired, ValidationProvider validationProvider) {
+
+        ValidationContext context = new ValidationContext(realm, "update-profile", UserModel.class, Collections.singletonMap("userNameRequired", userNameRequired));
+
         List<FormMessage> errors = new ArrayList<>();
-        
-        if (!realm.isRegistrationEmailAsUsername() && userNameRequired && isBlank(formData.getFirst(FIELD_USERNAME))) {
-            addError(errors, FIELD_USERNAME, Messages.MISSING_USERNAME);
-        }
 
-        if (isBlank(formData.getFirst(FIELD_FIRST_NAME))) {
-            addError(errors, FIELD_FIRST_NAME, Messages.MISSING_FIRST_NAME);
-        }
+//        if (!realm.isRegistrationEmailAsUsername() && userNameRequired && isBlank(formData.getFirst(FIELD_USERNAME))) {
+//            addError(errors, FIELD_USERNAME, Messages.MISSING_USERNAME);
+//        }
+//
+//        if (isBlank(formData.getFirst(FIELD_FIRST_NAME))) {
+//            addError(errors, FIELD_FIRST_NAME, Messages.MISSING_FIRST_NAME);
+//        }
+//
+//        if (isBlank(formData.getFirst(FIELD_LAST_NAME))) {
+//            addError(errors, FIELD_LAST_NAME, Messages.MISSING_LAST_NAME);
+//        }
 
-        if (isBlank(formData.getFirst(FIELD_LAST_NAME))) {
-            addError(errors, FIELD_LAST_NAME, Messages.MISSING_LAST_NAME);
-        }
+//        String email = formData.getFirst(FIELD_EMAIL);
+//        if (isBlank(email)) {
+//            addError(errors, FIELD_EMAIL, Messages.MISSING_EMAIL);
+//        } else if (!isEmailValid(email)) {
+//            addError(errors, FIELD_EMAIL, Messages.INVALID_EMAIL);
+//        }
 
-        if (isBlank(formData.getFirst(FIELD_EMAIL))) {
-            addError(errors, FIELD_EMAIL, Messages.MISSING_EMAIL);
-        } else if (!isEmailValid(formData.getFirst(FIELD_EMAIL))) {
-            addError(errors, FIELD_EMAIL, Messages.INVALID_EMAIL);
-        }
+        validationProvider.validate(FIELD_USERNAME, formData, context).onError(res -> {
+            res.getErrors().forEach(p -> addError(errors, FIELD_USERNAME, p.getMessage()));
+        });
+
+        validationProvider.validate(FIELD_FIRST_NAME, formData, context).onError(res -> {
+            res.getErrors().forEach(p -> addError(errors, FIELD_FIRST_NAME, p.getMessage()));
+        });
+
+        validationProvider.validate(FIELD_LAST_NAME, formData, context).onError(res -> {
+            res.getErrors().forEach(p -> addError(errors, FIELD_LAST_NAME, p.getMessage()));
+        });
+
+        validationProvider.validate(FIELD_EMAIL, formData, context).onError(res -> {
+            res.getErrors().forEach(p -> addError(errors, FIELD_EMAIL, p.getMessage()));
+        });
 
         return errors;
     }
-    
+
     /**
      * Validate if user object contains all mandatory fields.
-     * 
+     *
      * @param realm user is for
      * @param user to validate
      * @return true if user object contains all mandatory values, false if some mandatory value is missing
      */
     public static boolean validateUserMandatoryFields(RealmModel realm, UpdateProfileContext user){
-        return!(isBlank(user.getFirstName()) || isBlank(user.getLastName()) || isBlank(user.getEmail()));        
+        return!(isBlank(user.getFirstName()) || isBlank(user.getLastName()) || isBlank(user.getEmail()));
     }
 
     /**
      * Check if string is empty (null or lenght is 0)
-     * 
+     *
      * @param s to check
      * @return true if string is empty
      */
     public static boolean isEmpty(String s) {
         return s == null || s.length() == 0;
     }
-    
+
     /**
      * Check if string is blank (null or lenght is 0 or contains only white characters)
-     * 
+     *
      * @param s to check
      * @return true if string is blank
      */

@@ -36,11 +36,10 @@ import org.keycloak.services.ErrorResponseException;
 import org.keycloak.services.ForbiddenException;
 import org.keycloak.services.clientpolicy.AdminClientRegisterContext;
 import org.keycloak.services.clientpolicy.ClientPolicyException;
-import org.keycloak.services.clientpolicy.DefaultClientPolicyManager;
 import org.keycloak.services.managers.ClientManager;
 import org.keycloak.services.managers.RealmManager;
 import org.keycloak.services.resources.admin.permissions.AdminPermissionEvaluator;
-import org.keycloak.services.validation.ClientValidator;
+import org.keycloak.services.validation.ClientValidation;
 import org.keycloak.services.validation.PairwiseClientValidator;
 import org.keycloak.services.validation.ValidationMessages;
 import org.keycloak.validation.ClientValidationUtil;
@@ -180,7 +179,7 @@ public class ClientsResource {
         auth.clients().requireManage();
 
         ValidationMessages validationMessages = new ValidationMessages();
-        if (!ClientValidator.validate(rep, validationMessages) || !PairwiseClientValidator.validate(session, rep, validationMessages)) {
+        if (!ClientValidation.validate(rep, validationMessages) || !PairwiseClientValidator.validate(session, rep, validationMessages)) {
             Properties messages = AdminRoot.getMessages(session, realm, auth.adminAuth().getToken().getLocale());
             throw new ErrorResponseException(
                     validationMessages.getStringMessages(),

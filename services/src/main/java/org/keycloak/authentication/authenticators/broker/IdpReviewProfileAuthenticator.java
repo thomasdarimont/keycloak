@@ -35,6 +35,7 @@ import org.keycloak.models.utils.FormMessage;
 import org.keycloak.representations.idm.IdentityProviderRepresentation;
 import org.keycloak.services.resources.AttributeFormDataProcessor;
 import org.keycloak.services.validation.Validation;
+import org.keycloak.validation.ValidationProvider;
 
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
@@ -99,7 +100,8 @@ public class IdpReviewProfileAuthenticator extends AbstractIdpAuthenticator {
 
         RealmModel realm = context.getRealm();
 
-        List<FormMessage> errors = Validation.validateUpdateProfileForm(realm, formData, userCtx.isEditUsernameAllowed());
+        ValidationProvider validationProvider = context.getSession().getProvider(ValidationProvider.class);
+        List<FormMessage> errors = Validation.validateUpdateProfileForm(realm, formData, userCtx.isEditUsernameAllowed(), validationProvider);
         if (errors != null && !errors.isEmpty()) {
             Response challenge = context.form()
                     .setErrors(errors)
