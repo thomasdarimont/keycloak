@@ -19,14 +19,6 @@ public class ValidationResult {
         this.problems = new ArrayList<>(problems);
     }
 
-    public ValidationResult(ValidationResult first, ValidationResult second) {
-        this.valid = first.isValid() && second.isValid();
-        List<ValidationProblem> problems = new ArrayList<>();
-        problems.addAll(first.getProblems());
-        problems.addAll(second.getProblems());
-        this.problems = problems;
-    }
-
     public boolean isOk() {
         return this == OK;
     }

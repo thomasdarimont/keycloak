@@ -4,9 +4,19 @@ import org.keycloak.validation.ValidationContext;
 
 import java.util.List;
 
+/**
+ * A registry for Validators.
+ */
 public interface ValidatorRegistry {
 
-    List<Validator> getValidators(ValidationContext context, String key);
+    /**
+     * Retruns all validators, that are eligible for the given key and {@link ValidationContext}.
+     *
+     * @param context
+     * @param key
+     * @return
+     */
+    List<Validator<?>> getValidators(ValidationContext context, String key);
 
-    void register(String key, Validator validator, double order, String... contextKeys);
+    void register(String key, Validator<?> validator, double order, String... contextKeys);
 }

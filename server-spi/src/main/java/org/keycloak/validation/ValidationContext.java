@@ -34,6 +34,7 @@ public class ValidationContext {
     // user registration, user profile update, client registration, realm creation
     private final String contextKey;
 
+    // additional context specific attributes
     private final Map<String, Object> attributes;
 
     public ValidationContext(RealmModel realm, String contextKey) {

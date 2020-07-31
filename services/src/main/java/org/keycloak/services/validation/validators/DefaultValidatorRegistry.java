@@ -15,7 +15,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
+/**
+ * Default {@link ValidatorRegistry} implementation.
+ */
 public class DefaultValidatorRegistry implements ValidatorRegistry {
+
+    // TODO make validator lookup / storage more efficient
 
     // validator on top of keys
     // user validators
@@ -30,11 +35,11 @@ public class DefaultValidatorRegistry implements ValidatorRegistry {
     private final ConcurrentMap<String, SortedSet<ValidatorRegistration>> validatorRegistrations = new ConcurrentHashMap<>();
 
     @Override
-    public List<Validator> getValidators(ValidationContext context, String key) {
+    public List<Validator<?>> getValidators(ValidationContext context, String key) {
         return filterValidators(validatorRegistrations.getOrDefault(key, Collections.emptySortedSet()), context);
     }
 
-    protected List<Validator> filterValidators(SortedSet<ValidatorRegistration> validators, ValidationContext context) {
+    protected List<Validator<?>> filterValidators(SortedSet<ValidatorRegistration> validators, ValidationContext context) {
         return validators.stream()
                 .map(ValidatorRegistration::getValidator)
                 .filter(v -> v.isSupported(context) && v.isEnabled(context))
@@ -42,7 +47,7 @@ public class DefaultValidatorRegistry implements ValidatorRegistry {
     }
 
     @Override
-    public void register(String key, Validator validator, double order, String... contextKeys) {
+    public void register(String key, Validator<?> validator, double order, String... contextKeys) {
         validatorRegistrations.computeIfAbsent(key, t -> new TreeSet<>())
                 .add(new ValidatorRegistration(key, validator, order, new LinkedHashSet<>(Arrays.asList(contextKeys))));
     }

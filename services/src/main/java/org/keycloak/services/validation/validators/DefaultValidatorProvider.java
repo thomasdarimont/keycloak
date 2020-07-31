@@ -24,7 +24,7 @@ public class DefaultValidatorProvider implements ValidatorProvider {
     }
 
     protected Validator<String> createLastnameValidator() {
-        return (key, value, context, problems) -> {
+        return (key, value, context, problems, session) -> {
             if (Validation.isBlank(value)) {
                 problems.add(ValidationProblem.error(key, Messages.MISSING_LAST_NAME));
                 return false;
@@ -34,7 +34,7 @@ public class DefaultValidatorProvider implements ValidatorProvider {
     }
 
     protected Validator<String> createFirstnameValidator() {
-        return (key, value, context, problems) -> {
+        return (key, value, context, problems, session) -> {
             if (Validation.isBlank(value)) {
                 problems.add(ValidationProblem.error(key, Messages.MISSING_FIRST_NAME));
                 return false;
@@ -44,7 +44,7 @@ public class DefaultValidatorProvider implements ValidatorProvider {
     }
 
     protected Validator<String> createEmailValidator() {
-        return (key, value, context, problems) -> {
+        return (key, value, context, problems, session) -> {
 
             if (Validation.isBlank(value)) {
                 problems.add(ValidationProblem.error(key, Messages.MISSING_EMAIL));
@@ -61,7 +61,7 @@ public class DefaultValidatorProvider implements ValidatorProvider {
     }
 
     protected Validator<String> createUsernameValidator() {
-        return (key, value, context, problems) -> {
+        return (key, value, context, problems, session) -> {
             if (!context.getRealm().isRegistrationEmailAsUsername()
                     && context.getAttributeBoolean("userNameRequired")
                     && Validation.isBlank(value)) {

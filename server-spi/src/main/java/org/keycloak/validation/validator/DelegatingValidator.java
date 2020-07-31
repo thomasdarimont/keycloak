@@ -1,5 +1,6 @@
 package org.keycloak.validation.validator;
 
+import org.keycloak.models.KeycloakSession;
 import org.keycloak.validation.ValidationContext;
 import org.keycloak.validation.ValidationProblem;
 
@@ -25,8 +26,8 @@ public class DelegatingValidator<V> implements Validator<V> {
     }
 
     @Override
-    public boolean validate(String key, V value, ValidationContext context, List<ValidationProblem> problems) {
-        return this.delegate.validate(key, value, context, problems);
+    public boolean validate(String key, V value, ValidationContext context, List<ValidationProblem> problems, KeycloakSession session) {
+        return this.delegate.validate(key, value, context, problems, session);
     }
 
     public boolean isEnabled(ValidationContext validationContext) {
