@@ -1,4 +1,4 @@
-package org.keycloak.validation.validator;
+package org.keycloak.validation;
 
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.validation.ValidationContext;
@@ -7,10 +7,10 @@ import org.keycloak.validation.ValidationProblem;
 import java.util.List;
 
 /**
- * A generic Validator interface.
+ * A generic Validation interface.
  * @param <V>
  */
-public interface Validator<V> {
+public interface Validation<V> {
 
     /**
      * Validates the given value in the current {@link ValidationContext}.

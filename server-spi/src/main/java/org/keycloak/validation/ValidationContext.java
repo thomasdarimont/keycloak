@@ -7,6 +7,7 @@ import java.util.Map;
 
 public class ValidationContext {
 
+    // Note we use Strings here instead of enums to ease adding custom Keys
     public interface ValidationContextKey {
 
         String PROFILE_UPDATE = "user-profile-update";
@@ -14,6 +15,7 @@ public class ValidationContext {
         String REGISTRATION = "user-registration";
     }
 
+    // Note we use Strings here instead of enums to ease adding custom Keys
     public interface ValidationTarget {
 
         interface User {

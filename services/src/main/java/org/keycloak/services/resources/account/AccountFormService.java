@@ -28,9 +28,6 @@ import org.keycloak.authorization.store.PolicyStore;
 import org.keycloak.common.util.Base64Url;
 import org.keycloak.common.util.Time;
 import org.keycloak.common.util.UriUtils;
-import org.keycloak.credential.CredentialModel;
-import org.keycloak.credential.CredentialProvider;
-import org.keycloak.credential.OTPCredentialProvider;
 import org.keycloak.events.Details;
 import org.keycloak.events.Errors;
 import org.keycloak.events.Event;
@@ -79,7 +76,7 @@ import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.storage.ReadOnlyException;
 import org.keycloak.util.JsonSerialization;
 import org.keycloak.utils.CredentialHelper;
-import org.keycloak.validation.ValidationProvider;
+import org.keycloak.validation.ValidatorProvider;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
@@ -362,8 +359,8 @@ public class AccountFormService extends AbstractSecuredLocalService {
 
         event.event(EventType.UPDATE_PROFILE).client(auth.getClient()).user(auth.getUser());
 
-        ValidationProvider validationProvider = session.getProvider(ValidationProvider.class);
-        List<FormMessage> errors = Validation.validateUpdateProfileForm(realm, formData, validationProvider);
+        ValidatorProvider validator = session.getProvider(ValidatorProvider.class);
+        List<FormMessage> errors = Validation.validateUpdateProfileForm(realm, formData, validator);
         if (errors != null && !errors.isEmpty()) {
             setReferrerOnPage();
             return account.setErrors(Status.OK, errors).setProfileFormData(formData).createResponse(AccountPages.ACCOUNT);

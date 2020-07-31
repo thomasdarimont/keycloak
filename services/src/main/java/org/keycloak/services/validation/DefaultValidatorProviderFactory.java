@@ -4,23 +4,23 @@ import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.provider.ProviderFactory;
-import org.keycloak.services.validation.validators.DefaultValidatorRegistry;
+import org.keycloak.services.validation.validators.DefaultValidationRegistry;
+import org.keycloak.validation.ValidatorProvider;
+import org.keycloak.validation.ValidatorProviderFactory;
 import org.keycloak.validation.ValidationProvider;
-import org.keycloak.validation.ValidationProviderFactory;
-import org.keycloak.validation.validator.ValidatorProvider;
-import org.keycloak.validation.validator.ValidatorRegistry;
+import org.keycloak.validation.ValidationRegistry;
 
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-public class DefaultValidationProviderFactory implements ValidationProviderFactory {
+public class DefaultValidatorProviderFactory implements ValidatorProviderFactory {
 
-    private ValidatorRegistry validatorRegistry;
+    private ValidationRegistry validatorRegistry;
 
     @Override
-    public ValidationProvider create(KeycloakSession session) {
-        return new DefaultValidationProvider(session, validatorRegistry);
+    public ValidatorProvider create(KeycloakSession session) {
+        return new DefaultValidatorProvider(session, validatorRegistry);
     }
 
     @Override
@@ -33,18 +33,18 @@ public class DefaultValidationProviderFactory implements ValidationProviderFacto
         this.validatorRegistry = createValidatorRegistry(keycloakSessionFactory);
     }
 
-    protected ValidatorRegistry createValidatorRegistry(KeycloakSessionFactory keycloakSessionFactory) {
+    protected ValidationRegistry createValidatorRegistry(KeycloakSessionFactory keycloakSessionFactory) {
 
-        DefaultValidatorRegistry validatorRegistry = new DefaultValidatorRegistry();
+        DefaultValidationRegistry validatorRegistry = new DefaultValidationRegistry();
 
         KeycloakSession keycloakSession = keycloakSessionFactory.create();
-        List<ProviderFactory> providerFactories = keycloakSessionFactory.getProviderFactories(ValidatorProvider.class);
+        List<ProviderFactory> providerFactories = keycloakSessionFactory.getProviderFactories(ValidationProvider.class);
 
         Collections.sort(providerFactories, Comparator.comparing(ProviderFactory::order));
 
         for (ProviderFactory providerFactory : providerFactories) {
             providerFactory.postInit(keycloakSessionFactory);
-            ValidatorProvider validatorProvider = (ValidatorProvider) providerFactory.create(keycloakSession);
+            ValidationProvider validatorProvider = (ValidationProvider) providerFactory.create(keycloakSession);
             validatorProvider.register(validatorRegistry);
         }
 

@@ -3,18 +3,18 @@ package org.keycloak.services.validation.validators;
 import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
-import org.keycloak.validation.validator.ValidatorProvider;
-import org.keycloak.validation.validator.ValidatorProviderFactory;
+import org.keycloak.validation.ValidationProvider;
+import org.keycloak.validation.ValidationProviderFactory;
 
-public class DefaultValidatorProviderFactory implements ValidatorProviderFactory {
+public class DefaultValidationProviderFactory implements ValidationProviderFactory {
 
-    // Custom Validator provider factories should be ordered AFTER this, to be able to override default validators.
+    // Custom Validation provider factories should be ordered AFTER this, to be able to override default validators.
     public static final int ORDER = 1000;
 
-    private static final DefaultValidatorProvider INSTANCE = new DefaultValidatorProvider();
+    private static final DefaultValidationProvider INSTANCE = new DefaultValidationProvider();
 
     @Override
-    public ValidatorProvider create(KeycloakSession session) {
+    public ValidationProvider create(KeycloakSession session) {
         return INSTANCE;
     }
 

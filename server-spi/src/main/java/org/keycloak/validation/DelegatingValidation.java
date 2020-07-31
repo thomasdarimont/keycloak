@@ -1,25 +1,23 @@
-package org.keycloak.validation.validator;
+package org.keycloak.validation;
 
 import org.keycloak.models.KeycloakSession;
-import org.keycloak.validation.ValidationContext;
-import org.keycloak.validation.ValidationProblem;
 
 import java.util.List;
 import java.util.function.Predicate;
 
-public class DelegatingValidator<V> implements Validator<V> {
+public class DelegatingValidation<V> implements Validation<V> {
 
-    private final Validator<V> delegate;
+    private final Validation<V> delegate;
 
     private final Predicate<ValidationContext> enabledCheck;
 
     private final Predicate<ValidationContext> supportedCheck;
 
-    public DelegatingValidator(Validator<V> delegate) {
+    public DelegatingValidation(Validation<V> delegate) {
         this(delegate, c -> true, c -> true);
     }
 
-    public DelegatingValidator(Validator<V> delegate, Predicate<ValidationContext> enabledCheck, Predicate<ValidationContext> supportedCheck) {
+    public DelegatingValidation(Validation<V> delegate, Predicate<ValidationContext> enabledCheck, Predicate<ValidationContext> supportedCheck) {
         this.delegate = delegate;
         this.enabledCheck = enabledCheck;
         this.supportedCheck = supportedCheck;

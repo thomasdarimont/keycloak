@@ -1,9 +1,9 @@
 package org.keycloak.services.validation.validators;
 
 import org.keycloak.validation.ValidationContext;
-import org.keycloak.validation.validator.Validator;
-import org.keycloak.validation.validator.ValidatorRegistration;
-import org.keycloak.validation.validator.ValidatorRegistry;
+import org.keycloak.validation.Validation;
+import org.keycloak.validation.ValidationRegistration;
+import org.keycloak.validation.ValidationRegistry;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -16,9 +16,9 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 /**
- * Default {@link ValidatorRegistry} implementation.
+ * Default {@link ValidationRegistry} implementation.
  */
-public class DefaultValidatorRegistry implements ValidatorRegistry {
+public class DefaultValidationRegistry implements ValidationRegistry {
 
     // TODO make validator lookup / storage more efficient
 
@@ -32,23 +32,23 @@ public class DefaultValidatorRegistry implements ValidatorRegistry {
     // role validators
     // protocol mapper validators
     // ...
-    private final ConcurrentMap<String, SortedSet<ValidatorRegistration>> validatorRegistrations = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, SortedSet<ValidationRegistration>> validatorRegistrations = new ConcurrentHashMap<>();
 
     @Override
-    public List<Validator<?>> getValidators(ValidationContext context, String key) {
+    public List<Validation<?>> getValidations(ValidationContext context, String key) {
         return filterValidators(validatorRegistrations.getOrDefault(key, Collections.emptySortedSet()), context);
     }
 
-    protected List<Validator<?>> filterValidators(SortedSet<ValidatorRegistration> validators, ValidationContext context) {
+    protected List<Validation<?>> filterValidators(SortedSet<ValidationRegistration> validators, ValidationContext context) {
         return validators.stream()
-                .map(ValidatorRegistration::getValidator)
+                .map(ValidationRegistration::getValidation)
                 .filter(v -> v.isSupported(context) && v.isEnabled(context))
                 .collect(Collectors.toList());
     }
 
     @Override
-    public void register(String key, Validator<?> validator, double order, String... contextKeys) {
+    public void register(String key, Validation<?> validation, double order, String... contextKeys) {
         validatorRegistrations.computeIfAbsent(key, t -> new TreeSet<>())
-                .add(new ValidatorRegistration(key, validator, order, new LinkedHashSet<>(Arrays.asList(contextKeys))));
+                .add(new ValidationRegistration(key, validation, order, new LinkedHashSet<>(Arrays.asList(contextKeys))));
     }
 }

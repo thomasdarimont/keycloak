@@ -1,30 +1,31 @@
 package org.keycloak.services.validation;
 
 import org.keycloak.models.KeycloakSession;
+import org.keycloak.validation.Validation;
 import org.keycloak.validation.ValidationContext;
 import org.keycloak.validation.ValidationProblem;
-import org.keycloak.validation.ValidationProvider;
+import org.keycloak.validation.ValidationRegistry;
 import org.keycloak.validation.ValidationResult;
-import org.keycloak.validation.validator.Validator;
-import org.keycloak.validation.validator.ValidatorRegistry;
+import org.keycloak.validation.ValidatorProvider;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class DefaultValidationProvider implements ValidationProvider {
+public class DefaultValidatorProvider implements ValidatorProvider {
 
     private final KeycloakSession session;
-    private final ValidatorRegistry validatorRegistry;
+    private final ValidationRegistry validatorRegistry;
 
-    public DefaultValidationProvider(KeycloakSession session, ValidatorRegistry validatorRegistry) {
+    public DefaultValidatorProvider(KeycloakSession session, ValidationRegistry validatorRegistry) {
         this.session = session;
         this.validatorRegistry = validatorRegistry;
     }
 
     @Override
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public <V> ValidationResult validate(String key, V value, ValidationContext context) {
 
-        List<Validator<?>> validators = validatorRegistry.getValidators(context, key);
+        List<Validation<?>> validators = validatorRegistry.getValidations(context, key);
 
         if (validators == null || validators.isEmpty()) {
             return null;
@@ -32,10 +33,12 @@ public class DefaultValidationProvider implements ValidationProvider {
 
         List<ValidationProblem> problems = new ArrayList<>();
         boolean valid = true;
-        for (Validator validator : validators) {
-            valid &= validator.validate(key, value, context, problems, session);
 
+        // TODO fix generics
+        for (Validation validator : validators) {
+            valid &= validator.validate(key, value, context, problems, session);
         }
+
         return new ValidationResult(valid, problems);
     }
 }
