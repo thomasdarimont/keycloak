@@ -4,9 +4,9 @@ import org.keycloak.services.messages.Messages;
 import org.keycloak.services.validation.Validation;
 import org.keycloak.validation.ValidationContext.ValidationContextKey;
 import org.keycloak.validation.ValidationProblem;
+import org.keycloak.validation.validator.Validator;
 import org.keycloak.validation.validator.ValidatorProvider;
 import org.keycloak.validation.validator.ValidatorRegistry;
-import org.keycloak.validation.validator.WrappingValidator;
 
 import static org.keycloak.validation.ValidationContext.ValidationTarget.User;
 
@@ -23,28 +23,28 @@ public class DefaultValidatorProvider implements ValidatorProvider {
         validatorRegistry.register(User.LASTNAME, createLastnameValidator(), 1300.0, ValidationContextKey.PROFILE_UPDATE);
     }
 
-    protected WrappingValidator createLastnameValidator() {
-        return WrappingValidator.<String>of((context, key, value, problems) -> {
+    protected Validator<String> createLastnameValidator() {
+        return (key, value, context, problems) -> {
             if (Validation.isBlank(value)) {
                 problems.add(ValidationProblem.error(key, Messages.MISSING_LAST_NAME));
                 return false;
             }
             return true;
-        });
+        };
     }
 
-    protected WrappingValidator createFirstnameValidator() {
-        return WrappingValidator.<String>of((context, key, value, problems) -> {
+    protected Validator<String> createFirstnameValidator() {
+        return (key, value, context, problems) -> {
             if (Validation.isBlank(value)) {
                 problems.add(ValidationProblem.error(key, Messages.MISSING_FIRST_NAME));
                 return false;
             }
             return true;
-        });
+        };
     }
 
-    protected WrappingValidator createEmailValidator() {
-        return WrappingValidator.<String>of((context, key, value, problems) -> {
+    protected Validator<String> createEmailValidator() {
+        return (key, value, context, problems) -> {
 
             if (Validation.isBlank(value)) {
                 problems.add(ValidationProblem.error(key, Messages.MISSING_EMAIL));
@@ -57,11 +57,11 @@ public class DefaultValidatorProvider implements ValidatorProvider {
             }
 
             return true;
-        });
+        };
     }
 
-    protected WrappingValidator createUsernameValidator() {
-        return WrappingValidator.<String>of((context, key, value, problems) -> {
+    protected Validator<String> createUsernameValidator() {
+        return (key, value, context, problems) -> {
             if (!context.getRealm().isRegistrationEmailAsUsername()
                     && context.getAttributeBoolean("userNameRequired")
                     && Validation.isBlank(value)) {
@@ -69,6 +69,6 @@ public class DefaultValidatorProvider implements ValidatorProvider {
                 return false;
             }
             return true;
-        });
+        };
     }
 }

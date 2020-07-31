@@ -7,14 +7,6 @@ import java.util.Map;
 
 public class ValidationContext {
 
-    public static String USER_USERNAME_VALIDATION_KEY = "user.username";
-
-    public static String USER_EMAIL_VALIDATION_KEY = "user.email";
-
-    public static String USER_FIRSTNAME_VALIDATION_KEY = "user.firstname";
-
-    public static String USER_LASTNAME_VALIDATION_KEY = "user.lastname";
-
     public interface ValidationContextKey {
 
         String PROFILE_UPDATE = "user-profile-update";

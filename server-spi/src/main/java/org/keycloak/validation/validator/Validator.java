@@ -1,11 +1,13 @@
 package org.keycloak.validation.validator;
 
 import org.keycloak.validation.ValidationContext;
-import org.keycloak.validation.ValidationResult;
+import org.keycloak.validation.ValidationProblem;
 
-public interface Validator {
+import java.util.List;
 
-    ValidationResult validate(String key, Object value, ValidationContext context);
+public interface Validator<V> {
+
+    boolean validate(String key, V value, ValidationContext context, List<ValidationProblem> problems);
 
     default boolean isEnabled(ValidationContext validationContext) {
         return true;

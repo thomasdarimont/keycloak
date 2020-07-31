@@ -1,11 +1,13 @@
 package org.keycloak.services.validation;
 
 import org.keycloak.validation.ValidationContext;
+import org.keycloak.validation.ValidationProblem;
 import org.keycloak.validation.ValidationProvider;
 import org.keycloak.validation.ValidationResult;
 import org.keycloak.validation.validator.Validator;
 import org.keycloak.validation.validator.ValidatorRegistry;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class DefaultValidationProvider implements ValidationProvider {
@@ -25,13 +27,12 @@ public class DefaultValidationProvider implements ValidationProvider {
             return null;
         }
 
-        ValidationResult result = ValidationResult.OK;
-
+        List<ValidationProblem> problems = new ArrayList<>();
+        boolean valid = true;
         for (Validator validator : validators) {
-            ValidationResult current = validator.validate(key, value, context);
-            result = new ValidationResult(result, current);
-        }
+            valid &= validator.validate(key, value, context, problems);
 
-        return result;
+        }
+        return new ValidationResult(valid, problems);
     }
 }
