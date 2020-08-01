@@ -4,7 +4,6 @@ import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.provider.ProviderFactory;
-import org.keycloak.services.validation.validators.DefaultValidationRegistry;
 import org.keycloak.validation.ValidatorProvider;
 import org.keycloak.validation.ValidatorProviderFactory;
 import org.keycloak.validation.ValidationProvider;

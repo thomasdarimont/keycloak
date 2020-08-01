@@ -1,4 +1,4 @@
-package org.keycloak.services.validation.validators;
+package org.keycloak.services.validation;
 
 import org.keycloak.validation.ValidationContext;
 import org.keycloak.validation.Validation;
