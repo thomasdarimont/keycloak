@@ -1,14 +1,12 @@
 package org.keycloak.services.validation;
 
-import org.keycloak.validation.ValidationContext;
 import org.keycloak.validation.Validation;
+import org.keycloak.validation.ValidationContext;
 import org.keycloak.validation.ValidationRegistration;
 import org.keycloak.validation.ValidationRegistry;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,7 +38,7 @@ public class DefaultValidationRegistry implements ValidationRegistry {
     @Override
     public Map<String, List<Validation<?>>> getValidations(ValidationContext context, Set<String> keys) {
         Map<String, List<Validation<?>>> validators = new LinkedHashMap<>();
-        for(String key : keys) {
+        for (String key : keys) {
             SortedSet<ValidationRegistration> validatorRegistrationsForKey = validatorRegistrations.getOrDefault(key, Collections.emptySortedSet());
             List<Validation<?>> validatorsForKey = filterValidators(validatorRegistrationsForKey, context);
             validators.put(key, validatorsForKey);

@@ -12,20 +12,20 @@ import static org.keycloak.validation.ValidationContext.ValidationTarget.User;
 public class DefaultValidationProvider implements ValidationProvider {
 
     @Override
-    public void register(ValidationRegistry validatorRegistry) {
+    public void register(ValidationRegistry validationRegistry) {
 
         // TODO add additional validators
 
-        validatorRegistry.register(User.USERNAME, createUsernameValidation(), 1000.0,
+        validationRegistry.register(User.USERNAME, createUsernameValidation(), 1000.0,
                 ValidationContextKey.PROFILE_UPDATE, ValidationContextKey.REGISTRATION);
 
-        validatorRegistry.register(User.EMAIL, createEmailValidation(), 1100.0,
+        validationRegistry.register(User.EMAIL, createEmailValidation(), 1100.0,
                 ValidationContextKey.PROFILE_UPDATE, ValidationContextKey.REGISTRATION);
 
-        validatorRegistry.register(User.FIRSTNAME, createFirstnameValidation(), 1200.0,
+        validationRegistry.register(User.FIRSTNAME, createFirstnameValidation(), 1200.0,
                 ValidationContextKey.PROFILE_UPDATE);
 
-        validatorRegistry.register(User.LASTNAME, createLastnameValidation(), 1300.0,
+        validationRegistry.register(User.LASTNAME, createLastnameValidation(), 1300.0,
                 ValidationContextKey.PROFILE_UPDATE);
     }
 

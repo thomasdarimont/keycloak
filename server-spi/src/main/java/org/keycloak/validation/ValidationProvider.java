@@ -6,9 +6,9 @@ public interface ValidationProvider extends Provider {
 
     /**
      * Registers new {@link Validation} implementations into the given {@link ValidationRegistry}.
-     * @param validatorRegistry
+     * @param validationRegistry
      */
-    void register(ValidationRegistry validatorRegistry);
+    void register(ValidationRegistry validationRegistry);
 
     default void close() {
         // NOOP
