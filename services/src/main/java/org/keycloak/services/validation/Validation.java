@@ -98,8 +98,7 @@ public class Validation {
 
     public static List<FormMessage> validateUpdateProfileForm(RealmModel realm, MultivaluedMap<String, String> formData, boolean userNameRequired, ValidatorProvider validator) {
 
-        ValidationContext context = new ValidationContext(realm, ValidationContextKey.PROFILE_UPDATE, Collections.singletonMap("userNameRequired", userNameRequired));
-        List<FormMessage> errors = new ArrayList<>();
+//        List<FormMessage> errors = new ArrayList<>();
 
 //        if (!realm.isRegistrationEmailAsUsername() && userNameRequired && isBlank(formData.getFirst(FIELD_USERNAME))) {
 //            addError(errors, FIELD_USERNAME, Messages.MISSING_USERNAME);
@@ -120,16 +119,21 @@ public class Validation {
 //            addError(errors, FIELD_EMAIL, Messages.INVALID_EMAIL);
 //        }
 
-        validator.validate(User.USERNAME, formData.getFirst(FIELD_USERNAME), context)
+        ValidationContext context = new ValidationContext(realm, ValidationContextKey.PROFILE_UPDATE,
+                Collections.singletonMap("userNameRequired", userNameRequired));
+
+        List<FormMessage> errors = new ArrayList<>();
+
+        validator.validate(context, formData.getFirst(FIELD_USERNAME), User.USERNAME)
                 .onError(res -> res.getErrors().forEach(p -> addError(errors, FIELD_USERNAME, p.getMessage())));
 
-        validator.validate(User.FIRSTNAME, formData.getFirst(FIELD_FIRST_NAME), context)
+        validator.validate(context, formData.getFirst(FIELD_FIRST_NAME), User.FIRSTNAME)
                 .onError(res -> res.getErrors().forEach(p -> addError(errors, FIELD_FIRST_NAME, p.getMessage())));
 
-        validator.validate(User.LASTNAME, formData.getFirst(FIELD_LAST_NAME), context)
+        validator.validate(context, formData.getFirst(FIELD_LAST_NAME), User.LASTNAME)
                 .onError(res -> res.getErrors().forEach(p -> addError(errors, FIELD_LAST_NAME, p.getMessage())));
 
-        validator.validate(User.EMAIL, formData.getFirst(FIELD_EMAIL), context)
+        validator.validate(context, formData.getFirst(FIELD_EMAIL), User.EMAIL)
                 .onError(res -> res.getErrors().forEach(p -> addError(errors, FIELD_EMAIL, p.getMessage())));
 
         return errors;

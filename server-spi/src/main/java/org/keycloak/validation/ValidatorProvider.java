@@ -18,9 +18,29 @@ package org.keycloak.validation;
 
 import org.keycloak.provider.Provider;
 
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+/**
+ * A {@link ValidatorProvider} validates a given value in the given {@link ValidationContext} according to validation rules.
+ */
 public interface ValidatorProvider extends Provider {
 
-    <V> ValidationResult validate(String key, V value, ValidationContext context);
+    /**
+     * Validates a given value in the given {@link ValidationContext} according to validation rules
+     * references by the given validation keys.
+     *
+     * @param context the {@link ValidationContext}
+     * @param value   the value to validate
+     * @param keys    the keys of the validators to use
+     * @return the {@link ValidationResult} with the validation outcome
+     */
+    <V> ValidationResult validate(ValidationContext context, V value, Set<String> keys);
+
+    default <V> ValidationResult validate(ValidationContext context, V value, String... keys) {
+        return validate(context, value, new LinkedHashSet<>(Arrays.asList(keys)));
+    }
 
     @Override
     default void close() {

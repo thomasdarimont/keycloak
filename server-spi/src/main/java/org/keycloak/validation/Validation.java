@@ -21,7 +21,7 @@ public interface Validation<V> {
      * @param context  the {@link ValidationContext}
      * @param problems the {@link List} of {@link ValidationProblem ValidationProblem's}
      * @param session  the {@link KeycloakSession}
-     * @return {@literal true} if the validation successed, {@literal false} otherwise.
+     * @return {@literal true} if the validation succeeded, {@literal false} otherwise.
      */
     boolean validate(String key, V value, ValidationContext context, List<ValidationProblem> problems, KeycloakSession session);
 

@@ -8,8 +8,11 @@ import org.keycloak.validation.ValidationRegistry;
 import org.keycloak.validation.ValidationResult;
 import org.keycloak.validation.ValidatorProvider;
 
+import javax.xml.validation.Validator;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class DefaultValidatorProvider implements ValidatorProvider {
 
@@ -22,10 +25,11 @@ public class DefaultValidatorProvider implements ValidatorProvider {
     }
 
     @Override
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    public <V> ValidationResult validate(String key, V value, ValidationContext context) {
+    @SuppressWarnings({"unchecked"})
+    public <V> ValidationResult validate(ValidationContext context, V value, Set<String> keys) {
 
-        List<Validation<?>> validators = validatorRegistry.getValidations(context, key);
+        // TODO fix generics
+        Map<String, List<Validation<V>>> validators = (Map<String, List<Validation<V>>>)(Object)validatorRegistry.getValidations(context, keys);
 
         if (validators == null || validators.isEmpty()) {
             return null;
@@ -34,9 +38,10 @@ public class DefaultValidatorProvider implements ValidatorProvider {
         List<ValidationProblem> problems = new ArrayList<>();
         boolean valid = true;
 
-        // TODO fix generics
-        for (Validation validator : validators) {
-            valid &= validator.validate(key, value, context, problems, session);
+        for(Map.Entry<String, List<Validation<V>>> entry: validators.entrySet()) {
+            for (Validation<V> validation : entry.getValue()) {
+                valid &= validation.validate(entry.getKey(), value, context, problems, session);
+            }
         }
 
         return new ValidationResult(valid, problems);

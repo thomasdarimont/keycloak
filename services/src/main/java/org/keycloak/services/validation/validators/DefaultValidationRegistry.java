@@ -7,8 +7,11 @@ import org.keycloak.validation.ValidationRegistry;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
@@ -35,8 +38,14 @@ public class DefaultValidationRegistry implements ValidationRegistry {
     private final ConcurrentMap<String, SortedSet<ValidationRegistration>> validatorRegistrations = new ConcurrentHashMap<>();
 
     @Override
-    public List<Validation<?>> getValidations(ValidationContext context, String key) {
-        return filterValidators(validatorRegistrations.getOrDefault(key, Collections.emptySortedSet()), context);
+    public Map<String, List<Validation<?>>> getValidations(ValidationContext context, Set<String> keys) {
+        Map<String, List<Validation<?>>> validators = new LinkedHashMap<>();
+        for(String key : keys) {
+            SortedSet<ValidationRegistration> validatorRegistrationsForKey = validatorRegistrations.getOrDefault(key, Collections.emptySortedSet());
+            List<Validation<?>> validatorsForKey = filterValidators(validatorRegistrationsForKey, context);
+            validators.put(key, validatorsForKey);
+        }
+        return validators;
     }
 
     protected List<Validation<?>> filterValidators(SortedSet<ValidationRegistration> validators, ValidationContext context) {
@@ -47,8 +56,8 @@ public class DefaultValidationRegistry implements ValidationRegistry {
     }
 
     @Override
-    public void register(String key, Validation<?> validation, double order, String... contextKeys) {
+    public void register(String key, Validation<?> validation, double order, Set<String> contextKeys) {
         validatorRegistrations.computeIfAbsent(key, t -> new TreeSet<>())
-                .add(new ValidationRegistration(key, validation, order, new LinkedHashSet<>(Arrays.asList(contextKeys))));
+                .add(new ValidationRegistration(key, validation, order, contextKeys));
     }
 }
