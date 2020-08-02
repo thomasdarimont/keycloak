@@ -19,7 +19,7 @@ package org.keycloak.validation;
 import org.keycloak.provider.ProviderFactory;
 
 /**
- *
+ * {@link ProviderFactory} a {@link ValidatorProvider} instances.
  */
 public interface ValidatorProviderFactory extends ProviderFactory<ValidatorProvider> {
 }

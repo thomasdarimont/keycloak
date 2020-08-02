@@ -1,16 +1,13 @@
 package org.keycloak.validation;
 
 import org.keycloak.models.KeycloakSession;
-import org.keycloak.validation.ValidationContext;
-import org.keycloak.validation.ValidationProblem;
 
 import java.util.List;
 
 /**
  * A generic Validation interface.
- * @param <V>
  */
-public interface Validation<V> {
+public interface Validation {
 
     /**
      * Validates the given value in the current {@link ValidationContext}.
@@ -23,10 +20,11 @@ public interface Validation<V> {
      * @param session  the {@link KeycloakSession}
      * @return {@literal true} if the validation succeeded, {@literal false} otherwise.
      */
-    boolean validate(String key, V value, ValidationContext context, List<ValidationProblem> problems, KeycloakSession session);
+    boolean validate(String key, Object value, ValidationContext context, List<ValidationProblem> problems, KeycloakSession session);
 
     /**
      * Tells if the validation is enabled in the given {@link ValidationContext}.
+     *
      * @param validationContext
      * @return
      */
@@ -35,12 +33,13 @@ public interface Validation<V> {
     }
 
     /**
-     * Tells if the validation is supported in the given {@link ValidationContext}.
+     * Tells if the validation is supported in the given {@link ValidationContext} for the given {@code value}.
      *
      * @param validationContext
+     * @param value
      * @return
      */
-    default boolean isSupported(ValidationContext validationContext) {
+    default boolean isSupported(ValidationContext validationContext, Object value) {
         return true;
     }
 }

@@ -5,6 +5,10 @@ import org.keycloak.models.RealmModel;
 import java.util.Collections;
 import java.util.Map;
 
+/**
+ * Denotes a context in which the Validation takes place. A {@link ValidationContext} should be created for a
+ * batch of validation checks for a given entity.
+ */
 public class ValidationContext {
 
     // Note we use Strings here instead of enums to ease adding custom Keys
@@ -15,10 +19,14 @@ public class ValidationContext {
         String REGISTRATION = "user-registration";
     }
 
+    /**
+     * Denotes the ValidationTarget with predefined validation keys, e.g. Realm, User, Client, etc.
+     *
+     */
     // Note we use Strings here instead of enums to ease adding custom Keys
     public interface ValidationTarget {
 
-        interface User {
+        interface User extends ValidationTarget{
 
             String USERNAME = "user.username";
 

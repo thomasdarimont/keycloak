@@ -20,6 +20,9 @@ import org.keycloak.provider.Provider;
 import org.keycloak.provider.ProviderFactory;
 import org.keycloak.provider.Spi;
 
+/**
+ * An {@link Spi} to provide custom {@link ValidatorProvider} implementations.
+ */
 public class ValidatorSpi implements Spi {
 
     @Override

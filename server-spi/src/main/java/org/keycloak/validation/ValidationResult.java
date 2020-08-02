@@ -6,12 +6,21 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+/**
+ * Denotes the result of a validation run.
+ */
 public class ValidationResult {
 
     public static ValidationResult OK = new ValidationResult(true, Collections.emptyList());
 
+    /**
+     * Tells whether the validation outcome is considered valid.
+     */
     private final boolean valid;
 
+    /**
+     * Holds the {@link ValidationProblem} detected during the validation run.
+     */
     private final List<ValidationProblem> problems;
 
     public ValidationResult(boolean valid, List<ValidationProblem> problems) {

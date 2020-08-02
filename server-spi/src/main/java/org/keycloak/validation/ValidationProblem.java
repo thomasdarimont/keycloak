@@ -1,16 +1,36 @@
 package org.keycloak.validation;
 
+/**
+ * Denotes a problem that occurred during validatoin.
+ */
 public class ValidationProblem {
 
     public enum Severity {
-        WARNING, ERROR
+        /**
+         * Warning: the validation was performed but created a warning. The value might still be considered valid.
+         */
+        WARNING,
+
+        /**
+         * Error: the validation failed
+         */
+        ERROR
     }
 
-    private String key;
+    /**
+     * Holds the validation key.
+     */
+    private final String key;
 
-    private String message;
+    /**
+     * Holds the i18n validation message.
+     */
+    private final String message;
 
-    private Severity severity;
+    /**
+     * Holds the severity of the validation problem.
+     */
+    private final Severity severity;
 
     public ValidationProblem(String key, String message, Severity severity) {
         this.key = key;

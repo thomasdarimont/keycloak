@@ -24,10 +24,9 @@ public class DefaultValidatorProvider implements ValidatorProvider {
     }
 
     @Override
-    public <V> ValidationResult validate(ValidationContext context, V value, Set<String> keys) {
+    public ValidationResult validate(ValidationContext context, Object value, Set<String> keys) {
 
-        // TODO fix generics
-        Map<String, List<Validation<V>>> validators = (Map<String, List<Validation<V>>>) (Object) validatorRegistry.getValidations(context, keys);
+        Map<String, List<Validation>> validators = validatorRegistry.getValidations(context, keys, value);
 
         if (validators == null || validators.isEmpty()) {
             return null;
@@ -36,8 +35,8 @@ public class DefaultValidatorProvider implements ValidatorProvider {
         List<ValidationProblem> problems = new ArrayList<>();
         boolean valid = true;
 
-        for (Map.Entry<String, List<Validation<V>>> entry : validators.entrySet()) {
-            for (Validation<V> validation : entry.getValue()) {
+        for (Map.Entry<String, List<Validation>> entry : validators.entrySet()) {
+            for (Validation validation : entry.getValue()) {
                 valid &= validation.validate(entry.getKey(), value, context, problems, session);
             }
         }

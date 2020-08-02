@@ -5,7 +5,6 @@ import org.keycloak.validation.ValidationContext;
 import org.keycloak.validation.ValidationRegistration;
 import org.keycloak.validation.ValidationRegistry;
 
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,25 +35,28 @@ public class DefaultValidationRegistry implements ValidationRegistry {
     private final ConcurrentMap<String, SortedSet<ValidationRegistration>> validatorRegistrations = new ConcurrentHashMap<>();
 
     @Override
-    public Map<String, List<Validation<?>>> getValidations(ValidationContext context, Set<String> keys) {
-        Map<String, List<Validation<?>>> validators = new LinkedHashMap<>();
+    public Map<String, List<Validation>> getValidations(ValidationContext context, Set<String> keys, Object value) {
+        Map<String, List<Validation>> validators = new LinkedHashMap<>();
         for (String key : keys) {
-            SortedSet<ValidationRegistration> validatorRegistrationsForKey = validatorRegistrations.getOrDefault(key, Collections.emptySortedSet());
-            List<Validation<?>> validatorsForKey = filterValidators(validatorRegistrationsForKey, context);
+            SortedSet<ValidationRegistration> validatorRegistrationsForKey = validatorRegistrations.get(key);
+            if (validatorRegistrationsForKey == null || validatorRegistrationsForKey.isEmpty()) {
+                continue;
+            }
+            List<Validation> validatorsForKey = filterValidators(validatorRegistrationsForKey, context, value);
             validators.put(key, validatorsForKey);
         }
         return validators;
     }
 
-    protected List<Validation<?>> filterValidators(SortedSet<ValidationRegistration> validators, ValidationContext context) {
+    protected List<Validation> filterValidators(SortedSet<ValidationRegistration> validators, ValidationContext context, Object value) {
         return validators.stream()
                 .map(ValidationRegistration::getValidation)
-                .filter(v -> v.isSupported(context) && v.isEnabled(context))
+                .filter(v -> v.isSupported(context, value) && v.isEnabled(context))
                 .collect(Collectors.toList());
     }
 
     @Override
-    public void register(String key, Validation<?> validation, double order, Set<String> contextKeys) {
+    public void register(String key, Validation validation, double order, Set<String> contextKeys) {
         validatorRegistrations.computeIfAbsent(key, t -> new TreeSet<>())
                 .add(new ValidationRegistration(key, validation, order, contextKeys));
     }

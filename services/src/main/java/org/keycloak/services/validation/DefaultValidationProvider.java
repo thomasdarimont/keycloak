@@ -1,9 +1,9 @@
 package org.keycloak.services.validation;
 
 import org.keycloak.services.messages.Messages;
+import org.keycloak.validation.Validation;
 import org.keycloak.validation.ValidationContext.ValidationContextKey;
 import org.keycloak.validation.ValidationProblem;
-import org.keycloak.validation.Validation;
 import org.keycloak.validation.ValidationProvider;
 import org.keycloak.validation.ValidationRegistry;
 
@@ -29,9 +29,12 @@ public class DefaultValidationProvider implements ValidationProvider {
                 ValidationContextKey.PROFILE_UPDATE);
     }
 
-    protected Validation<String> createLastnameValidation() {
+    protected Validation createLastnameValidation() {
         return (key, value, context, problems, session) -> {
-            if (org.keycloak.services.validation.Validation.isBlank(value)) {
+
+            String input = value instanceof String ? (String) value : null;
+
+            if (org.keycloak.services.validation.Validation.isBlank(input)) {
                 problems.add(ValidationProblem.error(key, Messages.MISSING_LAST_NAME));
                 return false;
             }
@@ -39,9 +42,12 @@ public class DefaultValidationProvider implements ValidationProvider {
         };
     }
 
-    protected Validation<String> createFirstnameValidation() {
+    protected Validation createFirstnameValidation() {
         return (key, value, context, problems, session) -> {
-            if (org.keycloak.services.validation.Validation.isBlank(value)) {
+
+            String input = value instanceof String ? (String) value : null;
+
+            if (org.keycloak.services.validation.Validation.isBlank(input)) {
                 problems.add(ValidationProblem.error(key, Messages.MISSING_FIRST_NAME));
                 return false;
             }
@@ -49,15 +55,17 @@ public class DefaultValidationProvider implements ValidationProvider {
         };
     }
 
-    protected Validation<String> createEmailValidation() {
+    protected Validation createEmailValidation() {
         return (key, value, context, problems, session) -> {
 
-            if (org.keycloak.services.validation.Validation.isBlank(value)) {
+            String input = value instanceof String ? (String) value : null;
+
+            if (org.keycloak.services.validation.Validation.isBlank(input)) {
                 problems.add(ValidationProblem.error(key, Messages.MISSING_EMAIL));
                 return false;
             }
 
-            if (!org.keycloak.services.validation.Validation.isEmailValid(value)) {
+            if (!org.keycloak.services.validation.Validation.isEmailValid(input)) {
                 problems.add(ValidationProblem.error(key, Messages.INVALID_EMAIL));
                 return false;
             }
@@ -66,11 +74,14 @@ public class DefaultValidationProvider implements ValidationProvider {
         };
     }
 
-    protected Validation<String> createUsernameValidation() {
+    protected Validation createUsernameValidation() {
         return (key, value, context, problems, session) -> {
+
+            String input = value instanceof String ? (String) value : null;
+
             if (!context.getRealm().isRegistrationEmailAsUsername()
                     && context.getAttributeBoolean("userNameRequired")
-                    && org.keycloak.services.validation.Validation.isBlank(value)) {
+                    && org.keycloak.services.validation.Validation.isBlank(input)) {
                 problems.add(ValidationProblem.error(key, Messages.MISSING_USERNAME));
                 return false;
             }

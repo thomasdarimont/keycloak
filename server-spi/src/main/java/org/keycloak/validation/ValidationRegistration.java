@@ -15,7 +15,7 @@ public class ValidationRegistration implements Comparable<ValidationRegistration
     /**
      * The actual {@link Validation}
      */
-    private final Validation<?> validation;
+    private final Validation validation;
 
     /**
      * Denotes the contexts in which the referenced validation can be applied.
@@ -27,7 +27,7 @@ public class ValidationRegistration implements Comparable<ValidationRegistration
      */
     private final double order;
 
-    public ValidationRegistration(String key, Validation<?> validation, double order, Set<String> contextKeys) {
+    public ValidationRegistration(String key, Validation validation, double order, Set<String> contextKeys) {
         this.key = key;
         this.validation = validation;
         this.order = order;
@@ -38,7 +38,7 @@ public class ValidationRegistration implements Comparable<ValidationRegistration
         return key;
     }
 
-    public Validation<?> getValidation() {
+    public Validation getValidation() {
         return validation;
     }
 
