@@ -11,21 +11,30 @@ import static org.keycloak.validation.ValidationContext.ValidationTarget.User;
 
 public class DefaultValidationProvider implements ValidationProvider {
 
+    // Note: double order constants ease adding new validations before or after a validation.
+    // existing validations can also be replaced if the order of a new Validation is equal to the order of the existing
+    // Validation for the same validation key.
+    public static final double VALIDATION_ORDER_USER_USERNAME = 1000.0;
+    public static final double VALIDATION_ORDER_USER_EMAIL = 1100.0;
+    public static final double VALIDATION_ORDER_USER_FIRSTNAME = 1200.0;
+    public static final double VALIDATION_ORDER_USER_LASTNAME = 1300.0;
+
     @Override
     public void register(ValidationRegistry validationRegistry) {
 
         // TODO add additional validators
 
-        validationRegistry.register(User.USERNAME, createUsernameValidation(), 1000.0,
+        validationRegistry.register(User.USERNAME, createUsernameValidation(), VALIDATION_ORDER_USER_USERNAME,
                 ValidationContextKey.PROFILE_UPDATE, ValidationContextKey.REGISTRATION);
 
-        validationRegistry.register(User.EMAIL, createEmailValidation(), 1100.0,
+        validationRegistry.register(User.EMAIL, createEmailValidation(), VALIDATION_ORDER_USER_EMAIL,
                 ValidationContextKey.PROFILE_UPDATE, ValidationContextKey.REGISTRATION);
 
-        validationRegistry.register(User.FIRSTNAME, createFirstnameValidation(), 1200.0,
+        // TODO firstname / lastname validation could be merged?
+        validationRegistry.register(User.FIRSTNAME, createFirstnameValidation(), VALIDATION_ORDER_USER_FIRSTNAME,
                 ValidationContextKey.PROFILE_UPDATE);
 
-        validationRegistry.register(User.LASTNAME, createLastnameValidation(), 1300.0,
+        validationRegistry.register(User.LASTNAME, createLastnameValidation(), VALIDATION_ORDER_USER_LASTNAME,
                 ValidationContextKey.PROFILE_UPDATE);
     }
 

@@ -44,6 +44,7 @@ public class DefaultValidatorProviderFactory implements ValidatorProviderFactory
 
         Collections.sort(providerFactories, Comparator.comparing(ProviderFactory::order));
 
+        // Loop over all ValidationProvider registries to register all visible Validation implementations
         for (ProviderFactory providerFactory : providerFactories) {
             providerFactory.postInit(keycloakSessionFactory);
             ValidationProvider validatorProvider = (ValidationProvider) providerFactory.create(keycloakSession);

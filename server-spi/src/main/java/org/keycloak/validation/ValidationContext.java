@@ -23,13 +23,13 @@ public class ValidationContext {
 
     /**
      * Denotes the ValidationTarget with predefined validation keys, e.g. Realm, User, Client, etc.
-     *
      */
     // Note we use Strings here instead of enums to ease adding custom Keys
     public interface ValidationTarget {
 
-        interface User extends ValidationTarget{
+        interface User extends ValidationTarget {
 
+            // TODO discuss: should these validation keys match the actual property names?
             String USERNAME = "user.username";
 
             String EMAIL = "user.email";
@@ -37,6 +37,8 @@ public class ValidationContext {
             String FIRSTNAME = "user.firstname";
 
             String LASTNAME = "user.lastname";
+
+            // TODO what should be the syntax for well-known or custom attributes?
 
             // TODO define more validatable properties / attributes
         }
