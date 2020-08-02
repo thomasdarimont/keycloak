@@ -17,6 +17,8 @@ public class ValidationContext {
         String PROFILE_UPDATE = "user-profile-update";
 
         String REGISTRATION = "user-registration";
+
+        // TODO define more validation contexts
     }
 
     /**
@@ -36,7 +38,10 @@ public class ValidationContext {
 
             String LASTNAME = "user.lastname";
 
+            // TODO define more validatable properties / attributes
         }
+
+        // TODO define more validatable types with properties / attributes
     }
 
     private final RealmModel realm;

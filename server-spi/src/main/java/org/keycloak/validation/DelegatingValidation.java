@@ -3,22 +3,24 @@ package org.keycloak.validation;
 import org.keycloak.models.KeycloakSession;
 
 import java.util.List;
-import java.util.function.BiPredicate;
-import java.util.function.Predicate;
 
+/**
+ * {@link DelegatingValidation} allows to delegate to a given validation while customizing the checks for
+ * enablement and context-specific support.
+ */
 public class DelegatingValidation implements Validation {
 
     private final Validation delegate;
 
-    private final Predicate<ValidationContext> enabled;
+    private final ValidationEnabled enabled;
 
-    private final BiPredicate<ValidationContext, Object> supported;
+    private final ValidationSupported supported;
 
     public DelegatingValidation(Validation delegate) {
-        this(delegate, c -> true, (c, v) -> true);
+        this(delegate, ValidationEnabled.ALWAYS, ValidationSupported.ALWAYS);
     }
 
-    public DelegatingValidation(Validation delegate, Predicate<ValidationContext> enabled, BiPredicate<ValidationContext, Object> supported) {
+    public DelegatingValidation(Validation delegate, ValidationEnabled enabled, ValidationSupported supported) {
         this.delegate = delegate;
         this.enabled = enabled;
         this.supported = supported;
@@ -29,11 +31,11 @@ public class DelegatingValidation implements Validation {
         return this.delegate.validate(key, value, context, problems, session);
     }
 
-    public boolean isEnabled(ValidationContext context) {
-        return enabled.test(context);
+    public boolean isEnabled(String key, ValidationContext context) {
+        return enabled.test(key, context);
     }
 
-    public boolean isSupported(ValidationContext context, Object value) {
-        return supported.test(context, value);
+    public boolean isSupported(String key, Object value, ValidationContext context) {
+        return supported.test(key, value, context);
     }
 }

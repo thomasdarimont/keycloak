@@ -7,6 +7,7 @@ import java.util.List;
 /**
  * A generic Validation interface.
  */
+@FunctionalInterface
 public interface Validation {
 
     /**
@@ -25,21 +26,58 @@ public interface Validation {
     /**
      * Tells if the validation is enabled in the given {@link ValidationContext}.
      *
+     * @param key
      * @param validationContext
      * @return
      */
-    default boolean isEnabled(ValidationContext validationContext) {
+    default boolean isEnabled(String key, ValidationContext validationContext) {
         return true;
     }
 
     /**
      * Tells if the validation is supported in the given {@link ValidationContext} for the given {@code value}.
      *
+     * @param key
      * @param validationContext
      * @param value
      * @return
      */
-    default boolean isSupported(ValidationContext validationContext, Object value) {
+    default boolean isSupported(String key, Object value, ValidationContext validationContext) {
         return true;
+    }
+
+    /**
+     * Function interface to check if the current {@link Validation} is supported in the given {@link ValidationContext}.
+     *
+     * @see #isSupported(String, Object, ValidationContext)
+     */
+    @FunctionalInterface
+    interface ValidationSupported {
+
+        ValidationSupported ALWAYS = (k, v, c) -> true;
+
+        /**
+         * @param key
+         * @param value
+         * @param validationContext
+         * @return
+         */
+        boolean test(String key, Object value, ValidationContext validationContext);
+    }
+
+    /**
+     * Function interface to check if the current {@link Validation} is enabled in the given  {@link ValidationContext}.
+     */
+    @FunctionalInterface
+    interface ValidationEnabled {
+
+        ValidationEnabled ALWAYS = (k, c) -> true;
+
+        /**
+         * @param key
+         * @param validationContext
+         * @return
+         */
+        boolean test(String key, ValidationContext validationContext);
     }
 }

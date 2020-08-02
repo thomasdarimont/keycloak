@@ -19,6 +19,8 @@ public class ValidationRegistration implements Comparable<ValidationRegistration
 
     /**
      * Denotes the contexts in which the referenced validation can be applied.
+     *
+     * @see ValidationContext.ValidationContextKey
      */
     private final Set<String> contextKeys;
 
@@ -53,5 +55,9 @@ public class ValidationRegistration implements Comparable<ValidationRegistration
     @Override
     public int compareTo(ValidationRegistration that) {
         return Double.compare(this.getOrder(), that.getOrder());
+    }
+
+    public boolean isEligibleForContextKey(String contextKey) {
+        return getContextKeys().contains(contextKey);
     }
 }

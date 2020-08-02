@@ -42,16 +42,17 @@ public class DefaultValidationRegistry implements ValidationRegistry {
             if (validatorRegistrationsForKey == null || validatorRegistrationsForKey.isEmpty()) {
                 continue;
             }
-            List<Validation> validatorsForKey = filterValidators(validatorRegistrationsForKey, context, value);
+            List<Validation> validatorsForKey = filterValidators(key, validatorRegistrationsForKey, context, value);
             validators.put(key, validatorsForKey);
         }
         return validators;
     }
 
-    protected List<Validation> filterValidators(SortedSet<ValidationRegistration> validators, ValidationContext context, Object value) {
+    protected List<Validation> filterValidators(String key, SortedSet<ValidationRegistration> validators, ValidationContext context, Object value) {
         return validators.stream()
+                .filter(vr -> vr.isEligibleForContextKey(context.getContextKey()))
                 .map(ValidationRegistration::getValidation)
-                .filter(v -> v.isSupported(context, value) && v.isEnabled(context))
+                .filter(v -> v.isSupported(key, value, context) && v.isEnabled(key, context))
                 .collect(Collectors.toList());
     }
 
