@@ -37,6 +37,7 @@ public class DefaultValidatorProvider implements ValidatorProvider {
 
         for (Map.Entry<String, List<Validation>> entry : validators.entrySet()) {
             for (Validation validation : entry.getValue()) {
+                // TODO add support for early exit short-circuit validation via flag in ValidationContext
                 valid &= validation.validate(entry.getKey(), value, context, problems, session);
             }
         }
