@@ -52,7 +52,7 @@ public class DefaultValidationRegistry implements ValidationRegistry {
         return validators.stream()
                 .filter(vr -> vr.isEligibleForContextKey(context.getContextKey()))
                 .map(ValidationRegistration::getValidation)
-                .filter(v -> v.isSupported(key, value, context) && v.isEnabled(key, context))
+                .filter(v -> v.isSupported(key, value, context))
                 .collect(Collectors.toList());
     }
 
