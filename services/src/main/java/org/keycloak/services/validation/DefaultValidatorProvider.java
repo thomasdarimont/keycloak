@@ -32,6 +32,7 @@ public class DefaultValidatorProvider implements ValidatorProvider {
             return null;
         }
 
+        // TODO move problems to ValidationContext, but keep track of problems by validation key.
         List<ValidationProblem> problems = new ArrayList<>();
         boolean valid = true;
 
