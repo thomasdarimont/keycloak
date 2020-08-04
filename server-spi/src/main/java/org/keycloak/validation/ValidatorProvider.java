@@ -19,6 +19,7 @@ package org.keycloak.validation;
 import org.keycloak.provider.Provider;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -40,6 +41,10 @@ public interface ValidatorProvider extends Provider {
 
     default ValidationResult validate(ValidationContext context, Object value, ValidationKey... keys) {
         return validate(context, value, new LinkedHashSet<>(Arrays.asList(keys)));
+    }
+
+    default ValidationResult validate(ValidationContext context, Object value, ValidationKey key) {
+        return validate(context, value, Collections.singleton(key));
     }
 
     @Override
