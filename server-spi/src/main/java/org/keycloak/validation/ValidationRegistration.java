@@ -8,7 +8,7 @@ import java.util.Set;
 public class ValidationRegistration implements Comparable<ValidationRegistration> {
 
     /**
-     * Denotes the key of the attribute that the referenced {@link Validation} can validate.
+     * Denotes the key of the attribute or entity that the referenced {@link Validation} can validate.
      */
     private final ValidationKey key;
 
