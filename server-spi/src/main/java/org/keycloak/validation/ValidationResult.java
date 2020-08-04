@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Denotes the result of a validation run.
@@ -57,12 +59,29 @@ public class ValidationResult {
         return getProblems().stream().anyMatch(ValidationProblem::isWarning);
     }
 
-    public List<ValidationProblem> getErrors() {
-        return getProblems().stream().filter(ValidationProblem::isError).collect(Collectors.toList());
+    public List<ValidationProblem> getWarnings() {
+        return filter(getProblems().stream(), ValidationProblem::isWarning).collect(Collectors.toList());
     }
 
-    public List<ValidationProblem> getWarnings() {
-        return getProblems().stream().filter(ValidationProblem::isWarning).collect(Collectors.toList());
+    public List<ValidationProblem> getWarnings(String key) {
+        return filter(getProblems().stream(), ValidationProblem::isWarning, p -> p.getKey().equals(key)).collect(Collectors.toList());
+    }
+
+    public List<ValidationProblem> getErrors() {
+        return filter(getProblems().stream(), ValidationProblem::isError).collect(Collectors.toList());
+    }
+
+    public List<ValidationProblem> getErrors(String key) {
+        return filter(getProblems().stream(), ValidationProblem::isError, p -> p.getKey().equals(key)).collect(Collectors.toList());
+    }
+
+    @SafeVarargs
+    private final Stream<ValidationProblem> filter(Stream<ValidationProblem> stream, Predicate<ValidationProblem>... preds) {
+        Stream<ValidationProblem> filtered = stream;
+        for (Predicate<ValidationProblem> pred : preds) {
+            filtered = filtered.filter(pred);
+        }
+        return filtered;
     }
 
     public void onError(Consumer<ValidationResult> consumer) {
