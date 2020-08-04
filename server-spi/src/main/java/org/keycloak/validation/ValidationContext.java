@@ -11,54 +11,19 @@ import java.util.Map;
  */
 public class ValidationContext {
 
-    // Note we use Strings here instead of enums to ease adding custom Keys
-    public interface ValidationContextKey {
-
-        String PROFILE_UPDATE = "user-profile-update";
-
-        String REGISTRATION = "user-registration";
-
-        // TODO define more validation contexts
-    }
-
-    /**
-     * Denotes the ValidationTarget with predefined validation keys, e.g. Realm, User, Client, etc.
-     */
-    // Note we use Strings here instead of enums to ease adding custom Keys
-    public interface ValidationTarget {
-
-        interface User extends ValidationTarget {
-
-            // TODO discuss: should these validation keys match the actual property names?
-            String USERNAME = "user.username";
-
-            String EMAIL = "user.email";
-
-            String FIRSTNAME = "user.firstname";
-
-            String LASTNAME = "user.lastname";
-
-            // TODO what should be the syntax for well-known or custom attributes?
-
-            // TODO define more validatable properties / attributes
-        }
-
-        // TODO define more validatable types with properties / attributes
-    }
-
     private final RealmModel realm;
 
     // user registration, user profile update, client registration, realm creation
-    private final String contextKey;
+    private final ValidationContextKey contextKey;
 
     // additional context specific attributes
     private final Map<String, Object> attributes;
 
-    public ValidationContext(RealmModel realm, String contextKey) {
+    public ValidationContext(RealmModel realm, ValidationContextKey contextKey) {
         this(realm, contextKey, Collections.emptyMap());
     }
 
-    public ValidationContext(RealmModel realm, String contextKey, Map<String, Object> attributes) {
+    public ValidationContext(RealmModel realm, ValidationContextKey contextKey, Map<String, Object> attributes) {
         this.realm = realm;
         this.contextKey = contextKey;
         this.attributes = attributes;
@@ -68,7 +33,7 @@ public class ValidationContext {
         return realm;
     }
 
-    public String getContextKey() {
+    public ValidationContextKey getContextKey() {
         return contextKey;
     }
 
@@ -76,15 +41,15 @@ public class ValidationContext {
         return attributes;
     }
 
-    public boolean getAttributeBoolean(String name) {
-        return attributes.get(name) == Boolean.TRUE;
-    }
-
     public Object getAttribute(String name) {
         return attributes.get(name);
     }
 
-    public String getAttributeString(String name) {
+    public boolean getAttributeAsBoolean(String name) {
+        return attributes.get(name) == Boolean.TRUE;
+    }
+
+    public String getAttributeAsString(String name) {
         Object value = attributes.get(name);
         if (value == null) {
             return null;

@@ -36,9 +36,9 @@ public interface ValidatorProvider extends Provider {
      * @param keys    the keys of the validators to use
      * @return the {@link ValidationResult} with the validation outcome
      */
-    ValidationResult validate(ValidationContext context, Object value, Set<String> keys);
+    ValidationResult validate(ValidationContext context, Object value, Set<ValidationKey> keys);
 
-    default ValidationResult validate(ValidationContext context, Object value, String... keys) {
+    default ValidationResult validate(ValidationContext context, Object value, ValidationKey... keys) {
         return validate(context, value, new LinkedHashSet<>(Arrays.asList(keys)));
     }
 

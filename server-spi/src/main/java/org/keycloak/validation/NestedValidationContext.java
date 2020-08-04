@@ -39,4 +39,12 @@ public class NestedValidationContext extends ValidationContext {
         Objects.requireNonNull(problem, "problem");
         getProblems().add(problem);
     }
+
+    public void addError(ValidationKey key, String message) {
+        addProblem(ValidationProblem.error(key, message));
+    }
+
+    public void addWarning(ValidationKey key, String message) {
+        addProblem(ValidationProblem.warning(key, message));
+    }
 }

@@ -19,7 +19,7 @@ public interface Validation {
      * @param context  the {@link ValidationContext}
      * @return {@literal true} if the validation succeeded, {@literal false} otherwise.
      */
-    boolean validate(String key, Object value, NestedValidationContext context);
+    boolean validate(ValidationKey key, Object value, NestedValidationContext context);
 
     /**
      * Tells if the validation is supported in the given {@link ValidationContext} for the given {@code value}.
@@ -29,14 +29,14 @@ public interface Validation {
      * @param value
      * @return
      */
-    default boolean isSupported(String key, Object value, ValidationContext validationContext) {
+    default boolean isSupported(ValidationKey key, Object value, ValidationContext validationContext) {
         return true;
     }
 
     /**
      * Function interface to check if the current {@link Validation} is supported in the given {@link ValidationContext}.
      *
-     * @see #isSupported(String, Object, ValidationContext)
+     * @see #isSupported(ValidationKey, Object, ValidationContext)
      */
     @FunctionalInterface
     interface ValidationSupported {
@@ -49,6 +49,6 @@ public interface Validation {
          * @param validationContext
          * @return
          */
-        boolean test(String key, Object value, ValidationContext validationContext);
+        boolean test(ValidationKey key, Object value, ValidationContext validationContext);
     }
 }

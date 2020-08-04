@@ -20,7 +20,7 @@ public class ValidationProblem {
     /**
      * Holds the validation key.
      */
-    private final String key;
+    private final ValidationKey key;
 
     /**
      * Holds the i18n validation message.
@@ -32,13 +32,13 @@ public class ValidationProblem {
      */
     private final Severity severity;
 
-    public ValidationProblem(String key, String message, Severity severity) {
+    public ValidationProblem(ValidationKey key, String message, Severity severity) {
         this.key = key;
         this.message = message;
         this.severity = severity;
     }
 
-    public String getKey() {
+    public ValidationKey getKey() {
         return key;
     }
 
@@ -58,11 +58,11 @@ public class ValidationProblem {
         return severity == Severity.WARNING;
     }
 
-    public static ValidationProblem warning(String key, String message) {
+    public static ValidationProblem warning(ValidationKey key, String message) {
         return new ValidationProblem(key, message, Severity.WARNING);
     }
 
-    public static ValidationProblem error(String key, String message) {
+    public static ValidationProblem error(ValidationKey key, String message) {
         return new ValidationProblem(key, message, Severity.ERROR);
     }
 

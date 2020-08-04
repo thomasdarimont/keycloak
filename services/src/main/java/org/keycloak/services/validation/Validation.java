@@ -27,6 +27,7 @@ import org.keycloak.policy.PolicyError;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.validation.ValidationContext;
+import org.keycloak.validation.ValidationKey;
 import org.keycloak.validation.ValidatorProvider;
 
 import javax.ws.rs.core.MultivaluedMap;
@@ -35,8 +36,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import static org.keycloak.validation.ValidationContext.ValidationContextKey;
-import static org.keycloak.validation.ValidationContext.ValidationTarget.*;
+import org.keycloak.validation.ValidationContextKey;
 
 public class Validation {
 
@@ -119,21 +119,21 @@ public class Validation {
 //            addError(errors, FIELD_EMAIL, Messages.INVALID_EMAIL);
 //        }
 
-        ValidationContext context = new ValidationContext(realm, ValidationContextKey.PROFILE_UPDATE,
+        ValidationContext context = new ValidationContext(realm, ValidationContextKey.USER_PROFILE_UPDATE,
                 Collections.singletonMap("userNameRequired", userNameRequired));
 
         List<FormMessage> errors = new ArrayList<>();
 
-        validator.validate(context, formData.getFirst(FIELD_USERNAME), User.USERNAME)
+        validator.validate(context, formData.getFirst(FIELD_USERNAME), ValidationKey.USER_USERNAME)
                 .onError(res -> res.getErrors().forEach(p -> addError(errors, FIELD_USERNAME, p.getMessage())));
 
-        validator.validate(context, formData.getFirst(FIELD_FIRST_NAME), User.FIRSTNAME)
+        validator.validate(context, formData.getFirst(FIELD_FIRST_NAME), ValidationKey.USER_FIRSTNAME)
                 .onError(res -> res.getErrors().forEach(p -> addError(errors, FIELD_FIRST_NAME, p.getMessage())));
 
-        validator.validate(context, formData.getFirst(FIELD_LAST_NAME), User.LASTNAME)
+        validator.validate(context, formData.getFirst(FIELD_LAST_NAME), ValidationKey.USER_LASTNAME)
                 .onError(res -> res.getErrors().forEach(p -> addError(errors, FIELD_LAST_NAME, p.getMessage())));
 
-        validator.validate(context, formData.getFirst(FIELD_EMAIL), User.EMAIL)
+        validator.validate(context, formData.getFirst(FIELD_EMAIL), ValidationKey.USER_EMAIL)
                 .onError(res -> res.getErrors().forEach(p -> addError(errors, FIELD_EMAIL, p.getMessage())));
 
         return errors;

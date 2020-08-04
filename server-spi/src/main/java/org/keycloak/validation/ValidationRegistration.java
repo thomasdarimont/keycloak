@@ -10,7 +10,7 @@ public class ValidationRegistration implements Comparable<ValidationRegistration
     /**
      * Denotes the key of the attribute that the referenced {@link Validation} can validate.
      */
-    private final String key;
+    private final ValidationKey key;
 
     /**
      * The actual {@link Validation}
@@ -20,23 +20,23 @@ public class ValidationRegistration implements Comparable<ValidationRegistration
     /**
      * Denotes the contexts in which the referenced validation can be applied.
      *
-     * @see ValidationContext.ValidationContextKey
+     * @see ValidationContextKey
      */
-    private final Set<String> contextKeys;
+    private final Set<ValidationContextKey> contextKeys;
 
     /**
      * The order in case multiple validation are registered for the same attribute.
      */
     private final double order;
 
-    public ValidationRegistration(String key, Validation validation, double order, Set<String> contextKeys) {
+    public ValidationRegistration(ValidationKey key, Validation validation, double order, Set<ValidationContextKey> contextKeys) {
         this.key = key;
         this.validation = validation;
         this.order = order;
         this.contextKeys = contextKeys;
     }
 
-    public String getKey() {
+    public ValidationKey getKey() {
         return key;
     }
 
@@ -44,7 +44,7 @@ public class ValidationRegistration implements Comparable<ValidationRegistration
         return validation;
     }
 
-    public Set<String> getContextKeys() {
+    public Set<ValidationContextKey> getContextKeys() {
         return contextKeys;
     }
 
@@ -57,7 +57,7 @@ public class ValidationRegistration implements Comparable<ValidationRegistration
         return Double.compare(this.getOrder(), that.getOrder());
     }
 
-    public boolean isEligibleForContextKey(String contextKey) {
+    public boolean isEligibleForContextKey(ValidationContextKey contextKey) {
         return getContextKeys().contains(contextKey);
     }
 }

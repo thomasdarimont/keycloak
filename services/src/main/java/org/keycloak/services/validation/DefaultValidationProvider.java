@@ -2,18 +2,18 @@ package org.keycloak.services.validation;
 
 import org.keycloak.services.messages.Messages;
 import org.keycloak.validation.Validation;
-import org.keycloak.validation.ValidationContext.ValidationContextKey;
-import org.keycloak.validation.ValidationProblem;
+import org.keycloak.validation.ValidationContextKey;
 import org.keycloak.validation.ValidationProvider;
 import org.keycloak.validation.ValidationRegistry;
-
-import static org.keycloak.validation.ValidationContext.ValidationTarget.User;
+import org.keycloak.validation.ValidationKey;
 
 public class DefaultValidationProvider implements ValidationProvider {
 
     // Note: double order constants ease adding new validations before or after a validation.
     // existing validations can also be replaced if the order of a new Validation is equal to the order of the existing
     // Validation for the same validation key.
+
+    // TODO move orders to appropriate ValidationKey enum
     public static final double VALIDATION_ORDER_USER_USERNAME = 1000.0;
     public static final double VALIDATION_ORDER_USER_EMAIL = 1100.0;
     public static final double VALIDATION_ORDER_USER_FIRSTNAME = 1200.0;
@@ -24,18 +24,18 @@ public class DefaultValidationProvider implements ValidationProvider {
 
         // TODO add additional validators
 
-        validationRegistry.register(User.USERNAME, createUsernameValidation(), VALIDATION_ORDER_USER_USERNAME,
-                ValidationContextKey.PROFILE_UPDATE, ValidationContextKey.REGISTRATION);
+        validationRegistry.registerValidation(createUsernameValidation(), ValidationKey.USER_USERNAME, VALIDATION_ORDER_USER_USERNAME,
+                ValidationContextKey.USER_PROFILE_UPDATE, ValidationContextKey.USER_REGISTRATION);
 
-        validationRegistry.register(User.EMAIL, createEmailValidation(), VALIDATION_ORDER_USER_EMAIL,
-                ValidationContextKey.PROFILE_UPDATE, ValidationContextKey.REGISTRATION);
+        validationRegistry.registerValidation(createEmailValidation(), ValidationKey.USER_EMAIL, VALIDATION_ORDER_USER_EMAIL,
+                ValidationContextKey.USER_PROFILE_UPDATE, ValidationContextKey.USER_REGISTRATION);
 
         // TODO firstname / lastname validation could be merged?
-        validationRegistry.register(User.FIRSTNAME, createFirstnameValidation(), VALIDATION_ORDER_USER_FIRSTNAME,
-                ValidationContextKey.PROFILE_UPDATE);
+        validationRegistry.registerValidation(createFirstnameValidation(), ValidationKey.USER_FIRSTNAME, VALIDATION_ORDER_USER_FIRSTNAME,
+                ValidationContextKey.USER_PROFILE_UPDATE);
 
-        validationRegistry.register(User.LASTNAME, createLastnameValidation(), VALIDATION_ORDER_USER_LASTNAME,
-                ValidationContextKey.PROFILE_UPDATE);
+        validationRegistry.registerValidation(createLastnameValidation(), ValidationKey.USER_LASTNAME, VALIDATION_ORDER_USER_LASTNAME,
+                ValidationContextKey.USER_PROFILE_UPDATE);
     }
 
     protected Validation createLastnameValidation() {
@@ -44,7 +44,7 @@ public class DefaultValidationProvider implements ValidationProvider {
             String input = value instanceof String ? (String) value : null;
 
             if (org.keycloak.services.validation.Validation.isBlank(input)) {
-                context.addProblem(ValidationProblem.error(key, Messages.MISSING_LAST_NAME));
+                context.addError(key, Messages.MISSING_LAST_NAME);
                 return false;
             }
             return true;
@@ -57,7 +57,7 @@ public class DefaultValidationProvider implements ValidationProvider {
             String input = value instanceof String ? (String) value : null;
 
             if (org.keycloak.services.validation.Validation.isBlank(input)) {
-                context.addProblem(ValidationProblem.error(key, Messages.MISSING_FIRST_NAME));
+                context.addError(key, Messages.MISSING_FIRST_NAME);
                 return false;
             }
             return true;
@@ -70,12 +70,12 @@ public class DefaultValidationProvider implements ValidationProvider {
             String input = value instanceof String ? (String) value : null;
 
             if (org.keycloak.services.validation.Validation.isBlank(input)) {
-                context.addProblem(ValidationProblem.error(key, Messages.MISSING_EMAIL));
+                context.addError(key, Messages.MISSING_EMAIL);
                 return false;
             }
 
             if (!org.keycloak.services.validation.Validation.isEmailValid(input)) {
-                context.addProblem(ValidationProblem.error(key, Messages.INVALID_EMAIL));
+                context.addError(key, Messages.INVALID_EMAIL);
                 return false;
             }
 
@@ -89,9 +89,9 @@ public class DefaultValidationProvider implements ValidationProvider {
             String input = value instanceof String ? (String) value : null;
 
             if (!context.getRealm().isRegistrationEmailAsUsername()
-                    && context.getAttributeBoolean("userNameRequired")
+                    && context.getAttributeAsBoolean("userNameRequired")
                     && org.keycloak.services.validation.Validation.isBlank(input)) {
-                context.addProblem(ValidationProblem.error(key, Messages.MISSING_USERNAME));
+                context.addError(key, Messages.MISSING_USERNAME);
                 return false;
             }
             return true;

@@ -20,11 +20,11 @@ public class DelegatingValidation implements Validation {
     }
 
     @Override
-    public boolean validate(String key, Object value, NestedValidationContext context) {
+    public boolean validate(ValidationKey key, Object value, NestedValidationContext context) {
         return this.delegate.validate(key, value, context);
     }
 
-    public boolean isSupported(String key, Object value, NestedValidationContext context) {
+    public boolean isSupported(ValidationKey key, Object value, NestedValidationContext context) {
         return supported.test(key, value, context);
     }
 }

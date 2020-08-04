@@ -4,6 +4,8 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.validation.NestedValidationContext;
 import org.keycloak.validation.Validation;
 import org.keycloak.validation.ValidationContext;
+import org.keycloak.validation.ValidationKey;
+import org.keycloak.validation.ValidationProblem;
 import org.keycloak.validation.ValidationRegistry;
 import org.keycloak.validation.ValidationResult;
 import org.keycloak.validation.ValidatorProvider;
@@ -15,17 +17,17 @@ import java.util.Set;
 public class DefaultValidatorProvider implements ValidatorProvider {
 
     private final KeycloakSession session;
-    private final ValidationRegistry validatorRegistry;
+    private final ValidationRegistry validationRegistry;
 
-    public DefaultValidatorProvider(KeycloakSession session, ValidationRegistry validatorRegistry) {
+    public DefaultValidatorProvider(KeycloakSession session, ValidationRegistry validationRegistry) {
         this.session = session;
-        this.validatorRegistry = validatorRegistry;
+        this.validationRegistry = validationRegistry;
     }
 
     @Override
-    public ValidationResult validate(ValidationContext context, Object value, Set<String> keys) {
+    public ValidationResult validate(ValidationContext context, Object value, Set<ValidationKey> keys) {
 
-        Map<String, List<Validation>> validators = validatorRegistry.getValidations(context, keys, value);
+        Map<ValidationKey, List<Validation>> validators = validationRegistry.resolveValidations(context, keys, value);
 
         if (validators == null || validators.isEmpty()) {
             return null;
@@ -33,13 +35,15 @@ public class DefaultValidatorProvider implements ValidatorProvider {
 
         NestedValidationContext nestedContext = new NestedValidationContext(context, session);
         boolean valid = validateInternal(nestedContext, value, validators);
-        return new ValidationResult(valid, nestedContext.getProblems());
+        List<ValidationProblem> problems = nestedContext.getProblems();
+
+        return new ValidationResult(valid, problems);
     }
 
-    protected boolean validateInternal(NestedValidationContext context, Object value, Map<String, List<Validation>> validators) {
+    protected boolean validateInternal(NestedValidationContext context, Object value, Map<ValidationKey, List<Validation>> validators) {
 
         boolean valid = true;
-        for (Map.Entry<String, List<Validation>> entry : validators.entrySet()) {
+        for (Map.Entry<ValidationKey, List<Validation>> entry : validators.entrySet()) {
             for (Validation validation : entry.getValue()) {
                 // TODO add support for early exit short-circuit validation via flag in ValidationContext
                 valid &= validation.validate(entry.getKey(), value, context);
