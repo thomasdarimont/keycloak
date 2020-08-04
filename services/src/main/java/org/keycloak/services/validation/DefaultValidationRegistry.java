@@ -78,7 +78,7 @@ public class DefaultValidationRegistry implements ValidationRegistry {
     @Override
     public Map<ValidationKey, List<Validation>> getValidations(Set<ValidationKey> keys) {
 
-        if (keys.isEmpty()) {
+        if (keys == null || keys.isEmpty()) {
             return Collections.emptyMap();
         }
 
@@ -94,7 +94,7 @@ public class DefaultValidationRegistry implements ValidationRegistry {
     @Override
     public Map<ValidationKey, List<Validation>> resolveValidations(ValidationContext context, Set<ValidationKey> keys, Object value) {
 
-        if (keys.isEmpty()) {
+        if (keys == null || keys.isEmpty()) {
             return Collections.emptyMap();
         }
 
@@ -109,16 +109,22 @@ public class DefaultValidationRegistry implements ValidationRegistry {
 
     @Override
     public List<Validation> resolveValidations(ValidationContext context, ValidationKey key, Object value) {
-        return filterValidators(key, getValidationRegistrationsStream(key), context, value);
+        return resolveValidationsInternal(key, getValidationRegistrationsStream(key), context, value);
     }
 
-    protected List<Validation> filterValidators(ValidationKey key, Stream<ValidationRegistration> registrations, ValidationContext context, Object value) {
-
-        return registrations
-                .filter(vr -> vr.isEligibleForContextKey(context.getContextKey()))
-                .map(ValidationRegistration::getValidation)
-                .filter(v -> v.isSupported(key, value, context))
+    protected List<Validation> resolveValidationsInternal(ValidationKey key, Stream<ValidationRegistration> registrations, ValidationContext context, Object value) {
+        return filterSupportedValidationsStream(key, registrations, context, value)
                 .collect(Collectors.toList());
+    }
+
+    protected Stream<Validation> filterSupportedValidationsStream(ValidationKey key, Stream<ValidationRegistration> registrations, ValidationContext context, Object value) {
+        return filterEligibleRegistrationsStream(registrations, context)
+                .filter(v -> v.isSupported(key, value, context));
+    }
+
+    protected Stream<Validation> filterEligibleRegistrationsStream(Stream<ValidationRegistration> registrations, ValidationContext context) {
+        return registrations.filter(vr -> vr.isEligibleForContextKey(context.getContextKey()))
+                .map(ValidationRegistration::getValidation);
     }
 
     @Override
