@@ -11,7 +11,7 @@ import java.util.stream.Stream;
 /**
  * Denotes the result of a validation run.
  */
-public class ValidationResult {
+public class ValidationResult implements Consumer<Consumer<ValidationResult>> {
 
     public static ValidationResult OK = new ValidationResult(true, Collections.emptyList());
 
@@ -84,15 +84,16 @@ public class ValidationResult {
         return filtered;
     }
 
-    public void onError(Consumer<ValidationResult> consumer) {
-        consumer.accept(this);
-    }
-
     @Override
     public String toString() {
         return "ValidationResult{" +
                 "valid=" + valid +
                 ", problems=" + problems +
                 '}';
+    }
+
+    @Override
+    public void accept(Consumer<ValidationResult> consumer) {
+        consumer.accept(this);
     }
 }

@@ -125,16 +125,16 @@ public class Validation {
         List<FormMessage> errors = new ArrayList<>();
 
         validator.validate(context, formData.getFirst(FIELD_USERNAME), ValidationKey.USER_USERNAME)
-                .onError(res -> res.getErrors().forEach(p -> addError(errors, FIELD_USERNAME, p.getMessage())));
+                 .accept(res -> res.getErrors().forEach(p -> addError(errors, FIELD_USERNAME, p.getMessage())));
 
         validator.validate(context, formData.getFirst(FIELD_FIRST_NAME), ValidationKey.USER_FIRSTNAME)
-                .onError(res -> res.getErrors().forEach(p -> addError(errors, FIELD_FIRST_NAME, p.getMessage())));
+                 .accept(res -> res.getErrors().forEach(p -> addError(errors, FIELD_FIRST_NAME, p.getMessage())));
 
         validator.validate(context, formData.getFirst(FIELD_LAST_NAME), ValidationKey.USER_LASTNAME)
-                .onError(res -> res.getErrors().forEach(p -> addError(errors, FIELD_LAST_NAME, p.getMessage())));
+                 .accept(res -> res.getErrors().forEach(p -> addError(errors, FIELD_LAST_NAME, p.getMessage())));
 
         validator.validate(context, formData.getFirst(FIELD_EMAIL), ValidationKey.USER_EMAIL)
-                .onError(res -> res.getErrors().forEach(p -> addError(errors, FIELD_EMAIL, p.getMessage())));
+                 .accept(res -> res.getErrors().forEach(p -> addError(errors, FIELD_EMAIL, p.getMessage())));
 
         return errors;
     }
