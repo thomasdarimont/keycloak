@@ -11,17 +11,15 @@ import java.util.List;
 public interface Validation {
 
     /**
-     * Validates the given value in the current {@link ValidationContext}.
+     * Validates the given value in the current {@link NestedValidationContext}.
      * Detailed validation problems can be reported via the {@link ValidationProblem} list.
      *
      * @param key      key of the attribute to validate
      * @param value    the value to validate
      * @param context  the {@link ValidationContext}
-     * @param problems the {@link List} of {@link ValidationProblem ValidationProblem's}
-     * @param session  the {@link KeycloakSession}
      * @return {@literal true} if the validation succeeded, {@literal false} otherwise.
      */
-    boolean validate(String key, Object value, ValidationContext context, List<ValidationProblem> problems, KeycloakSession session);
+    boolean validate(String key, Object value, NestedValidationContext context);
 
     /**
      * Tells if the validation is supported in the given {@link ValidationContext} for the given {@code value}.

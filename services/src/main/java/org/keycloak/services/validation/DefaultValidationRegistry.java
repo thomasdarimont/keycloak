@@ -1,5 +1,6 @@
 package org.keycloak.services.validation;
 
+import org.keycloak.validation.NestedValidationContext;
 import org.keycloak.validation.Validation;
 import org.keycloak.validation.ValidationContext;
 import org.keycloak.validation.ValidationRegistration;
