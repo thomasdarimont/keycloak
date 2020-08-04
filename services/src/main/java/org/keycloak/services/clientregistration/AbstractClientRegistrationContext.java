@@ -19,7 +19,7 @@ package org.keycloak.services.clientregistration;
 
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.representations.idm.ClientRepresentation;
-import org.keycloak.services.validation.ClientValidation;
+import org.keycloak.services.validation.ClientValidator;
 import org.keycloak.services.validation.ValidationMessages;
 
 /**
@@ -54,6 +54,6 @@ public abstract class AbstractClientRegistrationContext implements ClientRegistr
 
     @Override
     public boolean validateClient(ValidationMessages validationMessages) {
-        return ClientValidation.validate(client, validationMessages);
+        return ClientValidator.validate(client, validationMessages);
     }
 }

@@ -24,7 +24,7 @@ import org.keycloak.representations.idm.ClientRepresentation;
 /**
  * @author Vaclav Muzikar <vmuzikar@redhat.com>
  */
-public class ClientValidation {
+public class ClientValidator {
     /**
      * Checks if the Client's Redirect URIs doesn't contain any URI fragments (like http://example.org/auth#fragment)
      *

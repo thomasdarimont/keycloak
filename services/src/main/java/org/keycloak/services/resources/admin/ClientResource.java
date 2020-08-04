@@ -60,7 +60,7 @@ import org.keycloak.services.managers.ResourceAdminManager;
 import org.keycloak.services.resources.admin.permissions.AdminPermissionEvaluator;
 import org.keycloak.services.resources.admin.permissions.AdminPermissionManagement;
 import org.keycloak.services.resources.admin.permissions.AdminPermissions;
-import org.keycloak.services.validation.ClientValidation;
+import org.keycloak.services.validation.ClientValidator;
 import org.keycloak.services.validation.PairwiseClientValidator;
 import org.keycloak.services.validation.ValidationMessages;
 import org.keycloak.validation.ClientValidationUtil;
@@ -135,7 +135,7 @@ public class ClientResource {
         auth.clients().requireConfigure(client);
 
         ValidationMessages validationMessages = new ValidationMessages();
-        if (!ClientValidation.validate(rep, validationMessages) || !PairwiseClientValidator.validate(session, rep, validationMessages)) {
+        if (!ClientValidator.validate(rep, validationMessages) || !PairwiseClientValidator.validate(session, rep, validationMessages)) {
             Properties messages = AdminRoot.getMessages(session, realm, auth.adminAuth().getToken().getLocale());
             throw new ErrorResponseException(
                     validationMessages.getStringMessages(),
