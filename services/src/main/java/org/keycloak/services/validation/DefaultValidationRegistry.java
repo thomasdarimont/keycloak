@@ -128,7 +128,7 @@ public class DefaultValidationRegistry implements ValidationRegistry {
     }
 
     @Override
-    public void registerValidation(Validation validation, ValidationKey key, double order, Set<ValidationContextKey> contextKeys) {
+    public void register(Validation validation, ValidationKey key, double order, Set<ValidationContextKey> contextKeys) {
 
         ValidationRegistration registration = new ValidationRegistration(key, validation, order, contextKeys);
 

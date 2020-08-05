@@ -119,21 +119,21 @@ public class Validation {
 //            addError(errors, FIELD_EMAIL, Messages.INVALID_EMAIL);
 //        }
 
-        ValidationContext context = new ValidationContext(realm, ValidationContextKey.USER_PROFILE_UPDATE,
+        ValidationContext context = new ValidationContext(realm, ValidationContextKey.User.PROFILE_UPDATE,
                 Collections.singletonMap("userNameRequired", userNameRequired));
 
         List<FormMessage> errors = new ArrayList<>();
 
-        validator.validate(context, formData.getFirst(FIELD_USERNAME), ValidationKey.USER_USERNAME)
+        validator.validate(context, formData.getFirst(FIELD_USERNAME), ValidationKey.User.USERNAME)
                  .accept(res -> res.getErrors().forEach(p -> addError(errors, FIELD_USERNAME, p.getMessage())));
 
-        validator.validate(context, formData.getFirst(FIELD_FIRST_NAME), ValidationKey.USER_FIRSTNAME)
+        validator.validate(context, formData.getFirst(FIELD_FIRST_NAME), ValidationKey.User.FIRSTNAME)
                  .accept(res -> res.getErrors().forEach(p -> addError(errors, FIELD_FIRST_NAME, p.getMessage())));
 
-        validator.validate(context, formData.getFirst(FIELD_LAST_NAME), ValidationKey.USER_LASTNAME)
+        validator.validate(context, formData.getFirst(FIELD_LAST_NAME), ValidationKey.User.LASTNAME)
                  .accept(res -> res.getErrors().forEach(p -> addError(errors, FIELD_LAST_NAME, p.getMessage())));
 
-        validator.validate(context, formData.getFirst(FIELD_EMAIL), ValidationKey.USER_EMAIL)
+        validator.validate(context, formData.getFirst(FIELD_EMAIL), ValidationKey.User.EMAIL)
                  .accept(res -> res.getErrors().forEach(p -> addError(errors, FIELD_EMAIL, p.getMessage())));
 
         return errors;

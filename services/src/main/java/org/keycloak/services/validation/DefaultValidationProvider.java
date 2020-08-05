@@ -19,39 +19,29 @@ package org.keycloak.services.validation;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.validation.Validation;
 import org.keycloak.validation.ValidationContextKey;
+import org.keycloak.validation.ValidationKey;
 import org.keycloak.validation.ValidationProvider;
 import org.keycloak.validation.ValidationRegistry;
-import org.keycloak.validation.ValidationKey;
 
 public class DefaultValidationProvider implements ValidationProvider {
 
-    // Note: double order constants ease adding new validations before or after a validation.
-    // existing validations can also be replaced if the order of a new Validation is equal to the order of the existing
-    // Validation for the same validation key.
-
-    // TODO move orders to appropriate ValidationKey enum
-    public static final double VALIDATION_ORDER_USER_USERNAME = 1000.0;
-    public static final double VALIDATION_ORDER_USER_EMAIL = 1100.0;
-    public static final double VALIDATION_ORDER_USER_FIRSTNAME = 1200.0;
-    public static final double VALIDATION_ORDER_USER_LASTNAME = 1300.0;
-
     @Override
-    public void register(ValidationRegistry validationRegistry) {
+    public void register(ValidationRegistry registry) {
 
         // TODO add additional validators
+        registry.register(createUsernameValidation(), ValidationKey.User.USERNAME,
+                ValidationContextKey.User.PROFILE_UPDATE, ValidationContextKey.User.REGISTRATION);
 
-        validationRegistry.registerValidation(createUsernameValidation(), ValidationKey.USER_USERNAME, VALIDATION_ORDER_USER_USERNAME,
-                ValidationContextKey.USER_PROFILE_UPDATE, ValidationContextKey.USER_REGISTRATION);
-
-        validationRegistry.registerValidation(createEmailValidation(), ValidationKey.USER_EMAIL, VALIDATION_ORDER_USER_EMAIL,
-                ValidationContextKey.USER_PROFILE_UPDATE, ValidationContextKey.USER_REGISTRATION);
+        registry.register(createEmailValidation(), ValidationKey.User.EMAIL,
+                ValidationContextKey.User.PROFILE_UPDATE, ValidationContextKey.User.REGISTRATION);
 
         // TODO firstname / lastname validation could be merged?
-        validationRegistry.registerValidation(createFirstnameValidation(), ValidationKey.USER_FIRSTNAME, VALIDATION_ORDER_USER_FIRSTNAME,
-                ValidationContextKey.USER_PROFILE_UPDATE);
+        registry.register(createFirstnameValidation(), ValidationKey.User.FIRSTNAME,
+                ValidationContextKey.User.PROFILE_UPDATE);
 
-        validationRegistry.registerValidation(createLastnameValidation(), ValidationKey.USER_LASTNAME, VALIDATION_ORDER_USER_LASTNAME,
-                ValidationContextKey.USER_PROFILE_UPDATE);
+        registry.register(createLastnameValidation(),
+                ValidationKey.User.LASTNAME,
+                ValidationContextKey.User.PROFILE_UPDATE);
     }
 
     protected Validation createLastnameValidation() {

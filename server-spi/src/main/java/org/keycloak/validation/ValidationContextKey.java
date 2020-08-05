@@ -16,24 +16,83 @@
  */
 package org.keycloak.validation;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
 /**
  * Denotes a dedicated ValidationContext in which certain {@link Validation} rules should be applied, e.g. during User Registration,
  * User Profile change, Client Registration, Realm Definition, Identity Provider Configuration, etc.
  * {@link Validation Validation's} can be associated with different ValidationContextKey.
  * <p>
  * Users can create custom {@link ValidationContextKey ValidationContextKey's} by implementing this interface.
- * It is recommended that custom {@link ValidationContextKey} implementations are singletons, hence enums are a good choice.
+ * It is recommended that custom {@link ValidationContextKey} implementations are singletons.
  */
 public interface ValidationContextKey {
 
-    ValidationContextKey USER_PROFILE_UPDATE = DefaultContext.USER_PROFILE_UPDATE;
+    interface User {
 
-    ValidationContextKey USER_REGISTRATION = DefaultContext.USER_REGISTRATION;
+        ValidationContextKey RESOURCE_UPDATE = create("USER_RESOURCE_UPDATE");
 
-    enum DefaultContext implements ValidationContextKey {
+        ValidationContextKey PROFILE_UPDATE = create("USER_PROFILE_UPDATE");
 
-        USER_PROFILE_UPDATE,
+        ValidationContextKey REGISTRATION = create("USER_REGISTRATION");
 
-        USER_REGISTRATION;
+        ValidationContextKey PROFILE_UPDATE_REGISTRATION = create("USER_PROFILE_UPDATE_REGISTRATION");
+
+        ValidationContextKey PROFILE_UPDATE_IDP_REVIEW = create("USER_PROFILE_UPDATE_IDP_REVIEW");
+
+        List<ValidationContextKey> ALL_KEYS = Collections.unmodifiableList(Arrays.asList(RESOURCE_UPDATE, PROFILE_UPDATE, PROFILE_UPDATE_IDP_REVIEW, PROFILE_UPDATE_REGISTRATION, REGISTRATION));
+    }
+
+    String name();
+
+    static ValidationContextKey create(String name) {
+        return new SimpleValidationContextKey(name);
+    }
+
+    static ValidationContextKey lookup(String name) {
+
+        for (ValidationContextKey key : User.ALL_KEYS) {
+            if (key.name().equals(name)) {
+                return key;
+            }
+        }
+
+        return null;
+    }
+
+    class SimpleValidationContextKey implements ValidationContextKey {
+
+        private final String name;
+
+        public SimpleValidationContextKey(String name) {
+            this.name = name;
+        }
+
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            SimpleValidationContextKey key = (SimpleValidationContextKey) o;
+            return Objects.equals(name, key.name);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(name);
+        }
+
+        @Override
+        public String toString() {
+            return "Dynamic{" +
+                    "name='" + name + '\'' +
+                    '}';
+        }
     }
 }

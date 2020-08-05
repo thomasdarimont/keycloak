@@ -17,11 +17,9 @@
 package org.keycloak.validation;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -59,6 +57,7 @@ public interface ValidationRegistry {
     /**
      * Returns all {@link Validation}s, that are eligible for the given validation context key
      * and {@link ValidationContext} as well as the given value.
+     *
      * @param context
      * @param key
      * @param value
@@ -74,9 +73,39 @@ public interface ValidationRegistry {
      * @param order
      * @param contextKeys
      */
-    void registerValidation(Validation validation, ValidationKey key, double order, Set<ValidationContextKey> contextKeys);
+    void register(Validation validation, ValidationKey key, double order, Set<ValidationContextKey> contextKeys);
 
-    default void registerValidation(Validation validation, ValidationKey key, double order, ValidationContextKey... contextKeys) {
-        registerValidation(validation, key, order, new LinkedHashSet<>(Arrays.asList(contextKeys)));
+    /**
+     * Registers a new {@link Validation} for the given validation key that can be applied in the given validation context keys.
+     *
+     * @param validation
+     * @param key
+     * @param order
+     * @param contextKeys
+     */
+    default void register(Validation validation, ValidationKey key, double order, ValidationContextKey... contextKeys) {
+        register(validation, key, order, new LinkedHashSet<>(Arrays.asList(contextKeys)));
+    }
+
+    /**
+     * Registers a new {@link Validation} for the given validation key that can be applied in the given validation context keys.
+     *
+     * @param validation
+     * @param key
+     * @param contextKeys
+     */
+    default void register(Validation validation, ValidationKey key, ValidationContextKey... contextKeys) {
+        register(validation, key, key.order(), new LinkedHashSet<>(Arrays.asList(contextKeys)));
+    }
+
+    /**
+     * Registers a new {@link Validation} for the given validation key that can be applied in the given validation context keys.
+     *
+     * @param validation
+     * @param key
+     * @param contextKeys
+     */
+    default void register(Validation validation, ValidationKey key, Set<ValidationContextKey> contextKeys) {
+        register(validation, key, key.order(), contextKeys);
     }
 }
