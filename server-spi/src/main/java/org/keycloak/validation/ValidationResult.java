@@ -16,7 +16,6 @@
  */
 package org.keycloak.validation;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
@@ -29,6 +28,9 @@ import java.util.stream.Stream;
  */
 public class ValidationResult implements Consumer<Consumer<ValidationResult>> {
 
+    /**
+     * Singleton denoting that the Validation was successful without errors or warnings.
+     */
     public static ValidationResult OK = new ValidationResult(true, Collections.emptyList());
 
     /**
@@ -43,9 +45,12 @@ public class ValidationResult implements Consumer<Consumer<ValidationResult>> {
 
     public ValidationResult(boolean valid, List<ValidationProblem> problems) {
         this.valid = valid;
-        this.problems = new ArrayList<>(problems);
+        this.problems = Collections.unmodifiableList(problems);
     }
 
+    /**
+     * @return true, if the Validation was successful without errors or warnings.
+     */
     public boolean isOk() {
         return this == OK;
     }
@@ -79,7 +84,7 @@ public class ValidationResult implements Consumer<Consumer<ValidationResult>> {
         return filter(getProblems().stream(), ValidationProblem::isWarning).collect(Collectors.toList());
     }
 
-    public List<ValidationProblem> getWarnings(String key) {
+    public List<ValidationProblem> getWarnings(ValidationKey key) {
         return filter(getProblems().stream(), ValidationProblem::isWarning, p -> p.getKey().equals(key)).collect(Collectors.toList());
     }
 
@@ -87,7 +92,7 @@ public class ValidationResult implements Consumer<Consumer<ValidationResult>> {
         return filter(getProblems().stream(), ValidationProblem::isError).collect(Collectors.toList());
     }
 
-    public List<ValidationProblem> getErrors(String key) {
+    public List<ValidationProblem> getErrors(ValidationKey key) {
         return filter(getProblems().stream(), ValidationProblem::isError, p -> p.getKey().equals(key)).collect(Collectors.toList());
     }
 

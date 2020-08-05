@@ -53,6 +53,10 @@ public class DefaultValidatorProvider implements ValidatorProvider {
         boolean valid = validateInternal(nestedContext, value, validators);
         List<ValidationProblem> problems = nestedContext.getProblems();
 
+        if (valid && problems.isEmpty()) {
+            return ValidationResult.OK;
+        }
+
         return new ValidationResult(valid, problems);
     }
 
