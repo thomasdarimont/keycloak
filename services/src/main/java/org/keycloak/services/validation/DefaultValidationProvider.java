@@ -16,7 +16,6 @@
  */
 package org.keycloak.services.validation;
 
-import org.keycloak.models.UserModel;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.validation.Validation;
 import org.keycloak.validation.ValidationContextKey;
@@ -104,6 +103,24 @@ public class DefaultValidationProvider implements ValidationProvider {
             return true;
         };
     }
+
+//    protected Validation uniqueEmailValidation() {
+//        return (key, value, context) -> {
+//
+//            if (context.getRealm().isDuplicateEmailsAllowed()) {
+//                return true;
+//            }
+//
+//            String input = value instanceof String ? (String) value : null;
+//            if (input == null) {
+//                context.addError(key, Messages.MISSING_EMAIL);
+//            }
+//
+//            UserModel userByEmail = context.getSession().users().getUserByEmail(input, context.getRealm());
+//            return userByEmail == null;
+//        };
+//    }
+
 //
 //    protected Validation createProfileValidation(ValidationRegistry registry) {
 //        return (key, value, context) -> {

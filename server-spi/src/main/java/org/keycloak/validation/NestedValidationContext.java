@@ -35,7 +35,7 @@ public class NestedValidationContext extends ValidationContext {
     private final List<ValidationProblem> problems;
 
     public NestedValidationContext(ValidationContext parent, KeycloakSession session) {
-        super(parent.getRealm(), parent.getContextKey(), parent.getAttributes());
+        super(parent);
         this.session = session;
         this.problems = new ArrayList<>();
     }
@@ -56,10 +56,18 @@ public class NestedValidationContext extends ValidationContext {
         getProblems().add(problem);
     }
 
+    /**
+     * @param key
+     * @param message
+     */
     public void addError(ValidationKey key, String message) {
         addProblem(ValidationProblem.error(key, message));
     }
 
+    /**
+     * @param key
+     * @param message
+     */
     public void addWarning(ValidationKey key, String message) {
         addProblem(ValidationProblem.warning(key, message));
     }
