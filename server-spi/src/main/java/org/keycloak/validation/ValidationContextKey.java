@@ -33,15 +33,15 @@ public interface ValidationContextKey {
 
     interface User {
 
-        ValidationContextKey RESOURCE_UPDATE = create("USER_RESOURCE_UPDATE");
+        ValidationContextKey RESOURCE_UPDATE = create("user.resource_update");
 
-        ValidationContextKey PROFILE_UPDATE = create("USER_PROFILE_UPDATE");
+        ValidationContextKey PROFILE_UPDATE = create("user.profile_update");
 
-        ValidationContextKey REGISTRATION = create("USER_REGISTRATION");
+        ValidationContextKey REGISTRATION = create("user.registration");
 
-        ValidationContextKey PROFILE_UPDATE_REGISTRATION = create("USER_PROFILE_UPDATE_REGISTRATION");
+        ValidationContextKey PROFILE_UPDATE_REGISTRATION = create("user.profile_update_registration");
 
-        ValidationContextKey PROFILE_UPDATE_IDP_REVIEW = create("USER_PROFILE_UPDATE_IDP_REVIEW");
+        ValidationContextKey PROFILE_UPDATE_IDP_REVIEW = create("user.profile_update_idp_review");
 
         List<ValidationContextKey> ALL_KEYS = Collections.unmodifiableList(Arrays.asList(RESOURCE_UPDATE, PROFILE_UPDATE, PROFILE_UPDATE_IDP_REVIEW, PROFILE_UPDATE_REGISTRATION, REGISTRATION));
     }
