@@ -47,6 +47,8 @@ public class ValidationContext {
      */
     private final ClientModel client;
 
+    // TODO add support to skip certain validations for ValidationKey
+
     public ValidationContext(ValidationContext that) {
         this(that.getRealm(), that.getContextKey(), that.getAttributes(), that.getUser(), that.getClient());
     }
