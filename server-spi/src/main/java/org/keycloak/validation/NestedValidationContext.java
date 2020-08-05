@@ -63,4 +63,20 @@ public class NestedValidationContext extends ValidationContext {
     public void addWarning(ValidationKey key, String message) {
         addProblem(ValidationProblem.warning(key, message));
     }
+
+    /**
+     * Provides support for nested validations, e.g. delegate complex field validations to other validations.
+     *
+     * @param key
+     * @param value
+     * @param registry
+     * @return
+     */
+    public boolean validateNested(ValidationKey key, Object value, ValidationRegistry registry) {
+
+        // TODO check for loops!
+
+        return registry.resolveValidations(this, key, value).stream()
+                .allMatch(v -> v.validate(key, value, this));
+    }
 }

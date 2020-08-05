@@ -37,11 +37,11 @@ public interface Validation {
      * Tells if the validation is supported in the given {@link ValidationContext} for the given {@code value}.
      *
      * @param key
-     * @param validationContext
+     * @param context
      * @param value
      * @return
      */
-    default boolean isSupported(ValidationKey key, Object value, ValidationContext validationContext) {
+    default boolean isSupported(ValidationKey key, Object value, ValidationContext context) {
         return true;
     }
 
@@ -58,9 +58,9 @@ public interface Validation {
         /**
          * @param key
          * @param value
-         * @param validationContext
+         * @param context
          * @return
          */
-        boolean test(ValidationKey key, Object value, ValidationContext validationContext);
+        boolean test(ValidationKey key, Object value, ValidationContext context);
     }
 }
