@@ -16,8 +16,11 @@
  */
 package org.keycloak.validation;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -84,16 +87,24 @@ public class ValidationResult implements Consumer<Consumer<ValidationResult>> {
         return filter(getProblems().stream(), ValidationProblem::isWarning).collect(Collectors.toList());
     }
 
-    public List<ValidationProblem> getWarnings(ValidationKey key) {
-        return filter(getProblems().stream(), ValidationProblem::isWarning, p -> p.getKey().equals(key)).collect(Collectors.toList());
+    public List<ValidationProblem> getWarnings(ValidationKey... keys) {
+        return getWarnings(new HashSet<>(Arrays.asList(keys)));
+    }
+
+    public List<ValidationProblem> getWarnings(Set<ValidationKey> keys) {
+        return filter(getProblems().stream(), ValidationProblem::isWarning, p -> keys.contains(p.getKey())).collect(Collectors.toList());
     }
 
     public List<ValidationProblem> getErrors() {
         return filter(getProblems().stream(), ValidationProblem::isError).collect(Collectors.toList());
     }
 
-    public List<ValidationProblem> getErrors(ValidationKey key) {
-        return filter(getProblems().stream(), ValidationProblem::isError, p -> p.getKey().equals(key)).collect(Collectors.toList());
+    public List<ValidationProblem> getErrors(ValidationKey... keys) {
+        return getErrors(new HashSet<>(Arrays.asList(keys)));
+    }
+
+    public List<ValidationProblem> getErrors(Set<ValidationKey> keys) {
+        return filter(getProblems().stream(), ValidationProblem::isError, p -> keys.contains(p.getKey())).collect(Collectors.toList());
     }
 
     @SafeVarargs
