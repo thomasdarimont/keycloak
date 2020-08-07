@@ -33,23 +33,23 @@ public interface ValidationContextKey {
 
     interface User {
 
-        ValidationContextKey RESOURCE_UPDATE = create("user.resource_update");
+        ValidationContextKey RESOURCE_UPDATE = new BuiltInValidationContextKey("user.resource_update");
 
-        ValidationContextKey PROFILE_UPDATE = create("user.profile_update");
+        ValidationContextKey PROFILE_UPDATE = new BuiltInValidationContextKey("user.profile_update");
 
-        ValidationContextKey REGISTRATION = create("user.registration");
+        ValidationContextKey REGISTRATION = new BuiltInValidationContextKey("user.registration");
 
-        ValidationContextKey PROFILE_UPDATE_REGISTRATION = create("user.profile_update_registration");
+        ValidationContextKey PROFILE_UPDATE_REGISTRATION = new BuiltInValidationContextKey("user.profile_update_registration");
 
-        ValidationContextKey PROFILE_UPDATE_IDP_REVIEW = create("user.profile_update_idp_review");
+        ValidationContextKey PROFILE_UPDATE_IDP_REVIEW = new BuiltInValidationContextKey("user.profile_update_idp_review");
 
         List<ValidationContextKey> ALL_KEYS = Collections.unmodifiableList(Arrays.asList(RESOURCE_UPDATE, PROFILE_UPDATE, PROFILE_UPDATE_IDP_REVIEW, PROFILE_UPDATE_REGISTRATION, REGISTRATION));
     }
 
     String name();
 
-    static ValidationContextKey create(String name) {
-        return new SimpleValidationContextKey(name);
+    static ValidationContextKey newCustomValidationContextKey(String name) {
+        return new CustomValidationContextKey(name);
     }
 
     static ValidationContextKey lookup(String name) {
@@ -63,11 +63,25 @@ public interface ValidationContextKey {
         return null;
     }
 
-    class SimpleValidationContextKey implements ValidationContextKey {
+    final class BuiltInValidationContextKey extends AbstractValidationContextKey {
+
+        public BuiltInValidationContextKey(String name) {
+            super(name);
+        }
+    }
+
+    final class CustomValidationContextKey extends AbstractValidationContextKey {
+
+        public CustomValidationContextKey(String name) {
+            super(name);
+        }
+    }
+
+    class AbstractValidationContextKey implements ValidationContextKey {
 
         private final String name;
 
-        public SimpleValidationContextKey(String name) {
+        public AbstractValidationContextKey(String name) {
             this.name = name;
         }
 
@@ -78,9 +92,9 @@ public interface ValidationContextKey {
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            SimpleValidationContextKey key = (SimpleValidationContextKey) o;
-            return Objects.equals(name, key.name);
+            if (!(o instanceof AbstractValidationContextKey)) return false;
+            AbstractValidationContextKey that = (AbstractValidationContextKey) o;
+            return Objects.equals(name, that.name);
         }
 
         @Override
@@ -90,7 +104,7 @@ public interface ValidationContextKey {
 
         @Override
         public String toString() {
-            return "Dynamic{" +
+            return getClass().getSimpleName() + "{" +
                     "name='" + name + '\'' +
                     '}';
         }
