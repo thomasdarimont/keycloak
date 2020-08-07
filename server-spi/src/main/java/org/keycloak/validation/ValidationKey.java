@@ -29,14 +29,14 @@ import java.util.Objects;
  */
 public interface ValidationKey {
 
-    // User Entities
-    // USER_PROFILE
-    // USER_REGISTRATION
-
     /**
      * Collection of User specific validation keys.
      */
     interface User {
+
+        // User Entities
+        // USER_PROFILE
+        // USER_REGISTRATION
 
         // User Attributes
         BuiltinValidationKey USERNAME = new BuiltinValidationKey("user.username");
