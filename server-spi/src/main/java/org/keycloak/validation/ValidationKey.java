@@ -39,12 +39,12 @@ public interface ValidationKey {
     interface User {
 
         // User Attributes
-        KeycloakValidationKey USERNAME = new KeycloakValidationKey("user.username");
-        KeycloakValidationKey EMAIL = new KeycloakValidationKey("user.email");
-        KeycloakValidationKey FIRSTNAME = new KeycloakValidationKey("user.firstName");
-        KeycloakValidationKey LASTNAME = new KeycloakValidationKey("user.lastName");
+        BuiltinValidationKey USERNAME = new BuiltinValidationKey("user.username");
+        BuiltinValidationKey EMAIL = new BuiltinValidationKey("user.email");
+        BuiltinValidationKey FIRSTNAME = new BuiltinValidationKey("user.firstName");
+        BuiltinValidationKey LASTNAME = new BuiltinValidationKey("user.lastName");
 
-        List<KeycloakValidationKey> ALL_KEYS = Collections.unmodifiableList(Arrays.asList(USERNAME, EMAIL, FIRSTNAME, LASTNAME));
+        List<BuiltinValidationKey> ALL_KEYS = Collections.unmodifiableList(Arrays.asList(USERNAME, EMAIL, FIRSTNAME, LASTNAME));
     }
 
     // TODO add additional supported attributes
@@ -88,14 +88,14 @@ public interface ValidationKey {
     }
 
     /**
-     * Keycloak internal {@link ValidationKey}.
+     * Keycloak built-in {@link ValidationKey}.
      * <p>
      * This type should only be used for Keycloak Internal {@link ValidationKey} implementations.
      * Users who want to define custom ValidationKeys should use the CustomValidationKey.
      */
-    final class KeycloakValidationKey extends AbstractValidationKey {
+    final class BuiltinValidationKey extends AbstractValidationKey {
 
-        public KeycloakValidationKey(String name) {
+        public BuiltinValidationKey(String name) {
             super(name);
         }
     }
@@ -142,7 +142,7 @@ public interface ValidationKey {
 
         @Override
         public String toString() {
-            return "Dynamic{" +
+            return getClass().getSimpleName() + "{" +
                     "name='" + name + '\'' +
                     '}';
         }

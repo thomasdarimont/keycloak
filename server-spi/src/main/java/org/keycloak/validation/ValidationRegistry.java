@@ -16,7 +16,7 @@
  */
 package org.keycloak.validation;
 
-import org.keycloak.validation.ValidationKey.KeycloakValidationKey;
+import org.keycloak.validation.ValidationKey.BuiltinValidationKey;
 
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -92,24 +92,24 @@ public interface ValidationRegistry {
     }
 
     /**
-     * Registers a new {@link Validation} for the given {@link KeycloakValidationKey} that can be applied in the given validation context keys with a default order.
+     * Registers a new {@link Validation} for the given {@link BuiltinValidationKey} that can be applied in the given validation context keys with a default order.
      *
      * @param validation
      * @param key
      * @param contextKeys
      */
-    default void register(Validation validation, KeycloakValidationKey key, Set<ValidationContextKey> contextKeys) {
+    default void register(Validation validation, BuiltinValidationKey key, Set<ValidationContextKey> contextKeys) {
         register(validation, key, DEFAULT_ORDER, contextKeys);
     }
 
     /**
-     * Registers a new {@link Validation} for the given {@link KeycloakValidationKey} that can be applied in the given validation context keys  with a default order.
+     * Registers a new {@link Validation} for the given {@link BuiltinValidationKey} that can be applied in the given validation context keys  with a default order.
      *
      * @param validation
      * @param key
      * @param contextKeys
      */
-    default void register(Validation validation, KeycloakValidationKey key, ValidationContextKey... contextKeys) {
+    default void register(Validation validation, BuiltinValidationKey key, ValidationContextKey... contextKeys) {
         register(validation, key, DEFAULT_ORDER, new LinkedHashSet<>(Arrays.asList(contextKeys)));
     }
 }

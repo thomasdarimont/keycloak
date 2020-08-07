@@ -123,7 +123,7 @@ public class DefaultValidationRegistry implements ValidationRegistry {
     }
 
     protected Stream<Validation> filterEligibleRegistrationsStream(Stream<ValidationRegistration> registrations, ValidationContext context) {
-        return registrations.filter(vr -> vr.isEligibleForContextKey(context.getContextKey()))
+        return registrations.filter(vr -> vr.isEligibleForContextKey(context.getContextKey())).sorted()
                 .map(ValidationRegistration::getValidation);
     }
 
@@ -132,9 +132,17 @@ public class DefaultValidationRegistry implements ValidationRegistry {
 
         ValidationRegistration registration = new ValidationRegistration(key, validation, order, contextKeys);
 
-        boolean wasNew = validatorRegistrations.computeIfAbsent(key, t -> new TreeSet<>()).add(registration);
+        SortedSet<ValidationRegistration> registrations = validatorRegistrations.computeIfAbsent(key, t -> new TreeSet<>());
+
+        boolean wasNew = registrations.add(registration);
         if (!wasNew) {
             LOGGER.debugf("Validation %s for key %s replaced existing validation.", validation.getClass().getName(), key);
+
+            // remove existing registration (with same order)
+            registrations.remove(registration);
+
+            // add new registration
+            registrations.add(registration);
         }
     }
 }
