@@ -69,47 +69,50 @@ public interface ValidationRegistry {
      */
     List<Validation> resolveValidations(ValidationContext context, ValidationKey key, Object value);
 
-    /**
-     * Registers a new {@link Validation} for the given {@link ValidationKey} that can be applied in the given validation context keys.
-     *
-     * @param validation
-     * @param key
-     * @param order
-     * @param contextKeys
-     */
-    void register(Validation validation, ValidationKey key, double order, Set<ValidationContextKey> contextKeys);
+    interface MutableValidationRegistry extends ValidationRegistry {
 
-    /**
-     * Registers a new {@link Validation} for the given {@link ValidationKey} that can be applied in the given validation context keys.
-     *
-     * @param validation
-     * @param key
-     * @param order
-     * @param contextKeys
-     */
-    default void register(Validation validation, ValidationKey key, double order, ValidationContextKey... contextKeys) {
-        register(validation, key, order, new LinkedHashSet<>(Arrays.asList(contextKeys)));
-    }
+        /**
+         * Registers a new {@link Validation} for the given {@link ValidationKey} that can be applied in the given validation context keys.
+         *
+         * @param validation
+         * @param key
+         * @param order
+         * @param contextKeys
+         */
+        void register(Validation validation, ValidationKey key, double order, Set<ValidationContextKey> contextKeys);
 
-    /**
-     * Registers a new {@link Validation} for the given {@link BuiltinValidationKey} that can be applied in the given validation context keys with a default order.
-     *
-     * @param validation
-     * @param key
-     * @param contextKeys
-     */
-    default void register(Validation validation, BuiltinValidationKey key, Set<ValidationContextKey> contextKeys) {
-        register(validation, key, DEFAULT_ORDER, contextKeys);
-    }
+        /**
+         * Registers a new {@link Validation} for the given {@link ValidationKey} that can be applied in the given validation context keys.
+         *
+         * @param validation
+         * @param key
+         * @param order
+         * @param contextKeys
+         */
+        default void register(Validation validation, ValidationKey key, double order, ValidationContextKey... contextKeys) {
+            register(validation, key, order, new LinkedHashSet<>(Arrays.asList(contextKeys)));
+        }
 
-    /**
-     * Registers a new {@link Validation} for the given {@link BuiltinValidationKey} that can be applied in the given validation context keys  with a default order.
-     *
-     * @param validation
-     * @param key
-     * @param contextKeys
-     */
-    default void register(Validation validation, BuiltinValidationKey key, ValidationContextKey... contextKeys) {
-        register(validation, key, DEFAULT_ORDER, new LinkedHashSet<>(Arrays.asList(contextKeys)));
+        /**
+         * Registers a new {@link Validation} for the given {@link BuiltinValidationKey} that can be applied in the given validation context keys with a default order.
+         *
+         * @param validation
+         * @param key
+         * @param contextKeys
+         */
+        default void register(Validation validation, BuiltinValidationKey key, Set<ValidationContextKey> contextKeys) {
+            register(validation, key, DEFAULT_ORDER, contextKeys);
+        }
+
+        /**
+         * Registers a new {@link Validation} for the given {@link BuiltinValidationKey} that can be applied in the given validation context keys  with a default order.
+         *
+         * @param validation
+         * @param key
+         * @param contextKeys
+         */
+        default void register(Validation validation, BuiltinValidationKey key, ValidationContextKey... contextKeys) {
+            register(validation, key, DEFAULT_ORDER, new LinkedHashSet<>(Arrays.asList(contextKeys)));
+        }
     }
 }

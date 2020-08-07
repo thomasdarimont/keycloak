@@ -49,7 +49,7 @@ public class DefaultValidatorProvider implements ValidatorProvider {
             return null;
         }
 
-        NestedValidationContext nestedContext = new NestedValidationContext(context, session);
+        NestedValidationContext nestedContext = new NestedValidationContext(context, session, validationRegistry);
         boolean valid = validateInternal(nestedContext, value, validators);
         List<ValidationProblem> problems = nestedContext.getProblems();
 
@@ -63,12 +63,19 @@ public class DefaultValidatorProvider implements ValidatorProvider {
     protected boolean validateInternal(NestedValidationContext context, Object value, Map<ValidationKey, List<Validation>> validators) {
 
         boolean valid = true;
+
+        allValidations:
         for (Map.Entry<ValidationKey, List<Validation>> entry : validators.entrySet()) {
             for (Validation validation : entry.getValue()) {
                 // TODO add support for early exit short-circuit validation via flag in ValidationContext
                 valid &= validation.validate(entry.getKey(), value, context);
+
+                if (!valid && context.isShortCircuit()) {
+                    break allValidations;
+                }
             }
         }
+
         return valid;
     }
 }

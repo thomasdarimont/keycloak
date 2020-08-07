@@ -37,14 +37,16 @@ public interface ValidationKey {
         // User Entities
         // USER_PROFILE
         // USER_REGISTRATION
+        // USER
+        BuiltinValidationKey USER = new BuiltinValidationKey("user", false);
 
         // User Attributes
-        BuiltinValidationKey USERNAME = new BuiltinValidationKey("user.username");
-        BuiltinValidationKey EMAIL = new BuiltinValidationKey("user.email");
-        BuiltinValidationKey FIRSTNAME = new BuiltinValidationKey("user.firstName");
-        BuiltinValidationKey LASTNAME = new BuiltinValidationKey("user.lastName");
+        BuiltinValidationKey USERNAME = new BuiltinValidationKey("user.username", true);
+        BuiltinValidationKey EMAIL = new BuiltinValidationKey("user.email", true);
+        BuiltinValidationKey FIRSTNAME = new BuiltinValidationKey("user.firstName", true);
+        BuiltinValidationKey LASTNAME = new BuiltinValidationKey("user.lastName", true);
 
-        List<BuiltinValidationKey> ALL_KEYS = Collections.unmodifiableList(Arrays.asList(USERNAME, EMAIL, FIRSTNAME, LASTNAME));
+        List<BuiltinValidationKey> ALL_KEYS = Collections.unmodifiableList(Arrays.asList(USER, USERNAME, EMAIL, FIRSTNAME, LASTNAME));
     }
 
     // TODO add additional supported attributes
@@ -54,7 +56,9 @@ public interface ValidationKey {
      *
      * @return
      */
-    String name();
+    String getName();
+
+    boolean isPropertyKey();
 
     /**
      * Create a new {@link ValidationKey}.
@@ -64,8 +68,8 @@ public interface ValidationKey {
      * @param name
      * @return
      */
-    static CustomValidationKey newCustomKey(String name) {
-        return new CustomValidationKey(name);
+    static CustomValidationKey newCustomKey(String name, boolean propertyKey) {
+        return new CustomValidationKey(name, propertyKey);
     }
 
     /**
@@ -77,7 +81,7 @@ public interface ValidationKey {
     static ValidationKey lookup(String name) {
 
         for (ValidationKey key : User.ALL_KEYS) {
-            if (key.name().equals(name)) {
+            if (key.getName().equals(name)) {
                 return key;
             }
         }
@@ -95,8 +99,8 @@ public interface ValidationKey {
      */
     final class BuiltinValidationKey extends AbstractValidationKey {
 
-        public BuiltinValidationKey(String name) {
-            super(name);
+        public BuiltinValidationKey(String name, boolean propertyKey) {
+            super(name, propertyKey);
         }
     }
 
@@ -107,8 +111,8 @@ public interface ValidationKey {
      */
     final class CustomValidationKey extends AbstractValidationKey {
 
-        public CustomValidationKey(String name) {
-            super(name);
+        public CustomValidationKey(String name, boolean propertyKey) {
+            super(name, propertyKey);
         }
     }
 
@@ -119,32 +123,34 @@ public interface ValidationKey {
 
         private final String name;
 
-        public AbstractValidationKey(String name) {
+        private final boolean propertyKey;
+
+        public AbstractValidationKey(String name, boolean propertyKey) {
             this.name = name;
+            this.propertyKey = propertyKey;
         }
 
-        public String name() {
+        public String getName() {
             return name;
+        }
+
+        @Override
+        public boolean isPropertyKey() {
+            return propertyKey;
         }
 
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (!(o instanceof CustomValidationKey)) return false;
+            if (!(o instanceof AbstractValidationKey)) return false;
             AbstractValidationKey that = (AbstractValidationKey) o;
-            return Objects.equals(name, that.name);
+            return propertyKey == that.propertyKey &&
+                    Objects.equals(name, that.name);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(name);
-        }
-
-        @Override
-        public String toString() {
-            return getClass().getSimpleName() + "{" +
-                    "name='" + name + '\'' +
-                    '}';
+            return Objects.hash(name, propertyKey);
         }
     }
 }

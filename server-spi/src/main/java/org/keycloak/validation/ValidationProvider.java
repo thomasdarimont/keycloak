@@ -17,6 +17,7 @@
 package org.keycloak.validation;
 
 import org.keycloak.provider.Provider;
+import org.keycloak.validation.ValidationRegistry.MutableValidationRegistry;
 
 /**
  * Provides custom {@link Validation Validation's} to a given {@link ValidationRegistry}.
@@ -28,7 +29,7 @@ public interface ValidationProvider extends Provider {
      *
      * @param validationRegistry to store the new {@link Validation Validation's}.
      */
-    void register(ValidationRegistry validationRegistry);
+    void register(MutableValidationRegistry validationRegistry);
 
     default void close() {
         // NOOP

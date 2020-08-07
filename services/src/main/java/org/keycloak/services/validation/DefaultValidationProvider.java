@@ -21,12 +21,12 @@ import org.keycloak.validation.Validation;
 import org.keycloak.validation.ValidationContextKey;
 import org.keycloak.validation.ValidationKey;
 import org.keycloak.validation.ValidationProvider;
-import org.keycloak.validation.ValidationRegistry;
+import org.keycloak.validation.ValidationRegistry.MutableValidationRegistry;
 
 public class DefaultValidationProvider implements ValidationProvider {
 
     @Override
-    public void register(ValidationRegistry registry) {
+    public void register(MutableValidationRegistry registry) {
 
         // TODO add additional validators
         registry.register(createUsernameValidation(), ValidationKey.User.USERNAME,

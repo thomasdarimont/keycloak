@@ -47,26 +47,29 @@ public class ValidationContext {
      */
     private final ClientModel client;
 
+    private final boolean shortCircuit;
+
     // TODO add support to skip certain validations for ValidationKey
 
     public ValidationContext(ValidationContext that) {
-        this(that.getRealm(), that.getContextKey(), that.getAttributes(), that.getUser(), that.getClient());
+        this(that.getRealm(), that.getContextKey(), that.getAttributes(), that.getUser(), that.getClient(), that.isShortCircuit());
     }
 
     public ValidationContext(RealmModel realm, ValidationContextKey contextKey) {
-        this(realm, contextKey, Collections.emptyMap(), null, null);
+        this(realm, contextKey, Collections.emptyMap(), null, null, false);
     }
 
     public ValidationContext(RealmModel realm, ValidationContextKey contextKey, Map<String, Object> attributes) {
-        this(realm, contextKey, attributes, null, null);
+        this(realm, contextKey, attributes, null, null, false);
     }
 
-    public ValidationContext(RealmModel realm, ValidationContextKey contextKey, Map<String, Object> attributes, UserModel user, ClientModel client) {
+    public ValidationContext(RealmModel realm, ValidationContextKey contextKey, Map<String, Object> attributes, UserModel user, ClientModel client, boolean shortCircuit) {
         this.realm = realm;
         this.contextKey = contextKey;
         this.attributes = attributes;
         this.user = user;
         this.client = client;
+        this.shortCircuit = shortCircuit;
     }
 
     public RealmModel getRealm() {
@@ -103,5 +106,21 @@ public class ValidationContext {
 
     public ClientModel getClient() {
         return client;
+    }
+
+    public boolean isShortCircuit() {
+        return shortCircuit;
+    }
+
+    public ValidationContext withUser(UserModel user) {
+        return new ValidationContext(realm, contextKey, attributes, user, client, shortCircuit);
+    }
+
+    public ValidationContext withClient(ClientModel client) {
+        return new ValidationContext(realm, contextKey, attributes, user, client, shortCircuit);
+    }
+
+    public ValidationContext withShortCircuit(boolean shortCircuit) {
+        return new ValidationContext(realm, contextKey, attributes, user, client, shortCircuit);
     }
 }

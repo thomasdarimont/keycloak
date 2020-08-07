@@ -4,7 +4,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
+import org.keycloak.models.UserModel;
 import org.keycloak.services.messages.Messages;
+import org.keycloak.storage.adapter.InMemoryUserAdapter;
 import org.keycloak.validation.NestedValidationContext;
 import org.keycloak.validation.ValidationContext;
 import org.keycloak.validation.ValidationContextKey;
@@ -12,6 +14,7 @@ import org.keycloak.validation.ValidationKey;
 import org.keycloak.validation.ValidationKey.CustomValidationKey;
 import org.keycloak.validation.ValidationProblem;
 import org.keycloak.validation.ValidationRegistry;
+import org.keycloak.validation.ValidationRegistry.MutableValidationRegistry;
 import org.keycloak.validation.ValidationResult;
 
 import java.util.List;
@@ -24,7 +27,7 @@ import static org.junit.Assert.assertTrue;
 public class DefaultValidatorProviderTest {
 
     DefaultValidatorProvider validator;
-    ValidationRegistry registry;
+    MutableValidationRegistry registry;
 
     KeycloakSession session;
 
@@ -208,15 +211,100 @@ public class DefaultValidatorProviderTest {
         assertTrue("A missing phone should cause problems", result.hasProblems());
     }
 
+    @Test
+    public void validateWithCustomValidationsInBulkMode() {
+
+        registry.register(CustomValidations::validateCustomAttribute1, CustomValidations.CUSTOM_ATTRIBUTE,
+                ValidationRegistry.DEFAULT_ORDER, CustomValidations.CUSTOM_CONTEXT);
+
+        registry.register(CustomValidations::validateCustomAttribute2, CustomValidations.CUSTOM_ATTRIBUTE,
+                ValidationRegistry.DEFAULT_ORDER + 1000.0, CustomValidations.CUSTOM_CONTEXT);
+
+        ValidationContext context = new ValidationContext(realm, CustomValidations.CUSTOM_CONTEXT);
+
+        ValidationResult result = validator.validate(context, "value3", CustomValidations.CUSTOM_ATTRIBUTE);
+        assertFalse("An invalid custom attribute should be invalid", result.isValid());
+        assertTrue("An invalid custom attribute should cause problems", result.hasProblems());
+        assertEquals(2, result.getProblems().size());
+        assertEquals(2, result.getErrors().size());
+        assertEquals(0, result.getErrors(ValidationKey.User.USERNAME).size());
+        List<ValidationProblem> errors = result.getErrors(CustomValidations.CUSTOM_ATTRIBUTE);
+        assertEquals(2, errors.size());
+        assertEquals(CustomValidations.CUSTOM_ATTRIBUTE, errors.get(0).getKey());
+        assertEquals(CustomValidations.INVALID_ATTRIBUTE1, errors.get(0).getMessage());
+        assertEquals(CustomValidations.INVALID_ATTRIBUTE2, errors.get(1).getMessage());
+    }
+
+    @Test
+    public void validateWithCustomValidationsInShortCircuitMode() {
+
+        registry.register(CustomValidations::validateCustomAttribute1, CustomValidations.CUSTOM_ATTRIBUTE,
+                ValidationRegistry.DEFAULT_ORDER, CustomValidations.CUSTOM_CONTEXT);
+
+        registry.register(CustomValidations::validateCustomAttribute2, CustomValidations.CUSTOM_ATTRIBUTE,
+                ValidationRegistry.DEFAULT_ORDER + 1000.0, CustomValidations.CUSTOM_CONTEXT);
+
+        ValidationContext context = new ValidationContext(realm, CustomValidations.CUSTOM_CONTEXT).withShortCircuit(true);
+
+        ValidationResult result = validator.validate(context, "value3", CustomValidations.CUSTOM_ATTRIBUTE);
+        assertFalse("An invalid custom attribute should be invalid", result.isValid());
+        assertTrue("An invalid custom attribute should cause problems", result.hasProblems());
+        assertEquals(1, result.getProblems().size());
+        assertEquals(1, result.getErrors().size());
+        assertEquals(0, result.getErrors(ValidationKey.User.USERNAME).size());
+        List<ValidationProblem> errors = result.getErrors(CustomValidations.CUSTOM_ATTRIBUTE);
+        assertEquals(1, errors.size());
+        assertEquals(CustomValidations.CUSTOM_ATTRIBUTE, errors.get(0).getKey());
+        assertEquals(CustomValidations.INVALID_ATTRIBUTE1, errors.get(0).getMessage());
+    }
+
+    @Test
+    public void validateCompoundObjectWithNestedPropertiesAndDefaultValidations() {
+
+        new DefaultValidationProvider().register(registry);
+
+        registry.register(CustomValidations::validateUserModel, ValidationKey.User.USER,
+                ValidationRegistry.DEFAULT_ORDER + 1000.0, ValidationContextKey.User.REGISTRATION);
+
+        ValidationContext context = new ValidationContext(realm, ValidationContextKey.User.REGISTRATION);
+
+        UserModel user = new InMemoryUserAdapter(null, null, "1");
+
+        user.setFirstName("Thomas");
+        user.setFirstName("Darimont");
+        user.setEmail("");
+
+        ValidationResult result = validator.validate(context, user, ValidationKey.User.USER);
+
+        assertFalse("An invalid custom attribute should be invalid", result.isValid());
+        assertTrue("An invalid custom attribute should cause problems", result.hasProblems());
+        assertEquals(3, result.getProblems().size());
+        assertEquals(3, result.getErrors().size());
+        assertEquals(0, result.getErrors(ValidationKey.User.USERNAME).size());
+        List<ValidationProblem> errors = result.getErrors();
+        assertEquals(CustomValidations.INVALID_USER_FIRSTNAME, errors.get(0).getMessage());
+        assertEquals(CustomValidations.INVALID_USER_LASTNAME, errors.get(1).getMessage());
+        assertEquals(Messages.MISSING_EMAIL, errors.get(2).getMessage());
+    }
+
+
     interface CustomValidations {
 
         String MISSING_PHONE = "missing_phone";
 
         String EMAIL_NOT_ALLOWED = "invalid_email_not_allowed";
 
+        String INVALID_ATTRIBUTE1 = "invalid_attribute1";
+
+        String INVALID_ATTRIBUTE2 = "invalid_attribute2";
+
         ValidationContextKey CUSTOM_CONTEXT = ValidationContextKey.newCustomValidationContextKey("user.custom");
 
-        CustomValidationKey PHONE = ValidationKey.newCustomKey("user.phone");
+        CustomValidationKey PHONE = ValidationKey.newCustomKey("user.phone", true);
+
+        CustomValidationKey CUSTOM_ATTRIBUTE = ValidationKey.newCustomKey("user.attributes.customAttribute", true);
+        String INVALID_USER_FIRSTNAME = "invalid_user_firstname";
+        String INVALID_USER_LASTNAME = "invalid_user_lastname";
 
         static boolean validatePhone(ValidationKey key, Object value, NestedValidationContext context) {
 
@@ -240,6 +328,53 @@ public class DefaultValidatorProviderTest {
             }
 
             return true;
+        }
+
+
+        static boolean validateCustomAttribute1(ValidationKey key, Object value, NestedValidationContext context) {
+            if (!"value1".equals(value)) {
+                context.addError(key, INVALID_ATTRIBUTE1);
+                return false;
+            }
+            return true;
+        }
+
+        static boolean validateCustomAttribute2(ValidationKey key, Object value, NestedValidationContext context) {
+            if (!"value2".equals(value)) {
+                context.addError(key, INVALID_ATTRIBUTE2);
+                return false;
+            }
+            return true;
+        }
+
+        static boolean validateUserModel(ValidationKey key, Object value, NestedValidationContext context) {
+
+            UserModel user = value instanceof UserModel ? (UserModel) value : null;
+            if (user == null) {
+                context.addError(key, Messages.INVALID_USER);
+                return false;
+            }
+
+            boolean valid = true;
+            if (!"Theo".equals(user.getFirstName())) {
+                context.addError(ValidationKey.User.FIRSTNAME, INVALID_USER_FIRSTNAME);
+                // go on with additional checks
+                // return false;
+                valid = false;
+            }
+
+            if (!"Tester".equals(user.getLastName())) {
+                context.addError(ValidationKey.User.EMAIL, INVALID_USER_LASTNAME);
+                // go on with additional checks
+                // return false;
+                valid = false;
+            }
+
+            if (!context.validateNested(ValidationKey.User.EMAIL, user.getEmail())) {
+                valid = false;
+            }
+
+            return valid;
         }
     }
 

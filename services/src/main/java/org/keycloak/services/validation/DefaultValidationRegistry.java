@@ -39,7 +39,7 @@ import java.util.stream.Stream;
 /**
  * Default {@link ValidationRegistry} implementation.
  */
-public class DefaultValidationRegistry implements ValidationRegistry {
+public class DefaultValidationRegistry implements ValidationRegistry.MutableValidationRegistry {
 
     private static final Logger LOGGER = Logger.getLogger(DefaultValidationProvider.class);
 

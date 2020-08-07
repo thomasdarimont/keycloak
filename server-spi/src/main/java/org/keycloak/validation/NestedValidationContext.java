@@ -29,14 +29,17 @@ public class NestedValidationContext extends ValidationContext {
 
     private final KeycloakSession session;
 
+    private final ValidationRegistry validationRegistry;
+
     /**
      * Holds the {@link List} of {@link ValidationProblem ValidationProblem's}
      */
     private final List<ValidationProblem> problems;
 
-    public NestedValidationContext(ValidationContext parent, KeycloakSession session) {
+    public NestedValidationContext(ValidationContext parent, KeycloakSession session, ValidationRegistry validationRegistry) {
         super(parent);
         this.session = session;
+        this.validationRegistry = validationRegistry;
         this.problems = new ArrayList<>();
     }
 
@@ -46,6 +49,10 @@ public class NestedValidationContext extends ValidationContext {
 
     public List<ValidationProblem> getProblems() {
         return problems;
+    }
+
+    public ValidationRegistry getValidationRegistry() {
+        return validationRegistry;
     }
 
     /**
@@ -77,14 +84,13 @@ public class NestedValidationContext extends ValidationContext {
      *
      * @param key
      * @param value
-     * @param registry
      * @return
      */
-    public boolean validateNested(ValidationKey key, Object value, ValidationRegistry registry) {
+    public boolean validateNested(ValidationKey key, Object value) {
 
         // TODO check for loops!
 
-        return registry.resolveValidations(this, key, value).stream()
+        return validationRegistry.resolveValidations(this, key, value).stream()
                 .allMatch(v -> v.validate(key, value, this));
     }
 }
