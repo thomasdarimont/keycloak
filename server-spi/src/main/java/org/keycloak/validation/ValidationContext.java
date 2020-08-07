@@ -47,29 +47,41 @@ public class ValidationContext {
      */
     private final ClientModel client;
 
-    private final boolean shortCircuit;
+    /**
+     * Reports all discovered problems if true, otherwise stop on first Problem.
+     */
+    private final boolean bulkMode;
 
     // TODO add support to skip certain validations for ValidationKey
 
     public ValidationContext(ValidationContext that) {
-        this(that.getRealm(), that.getContextKey(), that.getAttributes(), that.getUser(), that.getClient(), that.isShortCircuit());
+        this(that.getRealm(), that.getContextKey(), that.getAttributes(), that.getUser(), that.getClient(), that.isBulkMode());
     }
 
     public ValidationContext(RealmModel realm, ValidationContextKey contextKey) {
-        this(realm, contextKey, Collections.emptyMap(), null, null, false);
+        this(realm, contextKey, Collections.emptyMap(), null, null, true);
     }
 
     public ValidationContext(RealmModel realm, ValidationContextKey contextKey, Map<String, Object> attributes) {
-        this(realm, contextKey, attributes, null, null, false);
+        this(realm, contextKey, attributes, null, null, true);
     }
 
-    public ValidationContext(RealmModel realm, ValidationContextKey contextKey, Map<String, Object> attributes, UserModel user, ClientModel client, boolean shortCircuit) {
+    /**
+     *
+     * @param realm
+     * @param contextKey
+     * @param attributes
+     * @param user
+     * @param client
+     * @param bulkMode
+     */
+    public ValidationContext(RealmModel realm, ValidationContextKey contextKey, Map<String, Object> attributes, UserModel user, ClientModel client, boolean bulkMode) {
         this.realm = realm;
         this.contextKey = contextKey;
         this.attributes = attributes;
         this.user = user;
         this.client = client;
-        this.shortCircuit = shortCircuit;
+        this.bulkMode = bulkMode;
     }
 
     public RealmModel getRealm() {
@@ -108,19 +120,19 @@ public class ValidationContext {
         return client;
     }
 
-    public boolean isShortCircuit() {
-        return shortCircuit;
+    public boolean isBulkMode() {
+        return bulkMode;
     }
 
     public ValidationContext withUser(UserModel user) {
-        return new ValidationContext(realm, contextKey, attributes, user, client, shortCircuit);
+        return new ValidationContext(realm, contextKey, attributes, user, client, bulkMode);
     }
 
     public ValidationContext withClient(ClientModel client) {
-        return new ValidationContext(realm, contextKey, attributes, user, client, shortCircuit);
+        return new ValidationContext(realm, contextKey, attributes, user, client, bulkMode);
     }
 
-    public ValidationContext withShortCircuit(boolean shortCircuit) {
-        return new ValidationContext(realm, contextKey, attributes, user, client, shortCircuit);
+    public ValidationContext withBulkMode(boolean bulkMode) {
+        return new ValidationContext(realm, contextKey, attributes, user, client, bulkMode);
     }
 }

@@ -43,18 +43,6 @@ public class DefaultValidationRegistry implements ValidationRegistry.MutableVali
 
     private static final Logger LOGGER = Logger.getLogger(DefaultValidationProvider.class);
 
-    // TODO make validator lookup / storage more efficient
-
-    // validator on top of keys
-    // user validators
-    // client validators
-    // realm validators
-    // group validators
-    // federation provider validators
-    // identity provider validators
-    // role validators
-    // protocol mapper validators
-    // ...
     private final ConcurrentMap<ValidationKey, SortedSet<ValidationRegistration>> validatorRegistrations = new ConcurrentHashMap<>();
 
     protected Stream<ValidationRegistration> getValidationRegistrationsStream(ValidationKey key) {

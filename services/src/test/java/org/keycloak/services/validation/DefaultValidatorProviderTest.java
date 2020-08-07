@@ -236,7 +236,7 @@ public class DefaultValidatorProviderTest {
     }
 
     @Test
-    public void validateWithCustomValidationsInShortCircuitMode() {
+    public void validateWithCustomValidationsWithoutBulkMode() {
 
         registry.register(CustomValidations::validateCustomAttribute1, CustomValidations.CUSTOM_ATTRIBUTE,
                 ValidationRegistry.DEFAULT_ORDER, CustomValidations.CUSTOM_CONTEXT);
@@ -244,7 +244,7 @@ public class DefaultValidatorProviderTest {
         registry.register(CustomValidations::validateCustomAttribute2, CustomValidations.CUSTOM_ATTRIBUTE,
                 ValidationRegistry.DEFAULT_ORDER + 1000.0, CustomValidations.CUSTOM_CONTEXT);
 
-        ValidationContext context = new ValidationContext(realm, CustomValidations.CUSTOM_CONTEXT).withShortCircuit(true);
+        ValidationContext context = new ValidationContext(realm, CustomValidations.CUSTOM_CONTEXT).withBulkMode(false);
 
         ValidationResult result = validator.validate(context, "value3", CustomValidations.CUSTOM_ATTRIBUTE);
         assertFalse("An invalid custom attribute should be invalid", result.isValid());

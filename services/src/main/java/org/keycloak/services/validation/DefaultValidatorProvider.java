@@ -70,7 +70,7 @@ public class DefaultValidatorProvider implements ValidatorProvider {
 
                 valid &= validation.validate(entry.getKey(), value, context);
 
-                if (!valid && context.isShortCircuit()) {
+                if (!valid && !context.isBulkMode()) {
                     break outer;
                 }
             }
