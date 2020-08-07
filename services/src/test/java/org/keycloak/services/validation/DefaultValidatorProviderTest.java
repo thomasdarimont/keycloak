@@ -180,11 +180,41 @@ public class DefaultValidatorProviderTest {
         assertTrue("A not allowed should result in a email not allowed error", problem.isError());
     }
 
+    @Test
+    public void ignoreCustomValidationInDifferentValidationContext() {
+
+        ValidationContextKey contextKey = ValidationContextKey.User.PROFILE_UPDATE;
+        registry.register(CustomValidations::validatePhone, CustomValidations.PHONE,
+                ValidationRegistry.DEFAULT_ORDER, contextKey);
+
+        ValidationContextKey differentContextKey = ValidationContextKey.User.REGISTRATION;
+        ValidationContext context = new ValidationContext(realm, differentContextKey);
+
+        ValidationResult result = validator.validate(context, "", CustomValidations.PHONE);
+        assertTrue("A missing phone number is valid without validation in the " + differentContextKey, result.isValid());
+    }
+
+    @Test
+    public void validateWithCustomValidationInCustomValidationContext() {
+
+        ValidationContextKey contextKey = CustomValidations.CUSTOM_CONTEXT;
+        registry.register(CustomValidations::validatePhone, CustomValidations.PHONE,
+                ValidationRegistry.DEFAULT_ORDER, contextKey);
+
+        ValidationContext context = new ValidationContext(realm, contextKey);
+
+        ValidationResult result = validator.validate(context, "", CustomValidations.PHONE);
+        assertFalse("A missing phone number should be invalid", result.isValid());
+        assertTrue("A missing phone should cause problems", result.hasProblems());
+    }
+
     interface CustomValidations {
 
         String MISSING_PHONE = "missing_phone";
 
         String EMAIL_NOT_ALLOWED = "invalid_email_not_allowed";
+
+        ValidationContextKey CUSTOM_CONTEXT = ValidationContextKey.newCustomValidationContextKey("user.custom");
 
         CustomValidationKey PHONE = ValidationKey.newCustomKey("user.phone");
 
