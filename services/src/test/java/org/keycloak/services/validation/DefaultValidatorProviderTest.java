@@ -268,10 +268,10 @@ public class DefaultValidatorProviderTest {
 
         ValidationContext context = new ValidationContext(realm, ValidationContextKey.User.REGISTRATION);
 
-        UserModel user = new InMemoryUserAdapter(null, null, "1");
+        UserModel user = new InMemoryUserAdapter(session, realm, "1");
 
-        user.setFirstName("Thomas");
-        user.setFirstName("Darimont");
+        user.setFirstName("Petra");
+        user.setFirstName("Probe");
         user.setEmail("");
 
         ValidationResult result = validator.validate(context, user, ValidationKey.User.USER);

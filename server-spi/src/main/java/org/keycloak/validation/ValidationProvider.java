@@ -27,9 +27,9 @@ public interface ValidationProvider extends Provider {
     /**
      * Registers new {@link Validation} implementations into the given {@link ValidationRegistry}.
      *
-     * @param validationRegistry to store the new {@link Validation Validation's}.
+     * @param registry to store the new {@link Validation Validation's}.
      */
-    void register(MutableValidationRegistry validationRegistry);
+    void register(MutableValidationRegistry registry);
 
     default void close() {
         // NOOP

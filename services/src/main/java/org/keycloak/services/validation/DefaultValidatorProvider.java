@@ -64,14 +64,14 @@ public class DefaultValidatorProvider implements ValidatorProvider {
 
         boolean valid = true;
 
-        allValidations:
+        outer:
         for (Map.Entry<ValidationKey, List<Validation>> entry : validators.entrySet()) {
             for (Validation validation : entry.getValue()) {
-                // TODO add support for early exit short-circuit validation via flag in ValidationContext
+
                 valid &= validation.validate(entry.getKey(), value, context);
 
                 if (!valid && context.isShortCircuit()) {
-                    break allValidations;
+                    break outer;
                 }
             }
         }
