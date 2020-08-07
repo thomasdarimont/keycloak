@@ -16,6 +16,8 @@
  */
 package org.keycloak.validation;
 
+import org.keycloak.validation.ValidationKey.KeycloakValidationKey;
+
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -26,6 +28,8 @@ import java.util.Set;
  * A registry for {@link Validation Validation's}.
  */
 public interface ValidationRegistry {
+
+    double DEFAULT_ORDER = 0.0;
 
     /**
      * Returns all {@link Validation Validation's} registered for the given Set of validation keys.
@@ -66,7 +70,7 @@ public interface ValidationRegistry {
     List<Validation> resolveValidations(ValidationContext context, ValidationKey key, Object value);
 
     /**
-     * Registers a new {@link Validation} for the given validation key that can be applied in the given validation context keys.
+     * Registers a new {@link Validation} for the given {@link ValidationKey} that can be applied in the given validation context keys.
      *
      * @param validation
      * @param key
@@ -76,7 +80,7 @@ public interface ValidationRegistry {
     void register(Validation validation, ValidationKey key, double order, Set<ValidationContextKey> contextKeys);
 
     /**
-     * Registers a new {@link Validation} for the given validation key that can be applied in the given validation context keys.
+     * Registers a new {@link Validation} for the given {@link ValidationKey} that can be applied in the given validation context keys.
      *
      * @param validation
      * @param key
@@ -88,24 +92,24 @@ public interface ValidationRegistry {
     }
 
     /**
-     * Registers a new {@link Validation} for the given validation key that can be applied in the given validation context keys.
+     * Registers a new {@link Validation} for the given {@link KeycloakValidationKey} that can be applied in the given validation context keys with a default order.
      *
      * @param validation
      * @param key
      * @param contextKeys
      */
-    default void register(Validation validation, ValidationKey key, ValidationContextKey... contextKeys) {
-        register(validation, key, key.order(), new LinkedHashSet<>(Arrays.asList(contextKeys)));
+    default void register(Validation validation, KeycloakValidationKey key, Set<ValidationContextKey> contextKeys) {
+        register(validation, key, DEFAULT_ORDER, contextKeys);
     }
 
     /**
-     * Registers a new {@link Validation} for the given validation key that can be applied in the given validation context keys.
+     * Registers a new {@link Validation} for the given {@link KeycloakValidationKey} that can be applied in the given validation context keys  with a default order.
      *
      * @param validation
      * @param key
      * @param contextKeys
      */
-    default void register(Validation validation, ValidationKey key, Set<ValidationContextKey> contextKeys) {
-        register(validation, key, key.order(), contextKeys);
+    default void register(Validation validation, KeycloakValidationKey key, ValidationContextKey... contextKeys) {
+        register(validation, key, DEFAULT_ORDER, new LinkedHashSet<>(Arrays.asList(contextKeys)));
     }
 }

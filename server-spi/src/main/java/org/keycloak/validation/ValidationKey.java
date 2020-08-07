@@ -39,12 +39,12 @@ public interface ValidationKey {
     interface User {
 
         // User Attributes
-        ValidationKey USERNAME = create("user.username", 1000.0);
-        ValidationKey EMAIL = create("user.email", 1100.0);
-        ValidationKey FIRSTNAME = create("user.firstName", 1200.0);
-        ValidationKey LASTNAME = create("user.lastName", 1300.0);
+        KeycloakValidationKey USERNAME = new KeycloakValidationKey("user.username");
+        KeycloakValidationKey EMAIL = new KeycloakValidationKey("user.email");
+        KeycloakValidationKey FIRSTNAME = new KeycloakValidationKey("user.firstName");
+        KeycloakValidationKey LASTNAME = new KeycloakValidationKey("user.lastName");
 
-        List<ValidationKey> ALL_KEYS = Collections.unmodifiableList(Arrays.asList(USERNAME, EMAIL, FIRSTNAME, LASTNAME));
+        List<KeycloakValidationKey> ALL_KEYS = Collections.unmodifiableList(Arrays.asList(USERNAME, EMAIL, FIRSTNAME, LASTNAME));
     }
 
     // TODO add additional supported attributes
@@ -57,23 +57,15 @@ public interface ValidationKey {
     String name();
 
     /**
-     * Denotes the order in which the referenced validation should take place.
-     *
-     * @return
-     */
-    double order();
-
-    /**
      * Create a new {@link ValidationKey}.
      * <p>
      * Note that this is only for internal user and for creation of custom {@link ValidationKey ValidationKeys}.
      *
      * @param name
-     * @param order
      * @return
      */
-    static ValidationKey create(String name, double order) {
-        return new SimpleValidationKey(name, order);
+    static CustomValidationKey newCustomKey(String name) {
+        return new CustomValidationKey(name);
     }
 
     /**
@@ -95,44 +87,63 @@ public interface ValidationKey {
         return null;
     }
 
-    class SimpleValidationKey implements ValidationKey {
+    /**
+     * Keycloak internal {@link ValidationKey}.
+     * <p>
+     * This type should only be used for Keycloak Internal {@link ValidationKey} implementations.
+     * Users who want to define custom ValidationKeys should use the CustomValidationKey.
+     */
+    final class KeycloakValidationKey extends AbstractValidationKey {
+
+        public KeycloakValidationKey(String name) {
+            super(name);
+        }
+    }
+
+    /**
+     * Custom {@link ValidationKey}.
+     * <p>
+     * This is meant for users who want to define custom ValidationKeys.
+     */
+    final class CustomValidationKey extends AbstractValidationKey {
+
+        public CustomValidationKey(String name) {
+            super(name);
+        }
+    }
+
+    /**
+     * This type should be used for custom {@link ValidationKey} implementations.
+     */
+    abstract class AbstractValidationKey implements ValidationKey {
 
         private final String name;
 
-        private final double order;
-
-        public SimpleValidationKey(String name, double order) {
+        public AbstractValidationKey(String name) {
             this.name = name;
-            this.order = order;
         }
 
         public String name() {
             return name;
         }
 
-        public double order() {
-            return order;
-        }
-
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            SimpleValidationKey key = (SimpleValidationKey) o;
-            return Double.compare(key.order, order) == 0 &&
-                    Objects.equals(name, key.name);
+            if (!(o instanceof CustomValidationKey)) return false;
+            AbstractValidationKey that = (AbstractValidationKey) o;
+            return Objects.equals(name, that.name);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(name, order);
+            return Objects.hash(name);
         }
 
         @Override
         public String toString() {
             return "Dynamic{" +
                     "name='" + name + '\'' +
-                    ", order=" + order +
                     '}';
         }
     }
