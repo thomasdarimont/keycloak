@@ -155,13 +155,24 @@ public class OIDCAttributeMapperHelper {
     }
     
     private static JsonNode getJsonNode(Object attributeValue) {
-        if (attributeValue instanceof JsonNode) return (JsonNode) attributeValue;
+        if (attributeValue instanceof JsonNode) {
+            return (JsonNode) attributeValue;
+        }
+
         if (attributeValue instanceof String) {
             try {
                 return JsonSerialization.readValue(attributeValue.toString(), JsonNode.class);
-            } catch (Exception ex) {
+            } catch (Exception ignored) {
+                // noop
             }
         }
+
+        try {
+            return JsonSerialization.createObjectNode(attributeValue);
+        }catch (Exception ignored) {
+            // noop
+        }
+
         return null;
     }
 

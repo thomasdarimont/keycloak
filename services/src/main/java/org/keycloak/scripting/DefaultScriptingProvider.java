@@ -32,6 +32,8 @@ import org.keycloak.models.ScriptModel;
  */
 public class DefaultScriptingProvider implements ScriptingProvider {
 
+    public static final String GRAAL_JS_SCRIPT_ENGINE_NAME = "graal.js";
+    public static final String GRAALVM_JS_POLYGLOT_JS_NASHORN_COMPAT = "polyglot.js.nashorn-compat";
     private final ScriptEngineManager scriptEngineManager;
 
     DefaultScriptingProvider(ScriptEngineManager scriptEngineManager) {
@@ -116,6 +118,15 @@ public class DefaultScriptingProvider implements ScriptingProvider {
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(DefaultScriptingProvider.class.getClassLoader());
+
+            if (ScriptModel.TEXT_JAVASCRIPT.equals(script.getMimeType())) {
+                // users can force non compat mode via -Dpolyglot.js.nashorn-compat=false
+                if (System.getProperty(GRAALVM_JS_POLYGLOT_JS_NASHORN_COMPAT) == null) {
+                    System.setProperty(GRAALVM_JS_POLYGLOT_JS_NASHORN_COMPAT, "true");
+                }
+                return scriptEngineManager.getEngineByName(GRAAL_JS_SCRIPT_ENGINE_NAME);
+            }
+
             return scriptEngineManager.getEngineByMimeType(script.getMimeType());
         }
         finally {
