@@ -20,8 +20,10 @@ package org.keycloak.common.util;
 import org.jboss.logging.Logger;
 
 import java.io.ObjectInputStream;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -29,6 +31,8 @@ import java.util.Set;
 
 public class DelegatingSerializationFilter {
     private static final Logger LOG = Logger.getLogger(DelegatingSerializationFilter.class.getName());
+
+    private static final boolean JDK_SERIAL_SET_FILTER_AFTER_READ_ALLOWED = Boolean.getBoolean("jdk.serialSetFilterAfterRead");
 
     private static final SerializationFilterAdapter serializationFilterAdapter = isJava6To8() ? createOnJava6To8Adapter() : createOnJavaAfter8Adapter();
 
@@ -45,7 +49,7 @@ public class DelegatingSerializationFilter {
     }
 
     private void setFilter(ObjectInputStream ois, String filterPattern) {
-        LOG.debug("Using: " + serializationFilterAdapter.getClass().getSimpleName());
+        LOG.debugf("Using: %s", serializationFilterAdapter.getClass().getSimpleName());
 
         if (serializationFilterAdapter.getObjectInputFilter(ois) == null) {
             serializationFilterAdapter.setObjectInputFilter(ois, filterPattern);
@@ -67,8 +71,24 @@ public class DelegatingSerializationFilter {
             Method getObjectInputFilter = objectInputFilterConfigClass.getDeclaredMethod("getObjectInputFilter", ObjectInputStream.class);
             Method setObjectInputFilter = objectInputFilterConfigClass.getDeclaredMethod("setObjectInputFilter", ObjectInputStream.class, objectInputFilterClass);
             Method createFilter = objectInputFilterConfigClass.getDeclaredMethod("createFilter", String.class);
+
             LOG.info("Using OnJava6To8 serialization filter adapter");
-            return new OnJava6To8(getObjectInputFilter, setObjectInputFilter, createFilter);
+            if (JDK_SERIAL_SET_FILTER_AFTER_READ_ALLOWED) {
+                // no need to check ObjectInputStream for prior usage in this case
+                return new OnJava6To8(getObjectInputFilter, setObjectInputFilter, createFilter, null);
+            }
+
+            // Before setting the ObjectInputFilter, we need to check the internal state of the ObjectInputStream to avoid exceptions if the stream was already used before.
+            Field totalObjectRefsField = null;
+            try {
+                // this field is checked in the setInternalObjectFilterMethod
+                // lookup totalObjectRefsField to guard ObjectInputFilter configuration
+                totalObjectRefsField = ObjectInputStream.class.getDeclaredField("totalObjectRefs");
+                makeAccessible(totalObjectRefsField);
+            } catch (NoSuchFieldException e) {
+                LOG.debug("Could not find totalObjectRefs field in ObjectInputStream", e);
+            }
+            return new OnJava6To8(getObjectInputFilter, setObjectInputFilter, createFilter, totalObjectRefsField);
         } catch (ClassNotFoundException | NoSuchMethodException e) {
             // This can happen for older JDK updates.
             LOG.warn("Could not configure SerializationFilterAdapter. For better security, it is highly recommended to upgrade to newer JDK version update!");
@@ -87,8 +107,23 @@ public class DelegatingSerializationFilter {
             Method getObjectInputFilter = objectInputStreamClass.getDeclaredMethod("getObjectInputFilter");
             Method setObjectInputFilter = objectInputStreamClass.getDeclaredMethod("setObjectInputFilter", objectInputFilterClass);
             Method createFilter = objectInputFilterConfigClass.getDeclaredMethod("createFilter", String.class);
+
             LOG.info("Using OnJavaAfter8 serialization filter adapter");
-            return new OnJavaAfter8(getObjectInputFilter, setObjectInputFilter, createFilter);
+            if (JDK_SERIAL_SET_FILTER_AFTER_READ_ALLOWED) {
+                return new OnJavaAfter8(getObjectInputFilter, setObjectInputFilter, createFilter, null);
+            }
+
+            // Before setting the ObjectInputFilter, we need to check the internal state of the ObjectInputStream to avoid exceptions if the stream was already used before.
+            Field totalObjectRefsField = null;
+            try {
+                // this field is checked in the setObjectFilterMethod in JDK 9-11 and 15-16+? but not in 12-14
+                // lookup totalObjectRefsField to guard ObjectInputFilter configuration
+                totalObjectRefsField = ObjectInputStream.class.getDeclaredField("totalObjectRefs");
+                makeAccessible(totalObjectRefsField);
+            } catch (NoSuchFieldException e) {
+                LOG.debug("Could not find totalObjectRefs field in ObjectInputStream", e);
+            }
+            return new OnJavaAfter8(getObjectInputFilter, setObjectInputFilter, createFilter, totalObjectRefsField);
         } catch (ClassNotFoundException | NoSuchMethodException e) {
             // This can happen for older JDK updates.
             LOG.warn("Could not configure SerializationFilterAdapter. For better security, it is highly recommended to upgrade to newer JDK version update!");
@@ -97,38 +132,13 @@ public class DelegatingSerializationFilter {
         }
     }
 
-    // If codebase stays on Java 8 for a while you could use Java 8 classes directly without reflection
-    static class OnJava6To8 implements SerializationFilterAdapter {
-
-        private final Method getObjectInputFilterMethod;
-        private final Method setObjectInputFilterMethod;
-        private final Method createFilterMethod;
-
-        private OnJava6To8(Method getObjectInputFilterMethod, Method setObjectInputFilterMethod, Method createFilterMethod) {
-            this.getObjectInputFilterMethod = getObjectInputFilterMethod;
-            this.setObjectInputFilterMethod = setObjectInputFilterMethod;
-            this.createFilterMethod = createFilterMethod;
-        }
-
-        public Object getObjectInputFilter(ObjectInputStream ois) {
-            try {
-                return getObjectInputFilterMethod.invoke(null, ois);
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                LOG.warn("Could not read ObjectFilter from ObjectInputStream: " + e.getMessage());
-                return null;
-            }
-        }
-
-        public void setObjectInputFilter(ObjectInputStream ois, String filterPattern) {
-            try {
-                Object objectFilter = createFilterMethod.invoke(null, filterPattern);
-                setObjectInputFilterMethod.invoke(null, ois, objectFilter);
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                LOG.warn("Could not set ObjectFilter: " + e.getMessage());
-            }
+    private static void makeAccessible(Field field) {
+        if ((!Modifier.isPublic(field.getModifiers()) ||
+                !Modifier.isPublic(field.getDeclaringClass().getModifiers()) ||
+                Modifier.isFinal(field.getModifiers())) && !field.isAccessible()) {
+            field.setAccessible(true);
         }
     }
-
 
     static class EmptyFilterAdapter implements SerializationFilterAdapter {
 
@@ -139,11 +149,54 @@ public class DelegatingSerializationFilter {
 
         @Override
         public void setObjectInputFilter(ObjectInputStream ois, String filterPattern) {
-
+            // NOOP
         }
-
     }
 
+    // If codebase stays on Java 8 for a while you could use Java 8 classes directly without reflection
+    static class OnJava6To8 implements SerializationFilterAdapter {
+
+        private final Method getObjectInputFilterMethod;
+        private final Method setObjectInputFilterMethod;
+        private final Method createFilterMethod;
+        private final Field totalObjectRefsField;
+
+        private OnJava6To8(Method getObjectInputFilterMethod, Method setObjectInputFilterMethod, Method createFilterMethod, Field totalObjectRefsField) {
+            this.getObjectInputFilterMethod = getObjectInputFilterMethod;
+            this.setObjectInputFilterMethod = setObjectInputFilterMethod;
+            this.createFilterMethod = createFilterMethod;
+            this.totalObjectRefsField = totalObjectRefsField;
+        }
+
+        public Object getObjectInputFilter(ObjectInputStream ois) {
+            try {
+                return getObjectInputFilterMethod.invoke(null, ois);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                LOG.warnf("Could not read ObjectFilter from ObjectInputStream: %s", e.getMessage());
+                return null;
+            }
+        }
+
+        public void setObjectInputFilter(ObjectInputStream ois, String filterPattern) {
+            try {
+                // Avoid causing an exception when setting the filter to an ObjectInputStream which has already been read from.
+                // workaround for bug "filter cannot be set after an object has been read"
+                // https://github.com/keycloak/keycloak/pull/7053#issuecomment-701193325
+                if (totalObjectRefsField != null) {
+                    Long totalObjectRefs = (Long) totalObjectRefsField.get(ois);
+                    if (totalObjectRefs != null && totalObjectRefs > 0L) {
+                        LOG.debugf("Skip configuring ObjectInputFilter for ObjectInputStream to avoid Exception after object has been read");
+                        return;
+                    }
+                }
+
+                Object objectFilter = createFilterMethod.invoke(null, filterPattern);
+                setObjectInputFilterMethod.invoke(null, ois, objectFilter);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                LOG.warnf("Could not set ObjectFilter: %s", e.getMessage());
+            }
+        }
+    }
 
     // If codebase moves to Java 9+ could use Java 9+ classes directly without reflection and keep the old variant with reflection
     static class OnJavaAfter8 implements SerializationFilterAdapter {
@@ -151,32 +204,45 @@ public class DelegatingSerializationFilter {
         private final Method getObjectInputFilterMethod;
         private final Method setObjectInputFilterMethod;
         private final Method createFilterMethod;
+        private final Field totalObjectRefsField;
 
-        private OnJavaAfter8(Method getObjectInputFilterMethod, Method setObjectInputFilterMethod, Method createFilterMethod) {
+        private OnJavaAfter8(Method getObjectInputFilterMethod, Method setObjectInputFilterMethod, Method createFilterMethod, Field totalObjectRefsField) {
             this.getObjectInputFilterMethod = getObjectInputFilterMethod;
             this.setObjectInputFilterMethod = setObjectInputFilterMethod;
             this.createFilterMethod = createFilterMethod;
+            this.totalObjectRefsField = totalObjectRefsField;
         }
 
         public Object getObjectInputFilter(ObjectInputStream ois) {
             try {
                 return getObjectInputFilterMethod.invoke(ois);
             } catch (IllegalAccessException | InvocationTargetException e) {
-                LOG.warn("Could not read ObjectFilter from ObjectInputStream: " + e.getMessage());
+                LOG.warnf("Could not read ObjectFilter from ObjectInputStream: %s", e.getMessage());
                 return null;
             }
         }
 
         public void setObjectInputFilter(ObjectInputStream ois, String filterPattern) {
             try {
+                // Avoid causing an exception when setting the filter to an ObjectInputStream which has already been read from.
+                // workaround for bug "filter cannot be set after an object has been read"
+                // This happens in Java 9-11 and from 15-16
+                // https://github.com/keycloak/keycloak/pull/7053#issuecomment-701193325
+                if (totalObjectRefsField != null) {
+                    Long totalObjectRefs = (Long) totalObjectRefsField.get(ois);
+                    if (totalObjectRefs != null && totalObjectRefs > 0L) {
+                        LOG.debugf("Skip configuring ObjectInputFilter for ObjectInputStream to avoid Exception after object has been read");
+                        return;
+                    }
+                }
+
                 Object objectFilter = createFilterMethod.invoke(ois, filterPattern);
                 setObjectInputFilterMethod.invoke(ois, objectFilter);
             } catch (IllegalAccessException | InvocationTargetException e) {
-                LOG.warn("Could not set ObjectFilter: " + e.getMessage());
+                LOG.warnf("Could not set ObjectFilter: %s", e.getMessage());
             }
         }
     }
-
 
     public static class FilterPatternBuilder {
 
