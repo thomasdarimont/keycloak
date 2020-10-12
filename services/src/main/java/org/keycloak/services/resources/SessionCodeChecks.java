@@ -18,11 +18,9 @@
 package org.keycloak.services.resources;
 
 import java.net.URI;
-import java.util.AbstractMap.SimpleEntry;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.Map;
 
+import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
@@ -398,7 +396,14 @@ public class SessionCodeChecks {
         } else {
             // Finally need to show error as all the fallbacks failed
             event.error(Errors.INVALID_CODE);
-            return ErrorPage.error(session, authSession, Response.Status.BAD_REQUEST, Messages.INVALID_CODE);
+            String errorMessage = Messages.INVALID_CODE;
+
+            Map<String, Cookie> cookies = request.getHttpHeaders().getCookies();
+            if (cookies == null || cookies.isEmpty()) {
+                errorMessage = Messages.MISSING_COOKIES;
+            }
+
+            return ErrorPage.error(session, authSession, Response.Status.BAD_REQUEST, errorMessage);
         }
     }
 
