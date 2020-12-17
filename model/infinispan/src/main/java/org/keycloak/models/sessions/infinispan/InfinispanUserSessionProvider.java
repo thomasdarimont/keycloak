@@ -36,6 +36,7 @@ import org.keycloak.models.UserLoginFailureModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.UserSessionModel;
 import org.keycloak.models.UserSessionProvider;
+import org.keycloak.models.session.UserSessionPersisterProvider;
 import org.keycloak.models.sessions.infinispan.changes.Tasks;
 import org.keycloak.models.sessions.infinispan.changes.sessions.CrossDCLastSessionRefreshStore;
 import org.keycloak.models.sessions.infinispan.changes.sessions.PersisterLastSessionRefreshStore;
@@ -65,6 +66,7 @@ import org.keycloak.models.utils.SessionTimeoutHelper;
 
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -250,8 +252,98 @@ public class InfinispanUserSessionProvider implements UserSessionProvider {
     }
 
     protected UserSessionAdapter getUserSession(RealmModel realm, String id, boolean offline) {
-        UserSessionEntity entity = getUserSessionEntity(realm, id, offline);
-        return wrap(realm, entity, offline);
+
+        UserSessionEntity ispnUserSessionEntity = getUserSessionEntity(realm, id, offline);
+        if (!offline) {
+            return wrap(realm, ispnUserSessionEntity, offline);
+        }
+
+        // Try to recover from potentially lost offline-sessions
+
+        // first we try to resolve the offline session information from memory via the given Infinispan UserSessionEntity
+        UserSessionAdapter userSessionAdapter = resolveUserSessionFromInfinispanSessionEntity(realm, offline, ispnUserSessionEntity);
+        if (userSessionAdapter != null){
+            return userSessionAdapter;
+        }
+
+        // second we try to fetch and re-import the offline session information from the PersistenceProvider
+        ispnUserSessionEntity = getUserSessionEntityFromPersistenceProvider(realm, id, offline);
+        if (ispnUserSessionEntity != null) {
+            // we successfully recovered an offline session
+            return wrap(realm, ispnUserSessionEntity, offline);
+        }
+
+        // no luck the session is really not there anymore
+        return null;
+    }
+
+    private UserSessionEntity getUserSessionEntityFromPersistenceProvider(RealmModel realm, String id, boolean offline) {
+
+        log.infof("Offline user-session or client-session not found in infinispan, attempting UserSessionPersisterProvider lookup for sessionId. sessionId=%s", id);
+        UserSessionPersisterProvider persister = session.getProvider(UserSessionPersisterProvider.class);
+        UserSessionModel persistentUserSession = persister.loadUserSession(id, offline);
+
+        if (persistentUserSession == null) {
+            log.infof("Offline user-session not found in UserSessionPersisterProvider. sessionId=%s", id);
+            return null;
+        }
+
+        log.infof("Offline user-session or client-session found in UserSessionPersisterProvider, attempting to reimport user-session. sessionId=%s", id);
+        session.sessions().importUserSessions(Collections.singleton(persistentUserSession), offline);
+        log.infof("Offline user-session imported, trying another lookup. sessionId=%s", id);
+
+        UserSessionEntity ispnUserSessionEntity = getUserSessionEntity(realm, id, offline);
+
+        if (ispnUserSessionEntity != null) {
+            log.infof("Offline user-session found after import. sessionId=%s", id);
+        } else {
+            log.infof("Offline user-session could not be found after import. sessionId=%s", id);
+        }
+
+        return ispnUserSessionEntity;
+    }
+
+    protected UserSessionAdapter resolveUserSessionFromInfinispanSessionEntity(RealmModel realm, boolean offline, UserSessionEntity ispnUserSessionEntity) {
+
+        if (ispnUserSessionEntity == null) {
+            return null;
+        }
+
+        boolean sessionsForAllClientsPresent = true;
+        AuthenticatedClientSessionStore authenticatedClientSessionsStore = ispnUserSessionEntity.getAuthenticatedClientSessions();
+
+        // check if we have a valid client session for the given offline user session
+        UserSessionAdapter userSessionAdapter = null;
+        for (String clientUuid : authenticatedClientSessionsStore.keySet()) {
+
+            UUID clientSessionUuid = authenticatedClientSessionsStore.get(clientUuid);
+            ClientModel client = session.clients().getClientById(realm, clientUuid);
+            if (client == null) {
+                // we found a client that is no longer available
+                sessionsForAllClientsPresent = false;
+                break;
+            }
+
+            if (userSessionAdapter == null) {
+                userSessionAdapter = wrap(realm, ispnUserSessionEntity, offline);
+            }
+            AuthenticatedClientSessionModel clientSession = session.sessions()
+                    .getClientSession(userSessionAdapter, client, clientSessionUuid, offline);
+
+            if (clientSession == null) {
+                // we found at least one missing client session
+                sessionsForAllClientsPresent = false;
+                break;
+            }
+        }
+
+        // either session is missing or some client sessions are no longer present
+        if (userSessionAdapter == null || !sessionsForAllClientsPresent) {
+            return null;
+        }
+
+        // all referenced client sessions are present, return session
+        return userSessionAdapter;
     }
 
     private UserSessionEntity getUserSessionEntity(RealmModel realm, String id, boolean offline) {

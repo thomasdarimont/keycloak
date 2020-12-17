@@ -40,8 +40,9 @@ import java.io.Serializable;
         @NamedQuery(name="findUserSessionsCount", query="select count(sess) from PersistentUserSessionEntity sess where sess.offline = :offline"),
         @NamedQuery(name="findUserSessions", query="select sess from PersistentUserSessionEntity sess where sess.offline = :offline" +
                 " AND (sess.createdOn > :lastCreatedOn OR (sess.createdOn = :lastCreatedOn AND sess.userSessionId > :lastSessionId))" +
-                " order by sess.createdOn,sess.userSessionId")
-
+                " order by sess.createdOn,sess.userSessionId"),
+        @NamedQuery(name="findUserSession", query="select sess from PersistentUserSessionEntity sess where sess.offline = :offline" +
+                " AND sess.userSessionId = :userSessionId")
 })
 @Table(name="OFFLINE_USER_SESSION")
 @Entity

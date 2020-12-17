@@ -38,7 +38,9 @@ import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -237,6 +239,52 @@ public class JpaUserSessionPersisterProvider implements UserSessionPersisterProv
 
         logger.debugf("Removed %d expired user sessions and %d expired client sessions in realm '%s'", us, cs, realm.getName());
 
+    }
+
+    @Override
+    public UserSessionModel loadUserSession(String userSessionId, boolean offline) {
+
+        String offlineStr = offlineToString(offline);
+
+        TypedQuery<PersistentUserSessionEntity> userSessionQuery = em.createNamedQuery("findUserSession", PersistentUserSessionEntity.class);
+        userSessionQuery.setParameter("offline", offlineStr);
+        userSessionQuery.setParameter("userSessionId", userSessionId);
+        userSessionQuery.setMaxResults(1);
+
+        List<PersistentUserSessionAdapter> result = userSessionQuery.getResultStream()
+                .map(this::toAdapter)
+                .collect(Collectors.toList());
+
+        if (result.isEmpty()) {
+            return null;
+        }
+
+        PersistentUserSessionAdapter userSession = result.get(0);
+
+        TypedQuery<PersistentClientSessionEntity> clientSessionQuery = em.createNamedQuery("findClientSessionsByUserSessions", PersistentClientSessionEntity.class);
+        clientSessionQuery.setParameter("userSessionIds", Collections.singleton(userSessionId));
+        clientSessionQuery.setParameter("offline", offlineStr);
+        List<PersistentClientSessionEntity> clientSessions = clientSessionQuery.getResultList();
+        Set<String> removedClientUUIDs = new HashSet<>();
+
+        for (PersistentClientSessionEntity clientSession : clientSessions) {
+
+            PersistentAuthenticatedClientSessionAdapter clientSessAdapter = toAdapter(userSession.getRealm(), userSession, clientSession);
+            Map<String, AuthenticatedClientSessionModel> currentClientSessions = userSession.getAuthenticatedClientSessions();
+
+            // Case when client was removed in the meantime
+            if (clientSessAdapter.getClient() == null) {
+                removedClientUUIDs.add(clientSession.getClientId());
+            } else {
+                currentClientSessions.put(clientSession.getClientId(), clientSessAdapter);
+            }
+        }
+
+        for (String clientUUID : removedClientUUIDs) {
+            onClientRemoved(clientUUID);
+        }
+
+        return userSession;
     }
 
     @Override

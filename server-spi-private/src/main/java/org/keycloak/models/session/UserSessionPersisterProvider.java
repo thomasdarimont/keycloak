@@ -54,6 +54,8 @@ public interface UserSessionPersisterProvider extends Provider {
     // Remove userSessions and clientSessions, which are expired
     void removeExpired(RealmModel realm);
 
+    UserSessionModel loadUserSession(String userSessionId, boolean offline);
+
     // Called during startup. For each userSession, it loads also clientSessions
     List<UserSessionModel> loadUserSessions(int firstResult, int maxResults, boolean offline, int lastCreatedOn, String lastUserSessionId);
 
