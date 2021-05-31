@@ -1,0 +1,2 @@
+org.keycloak.datamasking.IdentityMaskingProviderFactory
+org.keycloak.datamasking.DefaultMaskingProviderFactory

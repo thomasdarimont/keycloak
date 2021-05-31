@@ -19,6 +19,8 @@ package org.keycloak.events.log;
 
 import org.keycloak.common.util.StackUtil;
 import org.jboss.logging.Logger;
+import org.keycloak.datamasking.MaskingProvider;
+import org.keycloak.datamasking.MaskingRules;
 import org.keycloak.events.Event;
 import org.keycloak.events.EventListenerProvider;
 import org.keycloak.events.EventListenerTransaction;
@@ -42,13 +44,14 @@ public class JBossLoggingEventListenerProvider implements EventListenerProvider 
     private final Logger.Level successLevel;
     private final Logger.Level errorLevel;
     private final EventListenerTransaction tx = new EventListenerTransaction(this::logAdminEvent, this::logEvent);
+    private final MaskingProvider masking;
 
     public JBossLoggingEventListenerProvider(KeycloakSession session, Logger logger, Logger.Level successLevel, Logger.Level errorLevel) {
         this.session = session;
         this.logger = logger;
         this.successLevel = successLevel;
         this.errorLevel = errorLevel;
-
+        this.masking = session.getProvider(MaskingProvider.class);
         this.session.getTransactionManager().enlistAfterCompletion(tx);
     }
 
@@ -77,7 +80,7 @@ public class JBossLoggingEventListenerProvider implements EventListenerProvider 
             sb.append(", userId=");
             sb.append(event.getUserId());
             sb.append(", ipAddress=");
-            sb.append(event.getIpAddress());
+            sb.append(masking.mask(event.getIpAddress(), MaskingRules.IP_ADDRESS));
 
             if (event.getError() != null) {
                 sb.append(", error=");
@@ -87,13 +90,15 @@ public class JBossLoggingEventListenerProvider implements EventListenerProvider 
             if (event.getDetails() != null) {
                 for (Map.Entry<String, String> e : event.getDetails().entrySet()) {
                     sb.append(", ");
-                    sb.append(e.getKey());
-                    if (e.getValue() == null || e.getValue().indexOf(' ') == -1) {
+                    String key = e.getKey();
+                    sb.append(key);
+                    String value = masking.mask(e.getValue(), key);
+                    if (value == null || value.indexOf(' ') == -1) {
                         sb.append("=");
-                        sb.append(e.getValue());
+                        sb.append(value);
                     } else {
                         sb.append("='");
-                        sb.append(e.getValue());
+                        sb.append(value);
                         sb.append("'");
                     }
                 }
@@ -134,7 +139,7 @@ public class JBossLoggingEventListenerProvider implements EventListenerProvider 
             sb.append(", userId=");
             sb.append(adminEvent.getAuthDetails().getUserId());
             sb.append(", ipAddress=");
-            sb.append(adminEvent.getAuthDetails().getIpAddress());
+            sb.append(masking.mask(adminEvent.getAuthDetails().getIpAddress(), MaskingRules.IP_ADDRESS));
             sb.append(", resourceType=");
             sb.append(adminEvent.getResourceTypeAsString());
             sb.append(", resourcePath=");
