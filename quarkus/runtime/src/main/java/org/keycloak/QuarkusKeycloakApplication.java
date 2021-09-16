@@ -1,22 +1,22 @@
 package org.keycloak;
 
-import java.util.Set;
-import java.util.stream.Collectors;
+import io.smallrye.metrics.MetricRegistries;
+import org.eclipse.microprofile.metrics.MetricRegistry;
+import org.keycloak.models.utils.PostMigrationEvent;
+import org.keycloak.provider.quarkus.QuarkusPlatform;
+import org.keycloak.services.metrics.DefaultMetricProvider;
+import org.keycloak.services.metrics.CustomMetricStore;
+import org.keycloak.services.metrics.MetricProvider;
+import org.keycloak.services.resources.KeycloakApplication;
+import org.keycloak.services.resources.QuarkusWelcomeResource;
+import org.keycloak.services.resources.WelcomeResource;
 
 import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.persistence.EntityManagerFactory;
 import javax.ws.rs.ApplicationPath;
-
-import io.smallrye.metrics.MetricRegistries;
-import org.eclipse.microprofile.metrics.MetricRegistry;
-import org.keycloak.models.utils.PostMigrationEvent;
-import org.keycloak.provider.quarkus.QuarkusPlatform;
-import org.keycloak.services.metrics.KeycloakMetrics;
-import org.keycloak.services.metrics.KeycloakMetricsCollector;
-import org.keycloak.services.resources.KeycloakApplication;
-import org.keycloak.services.resources.QuarkusWelcomeResource;
-import org.keycloak.services.resources.WelcomeResource;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @ApplicationPath("/")
 public class QuarkusKeycloakApplication extends KeycloakApplication {
@@ -60,10 +60,11 @@ public class QuarkusKeycloakApplication extends KeycloakApplication {
     }
 
     private void initializeKeycloakMetrics() {
-        MetricRegistry metricsRegistry = MetricRegistries.get(MetricRegistry.Type.APPLICATION);
-        KeycloakMetricsCollector keycloakMetricsCollector = new KeycloakMetricsCollector(sessionFactory, metricsRegistry);
-        KeycloakMetrics keycloakMetrics = new KeycloakMetrics(metricsRegistry, keycloakMetricsCollector);
-        keycloakMetrics.init();
+        MetricRegistry metricRegistry = MetricRegistries.get(MetricRegistry.Type.APPLICATION);
+        // TODO lookup MetricProvider via SPI
+        MetricProvider metricProvider = new DefaultMetricProvider();
+        CustomMetricStore metricStore = new CustomMetricStore(sessionFactory, metricRegistry, metricProvider);
+        metricProvider.registerMetrics(metricRegistry, metricStore);
     }
 
     private void forceEntityManagerInitialization() {
