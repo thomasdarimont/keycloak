@@ -27,15 +27,21 @@ import org.keycloak.events.EventBuilder;
 import org.keycloak.events.EventType;
 import org.keycloak.models.CibaConfig;
 import org.keycloak.models.ClientModel;
+import org.keycloak.models.ClientSessionContext;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.OAuth2DeviceCodeModel;
 import org.keycloak.models.OAuth2DeviceTokenStoreProvider;
+import org.keycloak.models.UserSessionModel;
+import org.keycloak.protocol.oidc.TokenManager;
+import org.keycloak.protocol.oidc.grants.ciba.CibaGrantType;
 import org.keycloak.protocol.oidc.grants.ciba.channel.AuthenticationChannelResponse;
 import org.keycloak.protocol.oidc.grants.ciba.channel.AuthenticationChannelResponse.Status;
 import org.keycloak.representations.AccessToken;
+import org.keycloak.representations.AccessTokenResponse;
 import org.keycloak.services.ErrorResponseException;
 import org.keycloak.services.Urls;
 import org.keycloak.services.managers.AppAuthManager;
+import org.keycloak.sessions.AuthenticationSessionModel;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -94,11 +100,64 @@ public class BackchannelAuthenticationCallbackEndpoint extends AbstractCibaEndpo
         // Call the notification endpoint
         ClientModel client = session.getContext().getClient();
         CibaConfig cibaConfig = realm.getCibaPolicy();
-        if (cibaConfig.getBackchannelTokenDeliveryMode(client).equals(CibaConfig.CIBA_PING_MODE)) {
+        String backChannelTokenDeliveryMode = cibaConfig.getBackchannelTokenDeliveryMode(client);
+        if (CibaConfig.CIBA_PING_MODE.equals(backChannelTokenDeliveryMode)) {
             sendClientNotificationRequest(client, cibaConfig, deviceModel);
+        } else if (CibaConfig.CIBA_PUSH_MODE.equals(backChannelTokenDeliveryMode)) {
+            sendClientNotificationRequestForPush(client, cibaConfig, deviceModel);
         }
 
         return Response.ok(MediaType.APPLICATION_JSON_TYPE).build();
+    }
+
+    protected void sendClientNotificationRequestForPush(ClientModel client, CibaConfig cibaConfig, OAuth2DeviceCodeModel deviceModel) {
+
+        String clientNotificationEndpoint = cibaConfig.getBackchannelClientNotificationEndpoint(client);
+        if (clientNotificationEndpoint == null) {
+            event.error(Errors.INVALID_REQUEST);
+            throw new ErrorResponseException(OAuthErrorException.INVALID_REQUEST, "Client notification endpoint not set for the client with the push mode",
+                    Response.Status.BAD_REQUEST);
+        }
+
+        logger.debugf("Sending request to client notification endpoint '%s' for the client '%s'",
+                clientNotificationEndpoint, client.getClientId());
+
+        AuthenticationSessionModel authSession = session.getContext().getAuthenticationSession();
+
+        UserSessionModel userSession = session.sessions().getUserSession(realm, authSession.getParentSession().getId());
+        ClientSessionContext clientSessionCtx = TokenManager.attachAuthenticationSession(session, userSession, authSession);
+
+        TokenManager.AccessTokenResponseBuilder responseBuilder = new TokenManager()
+                .responseBuilder(realm, client, event, session, userSession, clientSessionCtx)
+                .generateAccessToken();
+        AccessTokenResponse accessTokenResponse = responseBuilder.build();
+
+        accessTokenResponse.getOtherClaims().put(CibaGrantType.AUTH_REQ_ID, deviceModel.getAuthReqId());
+
+        try {
+            SimpleHttp simpleHttp = SimpleHttp.doPost(clientNotificationEndpoint, session)
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON)
+                    .json(accessTokenResponse)
+                    .auth(deviceModel.getClientNotificationToken());
+
+            int pushResponseStatus = simpleHttp.asStatus();
+
+            logger.tracef("Received status '%d' from request to client notification endpoint '%s' for the client '%s'",
+                    pushResponseStatus, clientNotificationEndpoint, client.getClientId());
+            if (pushResponseStatus != 200 && pushResponseStatus != 204) {
+                logger.warnf("Invalid status returned from client notification endpoint '%s' of client '%s'",
+                        clientNotificationEndpoint, client.getClientId());
+                event.error(Errors.INVALID_REQUEST);
+                throw new ErrorResponseException(OAuthErrorException.INVALID_REQUEST, "Failed to send request to client notification endpoint",
+                        Response.Status.BAD_REQUEST);
+            }
+        } catch (IOException ioe) {
+            logger.errorf(ioe, "Failed to send request to client notification endpoint '%s' of client '%s'",
+                    clientNotificationEndpoint, client.getClientId());
+            event.error(Errors.INVALID_REQUEST);
+            throw new ErrorResponseException(OAuthErrorException.INVALID_REQUEST, "Failed to send request to client notification endpoint",
+                    Response.Status.BAD_REQUEST);
+        }
     }
 
     private BackchannelAuthCallbackContext verifyAuthenticationRequest(HttpHeaders headers) {

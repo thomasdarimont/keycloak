@@ -28,7 +28,7 @@ public class CibaConfig extends AbstractConfig {
     public static final String CIBA_POLL_MODE = "poll";
     public static final String CIBA_PING_MODE = "ping";
     public static final String CIBA_PUSH_MODE = "push";
-    public static final List<String> CIBA_SUPPORTED_MODES = Arrays.asList(CIBA_POLL_MODE, CIBA_PING_MODE);
+    public static final List<String> CIBA_SUPPORTED_MODES = Arrays.asList(CIBA_POLL_MODE, CIBA_PING_MODE, CIBA_PUSH_MODE);
 
     // realm attribute names
     public static final String CIBA_BACKCHANNEL_TOKEN_DELIVERY_MODE = "cibaBackchannelTokenDeliveryMode";
