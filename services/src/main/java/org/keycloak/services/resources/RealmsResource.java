@@ -237,6 +237,17 @@ public class RealmsResource {
         return brokerService;
     }
 
+    @Path("{realm}/health")
+    public HealthService getHealthService(final @PathParam("realm") String name) {
+        RealmModel realm = init(name);
+
+        // TODO Add access check
+
+        HealthService healthService = new HealthService(realm);
+        ResteasyProviderFactory.getInstance().injectProperties(healthService);
+        return healthService;
+    }
+
     @OPTIONS
     @Path("{realm}/.well-known/{provider}")
     @Produces(MediaType.APPLICATION_JSON)

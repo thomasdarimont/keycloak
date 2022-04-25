@@ -1,0 +1,2 @@
+org.keycloak.quarkus.runtime.services.health.realm.EmailHealthIndicatorFactory
+org.keycloak.quarkus.runtime.services.health.realm.LdapHealthIndicatorFactory

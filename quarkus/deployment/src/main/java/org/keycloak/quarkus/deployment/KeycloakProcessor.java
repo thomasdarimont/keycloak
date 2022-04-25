@@ -111,7 +111,6 @@ import org.keycloak.policy.BlacklistPasswordPolicyProviderFactory;
 import org.keycloak.protocol.ProtocolMapperSpi;
 import org.keycloak.protocol.oidc.mappers.DeployedScriptOIDCProtocolMapper;
 import org.keycloak.provider.EnvironmentDependentProviderFactory;
-import org.keycloak.provider.KeycloakDeploymentInfo;
 import org.keycloak.provider.Provider;
 import org.keycloak.provider.ProviderFactory;
 import org.keycloak.provider.ProviderManager;
@@ -127,6 +126,7 @@ import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.vertx.http.deployment.FilterBuildItem;
 
+import org.keycloak.quarkus.runtime.services.health.KeycloakDataSourceHealthCheck;
 import org.keycloak.quarkus.runtime.storage.database.jpa.NamedJpaConnectionProviderFactory;
 import org.keycloak.quarkus.runtime.themes.FlatClasspathThemeResourceProviderFactory;
 import org.keycloak.representations.provider.ScriptProviderDescriptor;
@@ -459,7 +459,7 @@ class KeycloakProcessor {
      * running in a different thread than the worker thread started by {@link QuarkusRequestFilter}.
      * See https://github.com/quarkusio/quarkus/issues/12990.
      *
-     * <p>By doing this, custom health checks such as {@link org.keycloak.quarkus.runtime.services.health.KeycloakReadyHealthCheck} is
+     * <p>By doing this, custom health checks such as {@link KeycloakDataSourceHealthCheck} is
      * executed within an active {@link org.keycloak.models.KeycloakSession}, making possible to use it when calculating the
      * status.
      *

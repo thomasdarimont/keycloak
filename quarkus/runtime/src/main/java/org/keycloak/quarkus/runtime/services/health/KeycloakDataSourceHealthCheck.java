@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 @Readiness
 @ApplicationScoped
-public class KeycloakReadyHealthCheck extends DataSourceHealthCheck {
+public class KeycloakDataSourceHealthCheck extends DataSourceHealthCheck {
 
     /**
      * Date formatter, the same as used by Quarkus. This enables users to quickly compare the date printed
