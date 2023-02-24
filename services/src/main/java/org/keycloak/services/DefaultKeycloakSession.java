@@ -24,12 +24,14 @@ import org.keycloak.jose.jws.DefaultTokenManager;
 import org.keycloak.keys.DefaultKeyManager;
 import org.keycloak.models.ClientProvider;
 import org.keycloak.models.ClientScopeProvider;
+import org.keycloak.models.DefaultMetricsManager;
 import org.keycloak.models.GroupProvider;
 import org.keycloak.models.KeyManager;
 import org.keycloak.models.KeycloakContext;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.KeycloakTransactionManager;
+import org.keycloak.models.MetricsRecorder;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.RealmProvider;
 import org.keycloak.models.RoleProvider;
@@ -88,13 +90,20 @@ public class DefaultKeycloakSession implements KeycloakSession {
     private TokenManager tokenManager;
     private VaultTranscriber vaultTranscriber;
     private ClientPolicyManager clientPolicyManager;
+    private MetricsRecorder metricsManager;
+
     private boolean closed = false;
 
-    public DefaultKeycloakSession(DefaultKeycloakSessionFactory factory) {
+    public DefaultKeycloakSession(DefaultKeycloakSessionFactory factory, MetricsRecorder metricsManager) {
         this.factory = factory;
         this.transactionManager = new DefaultKeycloakTransactionManager(this);
+        this.metricsManager = metricsManager;
         context = createKeycloakContext(this);
         LOG.tracef("Created %s%s", this, StackUtil.getShortStackTrace());
+    }
+
+    public DefaultKeycloakSession(DefaultKeycloakSessionFactory factory) {
+        this(factory, new DefaultMetricsManager(factory));
     }
 
     @Override
@@ -243,6 +252,10 @@ public class DefaultKeycloakSession implements KeycloakSession {
     @Override
     public UserProvider users() {
         return getDatastoreProvider().users();
+    }
+
+    public MetricsRecorder metrics() {
+        return metricsManager;
     }
 
     @Override

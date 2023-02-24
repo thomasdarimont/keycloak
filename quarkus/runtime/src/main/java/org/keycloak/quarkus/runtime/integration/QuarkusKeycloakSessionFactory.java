@@ -23,11 +23,14 @@ import java.util.List;
 import java.util.Map;
 
 import org.keycloak.Config;
+import org.keycloak.metrics.KeycloakMetricsProvider;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.provider.Provider;
 import org.keycloak.provider.ProviderFactory;
 import org.keycloak.provider.ProviderManagerRegistry;
 import org.keycloak.provider.Spi;
+import org.keycloak.quarkus.runtime.integration.metrics.QuarkusKeycloakMetricsProvider;
+import org.keycloak.quarkus.runtime.integration.metrics.QuarkusMetricsManager;
 import org.keycloak.quarkus.runtime.themes.QuarkusJarThemeProviderFactory;
 import org.keycloak.services.DefaultKeycloakSessionFactory;
 import org.keycloak.services.resources.admin.permissions.AdminPermissions;
@@ -51,6 +54,8 @@ public final class QuarkusKeycloakSessionFactory extends DefaultKeycloakSessionF
     private final Boolean reaugmented;
     private final Map<Spi, Map<Class<? extends Provider>, Map<String, Class<? extends ProviderFactory>>>> factories;
     private Map<String, ProviderFactory> preConfiguredProviders;
+
+    private QuarkusMetricsManager metricsManager;
 
     public QuarkusKeycloakSessionFactory(
             Map<Spi, Map<Class<? extends Provider>, Map<String, Class<? extends ProviderFactory>>>> factories,
@@ -110,6 +115,14 @@ public final class QuarkusKeycloakSessionFactory extends DefaultKeycloakSessionF
         AdminPermissions.registerListener(this);
         // make the session factory ready for hot deployment
         ProviderManagerRegistry.SINGLETON.setDeployer(this);
+
+        // Always install the quarkus metrics provider first
+        // TODO resolve user provided metrics providers dynamically
+        List<KeycloakMetricsProvider> metricsProviders = List.of(new QuarkusKeycloakMetricsProvider());
+
+        QuarkusMetricsManager metricsManager = new QuarkusMetricsManager(this, metricsProviders);
+        register(metricsManager.getProviderEventListener());
+        this.metricsManager = metricsManager;
     }
 
     private ProviderFactory lookupProviderFactory(Class<? extends ProviderFactory> factoryClazz) {
@@ -126,6 +139,6 @@ public final class QuarkusKeycloakSessionFactory extends DefaultKeycloakSessionF
 
     @Override
     public KeycloakSession create() {
-        return new QuarkusKeycloakSession(this);
+        return new QuarkusKeycloakSession(this, metricsManager);
     }
 }

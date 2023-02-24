@@ -31,6 +31,7 @@ import org.keycloak.models.KeycloakContext;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.KeycloakTransactionManager;
+import org.keycloak.models.MetricsRecorder;
 import org.keycloak.models.ModelException;
 import org.keycloak.models.RealmProvider;
 import org.keycloak.models.RealmSpi;
@@ -278,6 +279,11 @@ public class ImportKeycloakSession implements KeycloakSession {
     @Override
     public UserProvider users() {
         return userProvider;
+    }
+
+    @Override
+    public MetricsRecorder metrics() {
+        return session.metrics();
     }
 
     @Override

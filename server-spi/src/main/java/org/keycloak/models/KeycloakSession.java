@@ -223,6 +223,13 @@ public interface KeycloakSession extends AutoCloseable {
     UserProvider users();
 
     /**
+     * Metrics management
+     *
+     * @return MetricsRecorder instance
+     */
+    MetricsRecorder metrics();
+
+    /**
      * @return ClientStorageManager instance
      */
     @Deprecated

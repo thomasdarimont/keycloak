@@ -18,14 +18,15 @@
 package org.keycloak.quarkus.runtime.integration;
 
 import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.MetricsRecorder;
 import org.keycloak.services.DefaultKeycloakContext;
 import org.keycloak.services.DefaultKeycloakSession;
 import org.keycloak.services.DefaultKeycloakSessionFactory;
 
 public class QuarkusKeycloakSession extends DefaultKeycloakSession {
 
-    public QuarkusKeycloakSession(DefaultKeycloakSessionFactory factory) {
-        super(factory);
+    public QuarkusKeycloakSession(DefaultKeycloakSessionFactory factory, MetricsRecorder metricsManager) {
+        super(factory, metricsManager);
     }
 
     @Override
