@@ -93,7 +93,7 @@
     "@testing-library/cypress": "^9.0.0",
     "@testing-library/jest-dom": "^6.1.2",
     "@testing-library/react": "^14.0.0",
-    "@types/dagre": "^0.7.49",
+    "@types/dagre": "^0.7.50",
     "@types/file-saver": "^2.0.5",
     "@types/flat": "^5.0.2",
     "@types/lodash-es": "^4.17.9",
