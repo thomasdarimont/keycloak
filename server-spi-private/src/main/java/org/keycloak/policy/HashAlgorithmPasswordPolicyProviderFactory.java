@@ -66,6 +66,11 @@ public class HashAlgorithmPasswordPolicyProviderFactory implements PasswordPolic
     }
 
     @Override
+    public PolicyError validate(String password, PasswordPolicyContext policyContext) {
+        return null;
+    }
+
+    @Override
     public String getDisplayName() {
         return "Hashing Algorithm";
     }

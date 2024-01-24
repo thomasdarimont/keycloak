@@ -27,6 +27,9 @@ import org.keycloak.provider.Provider;
 public interface PasswordPolicyManagerProvider extends Provider {
 
     PolicyError validate(RealmModel realm, UserModel user, String password);
-    PolicyError validate(String user, String password);
+
+    PolicyError validate(String username, String password);
+
+    PolicyError validate(String password, PasswordPolicyContext policyContext);
 
 }

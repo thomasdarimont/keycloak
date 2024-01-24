@@ -36,7 +36,17 @@ public class LowerCasePasswordPolicyProvider implements PasswordPolicyProvider {
 
     @Override
     public PolicyError validate(String username, String password) {
-        int min = context.getRealm().getPasswordPolicy().getPolicyConfig(LowerCasePasswordPolicyProviderFactory.ID);
+        return validate(password, new PasswordPolicyContext().setRealm(context.getRealm()));
+    }
+
+    @Override
+    public PolicyError validate(RealmModel realm, UserModel user, String password) {
+        return validate(password, new PasswordPolicyContext().setRealm(realm));
+    }
+
+    @Override
+    public PolicyError validate(String password, PasswordPolicyContext policyContext) {
+        int min = policyContext.getPasswordPolicy().getPolicyConfig(LowerCasePasswordPolicyProviderFactory.ID);
         int count = 0;
         for (char c : password.toCharArray()) {
             if (Character.isLowerCase(c)) {
@@ -44,11 +54,6 @@ public class LowerCasePasswordPolicyProvider implements PasswordPolicyProvider {
             }
         }
         return count < min ? new PolicyError(ERROR_MESSAGE, min) : null;
-    }
-
-    @Override
-    public PolicyError validate(RealmModel realm, UserModel user, String password) {
-        return validate(user.getUsername(), password);
     }
 
     @Override

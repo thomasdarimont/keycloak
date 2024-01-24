@@ -59,6 +59,11 @@ public class HashIterationsPasswordPolicyProviderFactory implements PasswordPoli
     }
 
     @Override
+    public PolicyError validate(String password, PasswordPolicyContext policyContext) {
+        return null;
+    }
+
+    @Override
     public Object parseConfig(String value) {
         return parseInteger(value, -1);
     }

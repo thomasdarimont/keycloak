@@ -39,15 +39,20 @@ public class NotEmailPasswordPolicyProvider implements PasswordPolicyProvider {
 
     @Override
     public PolicyError validate(String email, String password) {
-        if (email == null) {
-            return null;
-        }
-        return email.equals(password) ? POLICY_ERROR : null;
+        return validate(password, new PasswordPolicyContext().setUsername(email));
     }
 
     @Override
     public PolicyError validate(RealmModel realm, UserModel user, String password) {
-        return validate(user.getEmail(), password);
+        return validate(password, new PasswordPolicyContext().setUsername(user.getEmail()));
+    }
+
+    @Override
+    public PolicyError validate(String password, PasswordPolicyContext policyContext) {
+        if (policyContext.getUsername() == null) {
+            return null;
+        }
+        return policyContext.getUsername().equals(password) ? POLICY_ERROR : null;
     }
 
     @Override

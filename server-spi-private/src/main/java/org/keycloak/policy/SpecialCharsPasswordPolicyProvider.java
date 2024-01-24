@@ -36,7 +36,17 @@ public class SpecialCharsPasswordPolicyProvider implements PasswordPolicyProvide
 
     @Override
     public PolicyError validate(String username, String password) {
-        int min = context.getRealm().getPasswordPolicy().getPolicyConfig(SpecialCharsPasswordPolicyProviderFactory.ID);
+        return validate(password, new PasswordPolicyContext().setRealm(context.getRealm()));
+    }
+
+    @Override
+    public PolicyError validate(RealmModel realm, UserModel user, String password) {
+        return validate(password, new PasswordPolicyContext().setRealm(realm));
+    }
+
+    @Override
+    public PolicyError validate(String password, PasswordPolicyContext policyContext) {
+        int min = policyContext.getPasswordPolicy().getPolicyConfig(SpecialCharsPasswordPolicyProviderFactory.ID);
         int count = 0;
         for (char c : password.toCharArray()) {
             if (!Character.isLetterOrDigit(c)) {
@@ -44,11 +54,6 @@ public class SpecialCharsPasswordPolicyProvider implements PasswordPolicyProvide
             }
         }
         return count < min ? new PolicyError(ERROR_MESSAGE, min) : null;
-    }
-
-    @Override
-    public PolicyError validate(RealmModel realm, UserModel user, String password) {
-        return validate(user.getUsername(), password);
     }
 
     @Override

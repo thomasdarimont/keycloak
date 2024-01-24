@@ -1,6 +1,5 @@
 package org.keycloak.policy;
 
-import org.keycloak.Config;
 import org.keycloak.models.KeycloakContext;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
@@ -34,8 +33,18 @@ public class BlacklistPasswordPolicyProvider implements PasswordPolicyProvider {
    */
   @Override
   public PolicyError validate(String username, String password) {
+    return validate(password, new PasswordPolicyContext().setRealm(context.getRealm()));
+  }
 
-    Object policyConfig = context.getRealm().getPasswordPolicy().getPolicyConfig(BlacklistPasswordPolicyProviderFactory.ID);
+  @Override
+  public PolicyError validate(RealmModel realm, UserModel user, String password) {
+    return validate(password, new PasswordPolicyContext().setRealm(realm));
+  }
+
+  @Override
+  public PolicyError validate(String password, PasswordPolicyContext policyContext) {
+
+    Object policyConfig = policyContext.getPasswordPolicy().getPolicyConfig(BlacklistPasswordPolicyProviderFactory.ID);
     if (policyConfig == null) {
       return null;
     }
@@ -51,11 +60,6 @@ public class BlacklistPasswordPolicyProvider implements PasswordPolicyProvider {
     }
 
     return new PolicyError(ERROR_MESSAGE);
-  }
-
-  @Override
-  public PolicyError validate(RealmModel realm, UserModel user, String password) {
-    return validate(user.getUsername(), password);
   }
 
   /**

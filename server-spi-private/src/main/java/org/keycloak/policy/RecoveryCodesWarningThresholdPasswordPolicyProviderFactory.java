@@ -19,7 +19,6 @@ package org.keycloak.policy;
 
 import org.keycloak.Config;
 import org.keycloak.common.Profile;
-import org.keycloak.credential.hash.PasswordHashProvider;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.PasswordPolicy;
@@ -64,6 +63,11 @@ public class RecoveryCodesWarningThresholdPasswordPolicyProviderFactory implemen
 
     @Override
     public PolicyError validate(String user, String password) {
+        return null;
+    }
+
+    @Override
+    public PolicyError validate(String password, PasswordPolicyContext policyContext) {
         return null;
     }
 

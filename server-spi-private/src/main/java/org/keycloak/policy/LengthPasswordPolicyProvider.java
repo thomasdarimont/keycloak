@@ -36,13 +36,18 @@ public class LengthPasswordPolicyProvider implements PasswordPolicyProvider {
 
     @Override
     public PolicyError validate(String username, String password) {
-        int min = context.getRealm().getPasswordPolicy().getPolicyConfig(LengthPasswordPolicyProviderFactory.ID);
-        return password.length() < min ? new PolicyError(ERROR_MESSAGE, min) : null;
+        return validate(password, new PasswordPolicyContext().setRealm(context.getRealm()));
     }
 
     @Override
     public PolicyError validate(RealmModel realm, UserModel user, String password) {
-        return validate(user.getUsername(), password);
+        return validate(password, new PasswordPolicyContext().setRealm(realm));
+    }
+
+    @Override
+    public PolicyError validate(String password, PasswordPolicyContext policyContext) {
+        int min = policyContext.getPasswordPolicy().getPolicyConfig(LengthPasswordPolicyProviderFactory.ID);
+        return password.length() < min ? new PolicyError(ERROR_MESSAGE, min) : null;
     }
 
     @Override

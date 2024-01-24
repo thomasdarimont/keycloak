@@ -40,17 +40,22 @@ public class RegexPatternsPasswordPolicyProvider implements PasswordPolicyProvid
 
     @Override
     public PolicyError validate(String username, String password) {
-        Pattern pattern = context.getRealm().getPasswordPolicy().getPolicyConfig(RegexPatternsPasswordPolicyProviderFactory.ID);
+        return validate(password, new PasswordPolicyContext().setRealm(context.getRealm()));
+    }
+
+    @Override
+    public PolicyError validate(RealmModel realm, UserModel user, String password) {
+        return validate(password, new PasswordPolicyContext().setRealm(realm));
+    }
+
+    @Override
+    public PolicyError validate(String password, PasswordPolicyContext policyContext) {
+        Pattern pattern = policyContext.getPasswordPolicy().getPolicyConfig(RegexPatternsPasswordPolicyProviderFactory.ID);
         Matcher matcher = pattern.matcher(password);
         if (!matcher.matches()) {
             return new PolicyError(ERROR_MESSAGE, pattern.pattern());
         }
         return null;
-    }
-
-    @Override
-    public PolicyError validate(RealmModel realm, UserModel user, String password) {
-        return validate(user.getUsername(), password);
     }
 
     @Override

@@ -49,9 +49,15 @@ public class HistoryPasswordPolicyProvider implements PasswordPolicyProvider {
 
     @Override
     public PolicyError validate(RealmModel realm, UserModel user, String password) {
-        PasswordPolicy policy = session.getContext().getRealm().getPasswordPolicy();
+        return validate(password, new PasswordPolicyContext().setRealm(realm).setUser(user));
+    }
+
+    @Override
+    public PolicyError validate(String password, PasswordPolicyContext policyContext) {
+        PasswordPolicy policy = policyContext.getPasswordPolicy();
         int passwordHistoryPolicyValue = policy.getPolicyConfig(PasswordPolicy.PASSWORD_HISTORY_ID);
         if (passwordHistoryPolicyValue != -1) {
+            UserModel user = policyContext.getUser();
             if (user.credentialManager().getStoredCredentialsByTypeStream(PasswordCredentialModel.TYPE)
                     .map(PasswordCredentialModel::createFromCredentialModel)
                     .anyMatch(passwordCredential -> {
@@ -64,7 +70,7 @@ public class HistoryPasswordPolicyProvider implements PasswordPolicyProvider {
 
             if (passwordHistoryPolicyValue > 0) {
                 if (this.getRecent(user.credentialManager().getStoredCredentialsByTypeStream(PasswordCredentialModel.PASSWORD_HISTORY),
-                        passwordHistoryPolicyValue - 1)
+                                passwordHistoryPolicyValue - 1)
                         .map(PasswordCredentialModel::createFromCredentialModel)
                         .anyMatch(passwordCredential -> {
                             PasswordHashProvider hash = session.getProvider(PasswordHashProvider.class,

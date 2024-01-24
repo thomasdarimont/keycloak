@@ -29,8 +29,37 @@ public interface PasswordPolicyProvider extends Provider {
     String STRING_CONFIG_TYPE = "String";
     String INT_CONFIG_TYPE = "int";
 
+    /**
+     *
+     * @param realm
+     * @param user
+     * @param password
+     * @return
+     *
+     * @deprecated use {@link #validate(String, PasswordPolicyContext)} instead.
+     */
+    @Deprecated
     PolicyError validate(RealmModel realm, UserModel user, String password);
-    PolicyError validate(String user, String password);
+
+    /**
+     * @param username
+     * @param password
+     * @return
+     *
+     * @deprecated use {@link #validate(String, PasswordPolicyContext)} instead.
+     */
+    @Deprecated
+    PolicyError validate(String username, String password);
+
+    /**
+     * Validates the given password with the data from the {@link PasswordPolicyContext}.
+     *
+     * @param password
+     * @param policyContext
+     * @return
+     */
+    PolicyError validate(String password, PasswordPolicyContext policyContext);
+
     Object parseConfig(String value);
 
     default Integer parseInteger(String value, Integer defaultValue) {
@@ -40,4 +69,5 @@ public interface PasswordPolicyProvider extends Provider {
             throw new PasswordPolicyConfigException("Not a valid number");
         }
     }
+
 }

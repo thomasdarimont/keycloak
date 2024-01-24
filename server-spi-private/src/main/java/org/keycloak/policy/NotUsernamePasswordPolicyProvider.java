@@ -36,15 +36,20 @@ public class NotUsernamePasswordPolicyProvider implements PasswordPolicyProvider
 
     @Override
     public PolicyError validate(String username, String password) {
-        if (username == null) {
-            return null;
-        }
-        return username.equals(password) ? new PolicyError(ERROR_MESSAGE) : null;
+        return validate(password, new PasswordPolicyContext().setRealm(context.getRealm()).setUsername(username));
     }
 
     @Override
     public PolicyError validate(RealmModel realm, UserModel user, String password) {
-        return validate(user.getUsername(), password);
+        return validate(password, new PasswordPolicyContext().setRealm(realm).setUsername(user.getUsername()));
+    }
+
+    @Override
+    public PolicyError validate(String password, PasswordPolicyContext policyContext) {
+        if (policyContext.getUsername() == null) {
+            return null;
+        }
+        return policyContext.getUsername().equals(password) ? new PolicyError(ERROR_MESSAGE) : null;
     }
 
     @Override

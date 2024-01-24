@@ -64,6 +64,11 @@ public class ForceExpiredPasswordPolicyProviderFactory implements PasswordPolicy
     }
 
     @Override
+    public PolicyError validate(String password, PasswordPolicyContext policyContext) {
+        return null;
+    }
+
+    @Override
     public String getDisplayName() {
         return "Expire Password";
     }

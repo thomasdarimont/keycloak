@@ -36,13 +36,18 @@ public class MaximumLengthPasswordPolicyProvider implements PasswordPolicyProvid
 
     @Override
     public PolicyError validate(String username, String password) {
-        int max = context.getRealm().getPasswordPolicy().getPolicyConfig(MaximumLengthPasswordPolicyProviderFactory.ID);
-        return password.length() > max ? new PolicyError(ERROR_MESSAGE, max) : null;
+        return validate(password, new PasswordPolicyContext().setRealm(context.getRealm()));
     }
 
     @Override
     public PolicyError validate(RealmModel realm, UserModel user, String password) {
-        return validate(user.getUsername(), password);
+        return validate(password, new PasswordPolicyContext().setRealm(realm));
+    }
+
+    @Override
+    public PolicyError validate(String password, PasswordPolicyContext policyContext) {
+        int max = policyContext.getPasswordPolicy().getPolicyConfig(MaximumLengthPasswordPolicyProviderFactory.ID);
+        return password.length() > max ? new PolicyError(ERROR_MESSAGE, max) : null;
     }
 
     @Override
