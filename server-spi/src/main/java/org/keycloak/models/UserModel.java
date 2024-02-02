@@ -217,6 +217,6 @@ public interface UserModel extends RoleMapperModel {
         UPDATE_PASSWORD,
         TERMS_AND_CONDITIONS,
         VERIFY_PROFILE,
-        UPDATE_EMAIL
+        UPDATE_EMAIL,
     }
 }

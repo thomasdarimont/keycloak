@@ -93,4 +93,5 @@ org.keycloak.services.clientpolicy.ClientPolicyManagerSpi
 org.keycloak.userprofile.UserProfileSpi
 org.keycloak.device.DeviceRepresentationSpi
 org.keycloak.health.LoadBalancerCheckSpi
+org.keycloak.accesscontrol.AccessPolicySpi
 org.keycloak.cookie.CookieSpi

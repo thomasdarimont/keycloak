@@ -1,0 +1,18 @@
+services:
+  keycloak-opa:
+    image: openpolicyagent/opa:0.61.0
+    platform: linux/amd64
+    command:
+      - run
+      - --log-level
+      - debug
+      - --server
+      - --set
+      - "decision_logs.console=true"
+      # Watch for changes in policy folder
+      - "--watch"
+      - "/policies"
+    volumes:
+      - ./policies:/policies:z
+    ports:
+      - "8181:8181"
