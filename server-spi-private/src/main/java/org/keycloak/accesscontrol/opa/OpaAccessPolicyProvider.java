@@ -90,13 +90,22 @@ public class OpaAccessPolicyProvider implements AccessPolicyProvider {
         OpaResource resource = createResource(realm, client, config);
         OpaRequestContext requestContext = createRequestContext(session, config);
 
-        String policyUrl = createPolicyUrl(realm, client, action, config);
-        OpaClient opaClient = createOpaClient(context);
+        OpaAccessPolicy accessPolicy = getAccessPolicy(session, realm, client, user);
+
+        String policyUrl = createPolicyUrl(realm, client, action, config, accessPolicy);
+
         OpaPolicyQuery policyQuery = createPolicyRequest(subject, resource, requestContext, action);
+
+        OpaClient opaClient = createOpaClient(context);
 
         OpaResponse policyResponse = opaClient.evaluatePolicy(policyUrl, new OpaRequest(policyQuery));
 
         return toAccessDecision(policyResponse);
+    }
+
+    protected OpaAccessPolicy getAccessPolicy(KeycloakSession session, RealmModel realm, ClientModel client, UserModel user) {
+        // policy could be defined on realm / client / user? (group?) level
+        return new OpaAccessPolicy("someId", "generic");
     }
 
     protected AccessDecision toAccessDecision(OpaResponse response) {
@@ -136,7 +145,9 @@ public class OpaAccessPolicyProvider implements AccessPolicyProvider {
         return new OpaClient(context.getSession());
     }
 
-    protected String createPolicyUrl(RealmModel realm, ClientModel client, String action, ConfigWrapper config) {
+    protected String createPolicyUrl(RealmModel realm, ClientModel client, String action, ConfigWrapper config, OpaAccessPolicy accessPolicy) {
+
+        // take URL template from policy or context
 
         String opaUrl = config.getString(Option.URL.key);
 
