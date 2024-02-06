@@ -2,7 +2,6 @@ package org.keycloak.accesscontrol.opa.client;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import org.keycloak.accesscontrol.opa.OpaAccessPolicyProvider;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -13,55 +12,37 @@ public class OpaResponse {
     public static final OpaResponse DENY;
 
     static {
-        Map<String, Object> result = new HashMap<>();
-        result.put("allow", false);
-        result.put("message", OpaAccessPolicyProvider.ACCESS_DENIED_MESSAGE);
-        DENY = new OpaResponse(result);
+        OpaResponse deny = new OpaResponse();
+        deny.setResult(false);
+        deny.setMetadata(Collections.emptyMap());
+        DENY = deny;
     }
 
-    private Map<String, Object> result;
+    private Boolean result;
+
+    private String decisionId;
 
     private Map<String, Object> metadata;
 
-    public OpaResponse() {
-        this(Collections.emptyMap());
-    }
-
-    public OpaResponse(Map<String, Object> result) {
-        this.result = result;
-    }
-
     @JsonIgnore
     public boolean isAllowed() {
-        return result != null && Boolean.parseBoolean(String.valueOf(result.get("allow")));
+        return result == Boolean.TRUE;
     }
 
-    @JsonIgnore
-    public String getMessage() {
-        if (result == null) {
-            return null;
-        }
-        Object hint = result.get("message");
-        if (!(hint instanceof String)) {
-            return null;
-        }
-        return (String) hint;
-    }
-
-    @JsonAnySetter
-    public void handleUnknownProperty(String key, Object value) {
-        if (metadata == null) {
-            metadata = new HashMap<>();
-        }
-        this.metadata.put(key, value);
-    }
-
-    public Map<String, Object> getResult() {
+    public Boolean getResult() {
         return result;
     }
 
-    public void setResult(Map<String, Object> result) {
+    public void setResult(Boolean result) {
         this.result = result;
+    }
+
+    public String getDecisionId() {
+        return decisionId;
+    }
+
+    public void setDecisionId(String decisionId) {
+        this.decisionId = decisionId;
     }
 
     public Map<String, Object> getMetadata() {
@@ -72,11 +53,16 @@ public class OpaResponse {
         this.metadata = metadata;
     }
 
+    @JsonAnySetter
+    public void handleUnknownProperty(String key, Object value) {
+        if (metadata == null) {
+            metadata = new HashMap<>();
+        }
+        this.metadata.put(key, value);
+    }
+
     @Override
     public String toString() {
-        return "OpaAccessResponse{" +
-                "result=" + result +
-                ", metadata=" + metadata +
-                '}';
+        return "OpaAccessResponse{" + "result=" + result + ", metadata=" + metadata + '}';
     }
 }

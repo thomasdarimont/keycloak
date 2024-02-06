@@ -12,16 +12,13 @@ public class AccessDecision {
 
     private final Map<String, Object> details;
 
-    private final String message;
-
-    public AccessDecision(boolean allow, Map<String, Object> details, String message) {
-        this(allow ? Outcome.ALLOWED : Outcome.DENIED, details, message);
+    public AccessDecision(boolean allow, Map<String, Object> details) {
+        this(allow ? Outcome.ALLOWED : Outcome.DENIED, details);
     }
 
-    public AccessDecision(Outcome outcome, Map<String, Object> details, String message) {
+    public AccessDecision(Outcome outcome, Map<String, Object> details) {
         this.outcome = outcome;
         this.details = details;
-        this.message = message;
     }
 
     public Outcome getOutcome() {
@@ -30,10 +27,6 @@ public class AccessDecision {
 
     public Map<String, Object> getDetails() {
         return details;
-    }
-
-    public String getMessage() {
-        return message;
     }
 
     public boolean isAllowed() {

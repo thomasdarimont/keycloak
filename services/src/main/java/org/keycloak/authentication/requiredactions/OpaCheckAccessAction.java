@@ -55,11 +55,7 @@ public class OpaCheckAccessAction implements RequiredActionProvider {
 
         // deny access
         var loginForm = session.getProvider(LoginFormsProvider.class);
-        var hint = String.valueOf(accessDecision.getMessage());
-        if (hint == null) {
-            hint = Messages.ACCESS_DENIED;
-        }
-        loginForm.setError(hint, user.getUsername());
+        loginForm.setError(Messages.ACCESS_DENIED, user.getUsername());
 
         context.challenge(loginForm.createErrorPage(Response.Status.FORBIDDEN));
     }

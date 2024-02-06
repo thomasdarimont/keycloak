@@ -50,7 +50,8 @@ public class OpaClient {
 
         try {
             try (SimpleHttp.Response response = http.asResponse()) {
-                return response.asJson(OpaResponse.class);
+                OpaResponse opaResponse = response.asJson(OpaResponse.class);
+                return opaResponse;
             }
         } catch (IOException e) {
             log.errorf(e, "Policy request failed");

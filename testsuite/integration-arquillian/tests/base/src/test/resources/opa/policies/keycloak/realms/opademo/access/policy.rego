@@ -3,19 +3,42 @@ package keycloak.realms.opademo.access
 import future.keywords.if
 import future.keywords.in
 
-import data.keycloak.utils.kc.isClient
-import data.keycloak.utils.kc.hasRealmRole
+import data.keycloak.utils.kc
 
-# default rule "allow"
-default allow := {"allow":false, "message":"access-denied"}
+# default allow rule: deny all
+default allow := false
 
-# rule "allow" for client-id:account-console with realm-role:user
-allow := {"allow":true, "message":"user can access"} if {
-	isClient("account-console")
-	hasRealmRole("user")
+# allow acess to client-id:account-console if realm-role:user
+allow if {
+	kc.isClient("account-console")
+	kc.hasRealmRole("user")
 }
 
-# rule "allow" for client-id:keycloak.org
-allow := {"allow":true, "message":"user can access"} if {
-	isClient("keycloak.org")
+# allow acess to client-id:app1 if client-role:access
+allow if {
+	kc.isClient("app1")
+	kc.hasCurrentClientRole("access")
 }
+
+# allow acess to client-id:app2 if client-role:access
+allow if {
+	kc.isClient("app2")
+	kc.hasClientRole("app2", "access")
+}
+
+# allow acess to client-id:app3 if member of group
+allow if {
+	kc.isClient("app3")
+	kc.isGroupMember("mygroup")
+}
+
+# allow acess to "special clients" if member of group
+allow if {
+	is_special_client(input.resource.clientId)
+	kc.isGroupMember("foobargroup")
+}
+
+is_special_client(clientId) if startswith(clientId, "foo-")
+is_special_client(clientId) if startswith(clientId, "bar-")
+
+# https://www.styra.com/blog/how-to-express-or-in-rego/

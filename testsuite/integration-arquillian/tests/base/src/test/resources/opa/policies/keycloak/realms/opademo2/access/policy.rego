@@ -3,13 +3,12 @@ package keycloak.realms.opademo2.access
 import future.keywords.if
 import future.keywords.in
 
-import data.keycloak.utils.kc.isClient
-import data.keycloak.utils.kc.hasRealmRole
+import data.keycloak.utils.kc
 
 # default rule "allow"
-default allow := {"allow":false, "message":"access-denied"}
+default allow := false
 
 # rule "allow" for client-id:account-console
-allow := {"allow":true, "message":"user can access"} if {
-	isClient("account-console")
+allow if {
+	kc.isClient("account-console")
 }

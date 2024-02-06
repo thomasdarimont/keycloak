@@ -38,8 +38,6 @@ public class OpaAccessPolicyProvider implements AccessPolicyProvider {
 
     public static final String ID = "opa";
 
-    public static final String ACCESS_DENIED_MESSAGE = "access-denied";
-
     public static final String ACTION_LOGIN = "login";
 
     public static final String ACTION_CHECK_ACCESS = "access";
@@ -53,6 +51,7 @@ public class OpaAccessPolicyProvider implements AccessPolicyProvider {
         CLIENT_ATTRIBUTES("client-attributes"), //
         REQUEST_HEADERS("request-headers"), //
         USE_GROUPS("use-groups"), //
+
         URL("url"), //
         POLICY_PATH("policy-path"), //
         ;
@@ -79,26 +78,22 @@ public class OpaAccessPolicyProvider implements AccessPolicyProvider {
     @Override
     public AccessDecision evaluate(AccessDecisionContext context) {
 
-        RealmModel realm = context.getRealm();
-        UserModel user = context.getUser();
-        ClientModel client = context.getClient();
-        KeycloakSession session = context.getSession();
         String action = ACTION_CHECK_ACCESS;
 
         ConfigWrapper config = new MapConfig(providerConfig);
-        OpaSubject subject = createSubject(user, client, config);
-        OpaResource resource = createResource(realm, client, config);
-        OpaRequestContext requestContext = createRequestContext(session, config);
+        OpaSubject subject = createSubject(context.getUser(), context.getClient(), config);
+        OpaResource resource = createResource(context.getRealm(), context.getClient(), config);
+        OpaRequestContext requestContext = createRequestContext(context.getSession(), config);
 
-        OpaAccessPolicy accessPolicy = getAccessPolicy(session, realm, client, user);
+        OpaAccessPolicy accessPolicy = getAccessPolicy(context.getSession(), context.getRealm(), context.getClient(), context.getUser());
 
-        String policyUrl = createPolicyUrl(realm, client, action, config, accessPolicy);
+        String policyUrl = createPolicyUrl(context.getRealm(), context.getClient(), action, config, accessPolicy);
 
-        OpaPolicyQuery policyQuery = createPolicyRequest(subject, resource, requestContext, action);
+        OpaPolicyQuery accessRequest = createAccessRequest(subject, resource, requestContext, action);
 
         OpaClient opaClient = createOpaClient(context);
 
-        OpaResponse policyResponse = opaClient.evaluatePolicy(policyUrl, new OpaRequest(policyQuery));
+        OpaResponse policyResponse = opaClient.evaluatePolicy(policyUrl, new OpaRequest(accessRequest));
 
         return toAccessDecision(policyResponse);
     }
@@ -109,10 +104,10 @@ public class OpaAccessPolicyProvider implements AccessPolicyProvider {
     }
 
     protected AccessDecision toAccessDecision(OpaResponse response) {
-        return new AccessDecision(response.isAllowed(), response.getMetadata(), response.getMessage());
+        return new AccessDecision(response.isAllowed(), response.getMetadata());
     }
 
-    protected OpaPolicyQuery createPolicyRequest(OpaSubject subject, OpaResource resource, OpaRequestContext requestContext, String action) {
+    protected OpaPolicyQuery createAccessRequest(OpaSubject subject, OpaResource resource, OpaRequestContext requestContext, String action) {
         OpaPolicyQuery query = new OpaPolicyQuery();
         query.setSubject(subject);
         query.setResource(resource);
@@ -146,8 +141,6 @@ public class OpaAccessPolicyProvider implements AccessPolicyProvider {
     }
 
     protected String createPolicyUrl(RealmModel realm, ClientModel client, String action, ConfigWrapper config, OpaAccessPolicy accessPolicy) {
-
-        // take URL template from policy or context
 
         String opaUrl = config.getString(Option.URL.key);
 
