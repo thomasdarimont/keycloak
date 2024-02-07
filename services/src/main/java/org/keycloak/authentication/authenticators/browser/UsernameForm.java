@@ -20,15 +20,29 @@ package org.keycloak.authentication.authenticators.browser;
 import java.util.List;
 
 import org.keycloak.authentication.AuthenticationFlowContext;
+import org.keycloak.credential.CredentialInput;
+import org.keycloak.credential.UserCredentialManager;
 import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.forms.login.freemarker.LoginFormsUtil;
+import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.IdentityProviderModel;
+import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.RealmModel;
+import org.keycloak.models.SubjectCredentialManager;
+import org.keycloak.models.UserModel;
+import org.keycloak.models.utils.UserModelDelegate;
 import org.keycloak.services.messages.Messages;
 
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
+import org.keycloak.storage.adapter.FakeUserUtil;
+import org.keycloak.storage.adapter.InMemoryUserAdapter;
 
-public final class UsernameForm extends UsernamePasswordForm {
+public class UsernameForm extends UsernamePasswordForm {
+
+    public static final String IGNORE_USER_NOT_FOUND_KEY = "ignoreNotFound";
+
+    public static final boolean IGNORE_USER_NOT_FOUND_DEFAULT = false;
 
     @Override
     public void authenticate(AuthenticationFlowContext context) {
@@ -42,6 +56,37 @@ public final class UsernameForm extends UsernamePasswordForm {
             }
         }
         super.authenticate(context);
+    }
+
+    public boolean validateUser(AuthenticationFlowContext context, MultivaluedMap<String, String> inputData) {
+        UserModel user = getUser(context, inputData);
+
+        if (user == null && isIgnoreUserNotFoundEnabled(context)) {
+            // pass unknown user to the next stage and let it fail there.
+            String attemptedUsername = context.getAuthenticationSession().getAuthNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME);
+            user = FakeUserUtil.createFakeUser(context.getSession(), context.getRealm(), attemptedUsername);
+        }
+
+        return user != null && super.validateUser(context, user, inputData);
+    }
+
+    @Override
+    public void testInvalidUser(AuthenticationFlowContext context, UserModel user) {
+        super.testInvalidUser(context, user, !isIgnoreUserNotFoundEnabled(context));
+    }
+
+    protected boolean isIgnoreUserNotFoundEnabled(AuthenticationFlowContext context) {
+
+        AuthenticatorConfigModel authConfig = context.getAuthenticatorConfig();
+        if (authConfig == null) {
+            return UsernameForm.IGNORE_USER_NOT_FOUND_DEFAULT;
+        }
+
+        if (authConfig.getConfig() == null) {
+            return UsernameForm.IGNORE_USER_NOT_FOUND_DEFAULT;
+        }
+
+        return Boolean.parseBoolean(authConfig.getConfig().get(IGNORE_USER_NOT_FOUND_KEY));
     }
 
     @Override

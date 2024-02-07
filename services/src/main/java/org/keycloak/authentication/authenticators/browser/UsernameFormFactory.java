@@ -25,7 +25,9 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.credential.PasswordCredentialModel;
 import org.keycloak.provider.ProviderConfigProperty;
+import org.keycloak.provider.ProviderConfigurationBuilder;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -35,7 +37,24 @@ import java.util.List;
 public class UsernameFormFactory implements AuthenticatorFactory {
 
     public static final String PROVIDER_ID = "auth-username-form";
+
     public static final UsernameForm SINGLETON = new UsernameForm();
+
+    private static final List<ProviderConfigProperty> CONFIG_PROPERTIES;
+
+    static {
+        var list = ProviderConfigurationBuilder.create() //
+
+                .property().name(UsernameForm.IGNORE_USER_NOT_FOUND_KEY) //
+                .type(ProviderConfigProperty.BOOLEAN_TYPE) //
+                .label("Ignore not found") //
+                .defaultValue(Boolean.toString(UsernameForm.IGNORE_USER_NOT_FOUND_DEFAULT)) //
+                .helpText("Controls if the flow should continue with the next authentication step when the user was not found.") //
+                .add() //
+                .build();
+
+        CONFIG_PROPERTIES = Collections.unmodifiableList(list);
+    }
 
     @Override
     public Authenticator create(KeycloakSession session) {
@@ -69,8 +88,9 @@ public class UsernameFormFactory implements AuthenticatorFactory {
 
     @Override
     public boolean isConfigurable() {
-        return false;
+        return true;
     }
+
     public static final AuthenticationExecutionModel.Requirement[] REQUIREMENT_CHOICES = {
             AuthenticationExecutionModel.Requirement.REQUIRED
     };
@@ -92,7 +112,7 @@ public class UsernameFormFactory implements AuthenticatorFactory {
 
     @Override
     public List<ProviderConfigProperty> getConfigProperties() {
-        return null;
+        return CONFIG_PROPERTIES;
     }
 
     @Override

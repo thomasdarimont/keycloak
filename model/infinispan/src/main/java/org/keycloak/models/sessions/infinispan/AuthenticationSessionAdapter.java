@@ -33,6 +33,8 @@ import org.keycloak.models.sessions.infinispan.entities.AuthenticationSessionEnt
 import org.keycloak.models.light.LightweightUserAdapter;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.sessions.RootAuthenticationSessionModel;
+import org.keycloak.storage.adapter.FakeUserUtil;
+
 import static org.keycloak.models.Constants.SESSION_NOTE_LIGHTWEIGHT_USER;
 import static org.keycloak.models.light.LightweightUserAdapter.isLightweightUser;
 
@@ -289,6 +291,10 @@ public class AuthenticationSessionAdapter implements AuthenticationSessionModel 
     public UserModel getAuthenticatedUser() {
         if (entity.getAuthUserId() == null) {
             return null;
+        }
+
+        if ("fakeId".equals(entity.getAuthUserId())) {
+            return FakeUserUtil.createFakeUser(session, getRealm(), getAuthNote("ATTEMPTED_USERNAME"));
         }
 
         if (Profile.isFeatureEnabled(Feature.TRANSIENT_USERS) && getUserSessionNotes().containsKey(SESSION_NOTE_LIGHTWEIGHT_USER)) {

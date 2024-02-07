@@ -124,11 +124,17 @@ public abstract class AbstractUsernameFormAuthenticator extends AbstractFormAuth
     }
 
     public void testInvalidUser(AuthenticationFlowContext context, UserModel user) {
+        testInvalidUser(context, user, true);
+    }
+
+    public void testInvalidUser(AuthenticationFlowContext context, UserModel user, boolean failFast) {
         if (user == null) {
             dummyHash(context);
-            context.getEvent().error(Errors.USER_NOT_FOUND);
-            Response challengeResponse = challenge(context, getDefaultChallengeMessage(context), FIELD_USERNAME);
-            context.failureChallenge(AuthenticationFlowError.INVALID_USER, challengeResponse);
+            if (failFast) {
+                context.getEvent().error(Errors.USER_NOT_FOUND);
+                Response challengeResponse = challenge(context, getDefaultChallengeMessage(context), FIELD_USERNAME);
+                context.failureChallenge(AuthenticationFlowError.INVALID_USER, challengeResponse);
+            }
         }
     }
 
@@ -156,7 +162,7 @@ public abstract class AbstractUsernameFormAuthenticator extends AbstractFormAuth
         return user != null && validateUser(context, user, inputData);
     }
 
-    private UserModel getUser(AuthenticationFlowContext context, MultivaluedMap<String, String> inputData) {
+    protected UserModel getUser(AuthenticationFlowContext context, MultivaluedMap<String, String> inputData) {
         if (isUserAlreadySetBeforeUsernamePasswordAuth(context)) {
             // Get user from the authentication context in case he was already set before this authenticator
             UserModel user = context.getUser();
@@ -203,7 +209,7 @@ public abstract class AbstractUsernameFormAuthenticator extends AbstractFormAuth
         return user;
     }
 
-    private boolean validateUser(AuthenticationFlowContext context, UserModel user, MultivaluedMap<String, String> inputData) {
+    protected boolean validateUser(AuthenticationFlowContext context, UserModel user, MultivaluedMap<String, String> inputData) {
         if (!enabledUser(context, user)) {
             return false;
         }
