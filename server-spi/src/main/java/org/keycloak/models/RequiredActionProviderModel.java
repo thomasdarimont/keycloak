@@ -23,9 +23,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
-* @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
-* @version $Revision: 1 $
-*/
+ * Holds the information for a required action.
+ *
+ * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
+ * @version $Revision: 1 $
+ */
 public class RequiredActionProviderModel implements Serializable {
 
     public static class RequiredActionComparator implements Comparator<RequiredActionProviderModel> {
@@ -49,6 +51,7 @@ public class RequiredActionProviderModel implements Serializable {
     private boolean defaultAction;
     private int priority;
     private Map<String, String> config = new HashMap<>();
+    private boolean configurable;
 
 
     public String getId() {
@@ -119,5 +122,13 @@ public class RequiredActionProviderModel implements Serializable {
 
     public void setConfig(Map<String, String> config) {
         this.config = config;
+    }
+
+    public boolean isConfigurable() {
+        return configurable;
+    }
+
+    public void setConfigurable(boolean configurable) {
+        this.configurable = configurable;
     }
 }

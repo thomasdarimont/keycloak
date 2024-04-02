@@ -40,8 +40,8 @@ import org.keycloak.events.admin.ResourceType;
 import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.AuthenticationFlowModel;
 import org.keycloak.models.AuthenticatorConfigModel;
-import org.keycloak.models.Constants;
 import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.RequiredActionConfigModel;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.RequiredActionProviderModel;
 import org.keycloak.models.utils.Base32;
@@ -58,6 +58,8 @@ import org.keycloak.representations.idm.AuthenticationFlowRepresentation;
 import org.keycloak.representations.idm.AuthenticatorConfigInfoRepresentation;
 import org.keycloak.representations.idm.AuthenticatorConfigRepresentation;
 import org.keycloak.representations.idm.ConfigPropertyRepresentation;
+import org.keycloak.representations.idm.RequiredActionConfigInfoRepresentation;
+import org.keycloak.representations.idm.RequiredActionConfigRepresentation;
 import org.keycloak.representations.idm.RequiredActionProviderRepresentation;
 import org.keycloak.services.ErrorResponse;
 import org.keycloak.services.resources.KeycloakOpenAPI;
@@ -1057,7 +1059,7 @@ public class AuthenticationManagementResource {
     /**
      * Register a new required actions
      *
-     * @param data JSON containing 'providerId', and 'name' attributes.
+     * @param data JSON containing 'alias', and 'name' attributes.
      */
     @Path("register-required-action")
     @POST
@@ -1116,6 +1118,7 @@ public class AuthenticationManagementResource {
         rep.setPriority(model.getPriority());
         rep.setEnabled(model.isEnabled());
         rep.setConfig(model.getConfig());
+        rep.setConfigurable(model.isConfigurable());
         return rep;
     }
 
@@ -1263,6 +1266,115 @@ public class AuthenticationManagementResource {
         realm.updateRequiredActionProvider(next);
 
         adminEvent.operation(OperationType.UPDATE).resource(ResourceType.REQUIRED_ACTION).resourcePath(session.getContext().getUri()).success();
+    }
+
+    /**
+     * Get required actions provider's configuration description
+     */
+    @Path("required-actions/{alias}/config-description")
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @NoCache
+    @Tag(name = KeycloakOpenAPI.Admin.Tags.AUTHENTICATION_MANAGEMENT)
+    @Operation( summary = "Get RequiredAction provider configuration description")
+    public RequiredActionConfigInfoRepresentation getRequiredActionConfigDescription(@Parameter(description = "Alias of required action")  @PathParam("alias") String alias) {
+        auth.realm().requireViewRealm();
+
+        RequiredActionFactory factory = CredentialHelper.lookupConfigurableRequiredActionFactory(session, alias);
+        if (factory == null) {
+            throw new NotFoundException("Could not find configurable RequiredAction provider");
+        }
+
+        RequiredActionConfigInfoRepresentation rep = new RequiredActionConfigInfoRepresentation();
+        rep.setProperties(new LinkedList<>());
+        List<ProviderConfigProperty> configProperties = Optional.ofNullable(factory.getConfigMetadata()).orElse(Collections.emptyList());
+        for (ProviderConfigProperty prop : configProperties) {
+            ConfigPropertyRepresentation propRep = getConfigPropertyRep(prop);
+            rep.getProperties().add(propRep);
+        }
+        return rep;
+    }
+
+    /**
+     * Get the configuration of the RequiredAction provider in the current Realm.
+     * @param alias Provider id
+     */
+    @Path("required-actions/{alias}/config")
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @NoCache
+    @Tag(name = KeycloakOpenAPI.Admin.Tags.AUTHENTICATION_MANAGEMENT)
+    @Operation( summary = "Get RequiredAction configuration")
+    public RequiredActionConfigRepresentation getRequiredActionConfig(@Parameter(description = "Alias of required action")  @PathParam("alias") String alias) {
+        auth.realm().requireViewRealm();
+
+        RequiredActionFactory factory = CredentialHelper.lookupConfigurableRequiredActionFactory(session, alias);
+        if (factory == null) {
+            throw new BadRequestException("RequiredAction is not configurable");
+        }
+
+        // TODO do we need to support "deployed" required action configurations here?
+        RequiredActionConfigModel config = realm.getRequiredActionConfigByAlias(alias);
+        if (config == null) {
+            throw new NotFoundException("Could not find RequiredAction config");
+        }
+
+        return ModelToRepresentation.toRepresentation(config);
+    }
+
+    /**
+     * Remove the configuration from the RequiredAction provider in the current Realm.
+     * @param alias Provider id
+     */
+    @Path("required-actions/{alias}/config")
+    @DELETE
+    @NoCache
+    @Tag(name = KeycloakOpenAPI.Admin.Tags.AUTHENTICATION_MANAGEMENT)
+    @Operation( summary = "Delete RequiredAction configuration")
+    public void removeRequiredActionConfig(@Parameter(description = "Alias of required action")  @PathParam("alias") String alias) {
+        auth.realm().requireManageRealm();
+
+        RequiredActionFactory factory = CredentialHelper.lookupConfigurableRequiredActionFactory(session, alias);
+        if (factory == null) {
+            throw new BadRequestException("RequiredAction is not configurable");
+        }
+
+        RequiredActionConfigModel config = realm.getRequiredActionConfigByAlias(alias);
+        if (config == null) {
+            throw new NotFoundException("Could not find RequiredAction config");
+        }
+        realm.removeRequiredActionProviderConfig(config);
+
+        adminEvent.operation(OperationType.DELETE).resource(ResourceType.REQUIRED_ACTION_CONFIG).resourcePath(session.getContext().getUri()).success();
+    }
+
+    /**
+     * Update the configuration of the RequiredAction provider in the current Realm.
+     * @param alias provider id
+     * @param rep JSON describing new state of RequiredAction configuration
+     */
+    @Path("required-actions/{alias}/config")
+    @PUT
+    @Consumes(MediaType.APPLICATION_JSON)
+    @NoCache
+    @Tag(name = KeycloakOpenAPI.Admin.Tags.AUTHENTICATION_MANAGEMENT)
+    @Operation( summary = "Update RequiredAction configuration")
+    public void updateRequiredActionConfig(@Parameter(description = "Alias of required action")  @PathParam("alias") String alias, @Parameter(description = "JSON describing new state of required action configuration") RequiredActionConfigRepresentation rep) {
+        auth.realm().requireManageRealm();
+
+        RequiredActionFactory factory = CredentialHelper.lookupConfigurableRequiredActionFactory(session, alias);
+        if (factory == null) {
+            throw new BadRequestException("RequiredAction is not configurable");
+        }
+
+        RequiredActionConfigModel exists = realm.getRequiredActionConfigByAlias(alias);
+        if (exists == null) {
+            throw new NotFoundException("Could not find RequiredAction config");
+        }
+
+        exists.setConfig(RepresentationToModel.removeEmptyString(rep.getConfig()));
+        realm.updateRequiredActionConfig(exists);
+        adminEvent.operation(OperationType.UPDATE).resource(ResourceType.REQUIRED_ACTION_CONFIG).resourcePath(session.getContext().getUri()).representation(rep).success();
     }
 
     /**

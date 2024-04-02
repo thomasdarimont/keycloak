@@ -25,6 +25,8 @@ import org.keycloak.authentication.ClientAuthenticatorFactory;
 import org.keycloak.authentication.ConfigurableAuthenticatorFactory;
 import org.keycloak.authentication.FormAction;
 import org.keycloak.authentication.FormActionFactory;
+import org.keycloak.authentication.RequiredActionFactory;
+import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.credential.CredentialModel;
 import org.keycloak.credential.CredentialProvider;
 import org.keycloak.models.AuthenticationExecutionModel;
@@ -33,8 +35,11 @@ import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.credential.OTPCredentialModel;
+import org.keycloak.models.utils.Base32;
+import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.representations.idm.CredentialRepresentation;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -88,6 +93,33 @@ public class CredentialHelper {
              factory = (ClientAuthenticatorFactory)session.getKeycloakSessionFactory().getProviderFactory(ClientAuthenticator.class, providerId);
          }
          return factory;
+    }
+
+    public static RequiredActionFactory getConfigurableRequiredActionFactory(KeycloakSession session, String providerId) {
+        RequiredActionFactory providerFactory = (RequiredActionFactory)session.getKeycloakSessionFactory().getProviderFactory(RequiredActionProvider.class, providerId);
+
+        if (providerFactory == null) {
+            return null;
+        }
+
+        List<ProviderConfigProperty> configMetadata = providerFactory.getConfigMetadata();
+        if (configMetadata != null && !configMetadata.isEmpty()) {
+            return providerFactory;
+        }
+
+        return null;
+    }
+
+    public static RequiredActionFactory lookupConfigurableRequiredActionFactory(KeycloakSession session, String providerId) {
+
+        RequiredActionFactory factory = getConfigurableRequiredActionFactory(session, providerId);
+
+        if (factory == null) {
+            providerId = new String(Base32.decode(providerId));
+            factory = getConfigurableRequiredActionFactory(session, providerId);
+        }
+
+        return factory;
     }
 
     /**

@@ -30,7 +30,6 @@ import org.keycloak.authorization.policy.provider.PolicyProviderFactory;
 import org.keycloak.authorization.store.PolicyStore;
 import org.keycloak.authorization.store.StoreFactory;
 import org.keycloak.common.Profile;
-import org.keycloak.common.Profile.Feature;
 import org.keycloak.common.util.MultivaluedHashMap;
 import org.keycloak.common.util.Time;
 import org.keycloak.component.ComponentModel;
@@ -888,6 +887,7 @@ public class ModelToRepresentation {
         rep.setName(model.getName());
         rep.setProviderId(model.getProviderId());
         rep.setPriority(model.getPriority());
+        rep.setConfigurable(model.isConfigurable());
         return rep;
     }
 
@@ -1205,4 +1205,9 @@ public class ModelToRepresentation {
         }
     }
 
+    public static RequiredActionConfigRepresentation toRepresentation(RequiredActionConfigModel model) {
+        RequiredActionConfigRepresentation rep = new RequiredActionConfigRepresentation();
+        rep.setConfig(model.getConfig());
+        return rep;
+    }
 }

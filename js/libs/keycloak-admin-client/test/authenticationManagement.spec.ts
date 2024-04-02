@@ -133,6 +133,19 @@ describe("Authentication management", () => {
       );
     });
 
+    // TODO use required action that is actually configurable
+    // it("should fetch config description for required action", async () => {
+    //   const configDescription =
+    //     await kcAdminClient.authenticationManagement.getRequiredActionConfigDescription(
+    //       {
+    //         alias: "UPDATE_PASSWORD",
+    //       },
+    //     );
+    //
+    //   expect(configDescription).is.ok;
+    //   expect(configDescription.properties).is.ok;
+    // });
+
     it("should get client authenticator providers", async () => {
       const authenticationProviders =
         await kcAdminClient.authenticationManagement.getClientAuthenticatorProviders();

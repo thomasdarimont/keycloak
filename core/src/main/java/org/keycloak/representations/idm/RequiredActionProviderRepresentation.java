@@ -33,6 +33,7 @@ public class RequiredActionProviderRepresentation {
     private boolean defaultAction;
     private int priority;
     private Map<String, String> config = new HashMap<>();
+    private boolean configurable;
 
 
     public String getAlias() {
@@ -95,5 +96,13 @@ public class RequiredActionProviderRepresentation {
 
     public void setConfig(Map<String, String> config) {
         this.config = config;
+    }
+
+    public boolean isConfigurable() {
+        return configurable;
+    }
+
+    public void setConfigurable(boolean configurable) {
+        this.configurable = configurable;
     }
 }

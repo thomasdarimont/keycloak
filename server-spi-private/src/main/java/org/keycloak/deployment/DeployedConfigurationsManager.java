@@ -23,6 +23,7 @@ import org.jboss.logging.Logger;
 import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
+import org.keycloak.models.RequiredActionConfigModel;
 
 /**
  * Allows to CRUD for configurations (like Authenticator configs). Those are typically saved in the store (realm), but can be also
@@ -75,4 +76,8 @@ public class DeployedConfigurationsManager {
         }
     }
 
+    public RequiredActionConfigModel getRequiredActionConfig(RealmModel realm, String providerId) {
+        // TODO do we need to support "deployed" required action configurations here?
+        return realm.getRequiredActionConfigByAlias(providerId);
+    }
 }

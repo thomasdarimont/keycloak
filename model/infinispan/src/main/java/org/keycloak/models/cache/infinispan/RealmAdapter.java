@@ -1398,6 +1398,30 @@ public class RealmAdapter implements CachedRealmModel {
     }
 
     @Override
+    public RequiredActionConfigModel getRequiredActionConfigByAlias(String providerId) {
+        if (isUpdated()) return updated.getRequiredActionConfigByAlias(providerId);
+        return cached.getRequiredActionProviderConfigs().get(providerId);
+    }
+
+    @Override
+    public void updateRequiredActionConfig(RequiredActionConfigModel model) {
+        getDelegateForUpdate();
+        updated.updateRequiredActionConfig(model);
+    }
+
+    @Override
+    public void removeRequiredActionProviderConfig(RequiredActionConfigModel model) {
+        getDelegateForUpdate();
+        updated.removeRequiredActionProviderConfig(model);
+    }
+
+    @Override
+    public Stream<RequiredActionConfigModel> getRequiredActionConfigsStream() {
+        if (isUpdated()) return updated.getRequiredActionConfigsStream();
+        return cached.getRequiredActionProviderConfigs().values().stream();
+    }
+
+    @Override
     public Stream<RequiredActionProviderModel> getRequiredActionProvidersStream() {
         if (isUpdated()) return updated.getRequiredActionProvidersStream();
         return cached.getRequiredActionProviderList().stream();

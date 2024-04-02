@@ -18,4 +18,5 @@ export default interface RequiredActionProviderRepresentation {
   name?: string;
   providerId?: string;
   priority?: number;
+  configurable?: boolean;
 }

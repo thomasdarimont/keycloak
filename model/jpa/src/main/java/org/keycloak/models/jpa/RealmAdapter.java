@@ -19,6 +19,8 @@ package org.keycloak.models.jpa;
 
 import org.keycloak.Config;
 import org.jboss.logging.Logger;
+import org.keycloak.authentication.RequiredActionFactory;
+import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.broker.provider.IdentityProvider;
 import org.keycloak.broker.provider.IdentityProviderFactory;
 import org.keycloak.broker.social.SocialIdentityProvider;
@@ -31,6 +33,7 @@ import org.keycloak.models.*;
 import org.keycloak.models.jpa.entities.*;
 import org.keycloak.models.utils.ComponentUtil;
 import org.keycloak.models.utils.KeycloakModelUtils;
+import org.keycloak.provider.ProviderConfigProperty;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
@@ -1837,6 +1840,73 @@ public class RealmAdapter implements StorageProviderRealmModel, JpaModel<RealmEn
     }
 
     @Override
+    public Stream<RequiredActionConfigModel> getRequiredActionConfigsStream() {
+        return getRequiredActionProvidersStream() //
+                .map(this::requiredActionToConfigModel);
+    }
+
+    @Override
+    public RequiredActionConfigModel getRequiredActionConfigByAlias(String providerId) {
+        return getRequiredActionConfigsStream() //
+                .filter(req -> req.getProviderId().equals(providerId))//
+                .findFirst() //
+                .orElse(null);
+    }
+
+    private RequiredActionConfigModel requiredActionToConfigModel(RequiredActionProviderModel reqAction) {
+        RequiredActionConfigModel configModel = new RequiredActionConfigModel();
+        configModel.setConfig(new HashMap<>(reqAction.getConfig()));
+        configModel.setProviderId(reqAction.getProviderId());
+        return configModel;
+    }
+
+    @Override
+    public void removeRequiredActionProviderConfig(RequiredActionConfigModel model) {
+        getRequiredActionProvidersStream() //
+                .filter(req -> req.getProviderId().equals(model.getProviderId()))//
+                .findFirst() //
+                .ifPresent(reqAction -> { //
+                    // TODO verify this is enough to remove dangling config entries
+                    reqAction.setConfig(null);
+                    updateRequiredActionProvider(reqAction);
+                });
+    }
+
+    @Override
+    public void updateRequiredActionConfig(RequiredActionConfigModel model) {
+
+        getRequiredActionProvidersStream() //
+                .filter(req -> req.getProviderId().equals(model.getProviderId()))//
+                .findFirst() //
+                .ifPresent(reqAction -> { //
+
+                    RequiredActionFactory factory = (RequiredActionFactory)session.getKeycloakSessionFactory().getProviderFactory(RequiredActionProvider.class, model.getProviderId());
+                    if (factory == null || !factory.isConfigurable()) {
+                        return;
+                    }
+
+                    // validate model config
+                    factory.validateConfig(this, model);
+
+                    // update model config
+                    Map<String, String> config = new HashMap<>(reqAction.getConfig());
+                    if (config != null) {
+                        if (model != null && model.getConfig() != null) {
+                            // only apply explicitly listed config properties
+                            for (ProviderConfigProperty configProperty : factory.getConfigMetadata()) {
+                                String value = model.getConfig().get(configProperty.getName());
+                                config.put(configProperty.getName(), value);
+                            }
+                        }
+                    }
+                    reqAction.setConfig(config);
+
+                    // propagate update to database
+                    updateRequiredActionProvider(reqAction);
+                });
+    }
+
+    @Override
     public RequiredActionProviderModel addRequiredActionProvider(RequiredActionProviderModel model) {
         if (getRequiredActionProviderByAlias(model.getAlias()) != null) {
             throw new ModelDuplicateException("A Required Action Provider with given alias already exists.");
@@ -1887,6 +1957,10 @@ public class RealmAdapter implements StorageProviderRealmModel, JpaModel<RealmEn
         Map<String, String> config = new HashMap<>();
         if (entity.getConfig() != null) config.putAll(entity.getConfig());
         model.setConfig(config);
+
+        RequiredActionFactory factory = (RequiredActionFactory)session.getKeycloakSessionFactory().getProviderFactory(RequiredActionProvider.class, entity.getProviderId());
+        model.setConfigurable(factory.isConfigurable());
+
         return model;
     }
 

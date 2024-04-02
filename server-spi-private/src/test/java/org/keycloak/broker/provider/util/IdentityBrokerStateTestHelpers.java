@@ -1773,6 +1773,26 @@ public class IdentityBrokerStateTestHelpers {
         public void decreaseRemainingCount(ClientInitialAccessModel clientInitialAccess) {
 
         }
+
+        @Override
+        public Stream<RequiredActionConfigModel> getRequiredActionConfigsStream() {
+            return Stream.empty();
+        }
+
+        @Override
+        public RequiredActionConfigModel getRequiredActionConfigByAlias(String providerId) {
+            return null;
+        }
+
+        @Override
+        public void removeRequiredActionProviderConfig(RequiredActionConfigModel model) {
+
+        }
+
+        @Override
+        public void updateRequiredActionConfig(RequiredActionConfigModel model) {
+
+        }
     }
 
 }

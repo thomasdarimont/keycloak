@@ -28,6 +28,7 @@ public class RequiredActionProviderSimpleRepresentation {
     private String id;
     private String name;
     private String providerId;
+    private boolean configurable;
 
     public String getId() {
         return id;
@@ -51,5 +52,13 @@ public class RequiredActionProviderSimpleRepresentation {
 
     public void setProviderId(String providerId) {
         this.providerId = providerId;
+    }
+
+    public boolean isConfigurable() {
+        return configurable;
+    }
+
+    public void setConfigurable(boolean configurable) {
+        this.configurable = configurable;
     }
 }
