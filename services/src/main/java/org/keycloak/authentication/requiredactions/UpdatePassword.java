@@ -36,12 +36,17 @@ import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.utils.FormMessage;
 import org.keycloak.policy.MaxAuthAgePasswordPolicyProviderFactory;
+import org.keycloak.provider.ProviderConfigProperty;
+import org.keycloak.provider.ProviderConfigurationBuilder;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.services.validation.Validation;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -212,5 +217,21 @@ public class UpdatePassword implements RequiredActionProvider, RequiredActionFac
         }
 
         return maxAge;
+    }
+
+    // TODO remove me: this is just for the sake of demonstrating configurable required actions
+    private static final List<ProviderConfigProperty> CONFIG_PROPERTIES = ProviderConfigurationBuilder.create().property() //
+            .name("max_auth_age") //
+            .label("Maximum Age of Authentication") //
+            .helpText("If authentication is older then user must reauthenticate") //
+            .type(ProviderConfigProperty.STRING_TYPE) //
+            .defaultValue(MaxAuthAgePasswordPolicyProviderFactory.DEFAULT_MAX_AUTH_AGE) //
+            .add() //
+            .build();
+
+    // TODO remove me: this is just for the sake of demonstrating configurable required actions
+    @Override
+    public List<ProviderConfigProperty> getConfigMetadata() {
+        return new ArrayList<>(CONFIG_PROPERTIES);
     }
 }

@@ -261,9 +261,10 @@ export class AuthenticationManagement extends Resource<{ realm?: string }> {
   });
 
   // Update the configuration from the RequiredAction provider in the current Realm.
-  public updateRequiredActionConfig = this.makeRequest<
+  public updateRequiredActionConfig = this.makeUpdateRequest<
     { alias: string },
-    RequiredActionConfigRepresentation
+    RequiredActionConfigRepresentation,
+    void
   >({
     method: "PUT",
     path: "/required-actions/{alias}/config",

@@ -10,7 +10,7 @@ import { KeycloakSpinner } from "../components/keycloak-spinner/KeycloakSpinner"
 import { toKey } from "../util";
 import { useFetch } from "../utils/useFetch";
 import { DraggableTable } from "./components/DraggableTable";
-import { CogIcon } from "@patternfly/react-icons";
+import { RequiredActionConfigModal } from "./components/RequiredActionConfigModal";
 
 type DataType = RequiredActionProviderRepresentation &
   RequiredActionProviderSimpleRepresentation;
@@ -138,15 +138,18 @@ export const RequiredActions = () => {
         },
         {
           name: "config",
-          "displayKey": "configure",
-          cellRenderer: (row) => (
-            row.data.configurable
-              ? <button
-              id={`configure-${toKey(row.name)}`}
-              aria-label={toKey(row.name)}
-              ><CogIcon /></button>
-              : <></>
-          ),
+          displayKey: "configure",
+          cellRenderer: (row) =>
+            row.data.configurable ? (
+              <button
+                id={`configure-${toKey(row.name)}`}
+                aria-label={toKey(row.name)}
+              >
+                <RequiredActionConfigModal requiredAction={row.data} />
+              </button>
+            ) : (
+              <></>
+            ),
         },
         {
           name: "enabled",
