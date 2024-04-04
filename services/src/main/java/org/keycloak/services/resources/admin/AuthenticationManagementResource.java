@@ -1059,7 +1059,7 @@ public class AuthenticationManagementResource {
     /**
      * Register a new required actions
      *
-     * @param data JSON containing 'alias', and 'name' attributes.
+     * @param data JSON containing 'providerId', and 'name' attributes.
      */
     @Path("register-required-action")
     @POST
