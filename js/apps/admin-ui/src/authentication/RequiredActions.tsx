@@ -1,9 +1,9 @@
 import type RequiredActionProviderRepresentation from "@keycloak/keycloak-admin-client/lib/defs/requiredActionProviderRepresentation";
 import type RequiredActionProviderSimpleRepresentation from "@keycloak/keycloak-admin-client/lib/defs/requiredActionProviderSimpleRepresentation";
-import { AlertVariant, Switch } from "@patternfly/react-core";
+import { AlertVariant, Button, Switch } from "@patternfly/react-core";
+import { CogIcon } from "@patternfly/react-icons";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-
 import { adminClient } from "../admin-client";
 import { useAlerts } from "../components/alert/Alerts";
 import { KeycloakSpinner } from "../components/keycloak-spinner/KeycloakSpinner";
@@ -27,6 +27,7 @@ export const RequiredActions = () => {
   const { addAlert, addError } = useAlerts();
 
   const [actions, setActions] = useState<Row[]>();
+  const [selectedAction, setSelectedAction] = useState<DataType>();
   const [key, setKey] = useState(0);
   const refresh = () => setKey(key + 1);
 
@@ -37,19 +38,17 @@ export const RequiredActions = () => {
         adminClient.authenticationManagement.getUnregisteredRequiredActions(),
       ]);
       return [
-        ...requiredActions.map((a) => ({
-          name: a.name!,
-          enabled: a.enabled!,
-          defaultAction: a.defaultAction!,
-          configurable: a.configurable,
-          data: a,
+        ...requiredActions.map((action) => ({
+          name: action.name!,
+          enabled: action.enabled!,
+          defaultAction: action.defaultAction!,
+          data: action,
         })),
-        ...unregisteredRequiredActions.map((a) => ({
-          name: a.name!,
+        ...unregisteredRequiredActions.map((action) => ({
+          name: action.name!,
           enabled: false,
           defaultAction: false,
-          configurable: a.configurable,
-          data: a,
+          data: action,
         })),
       ];
     },
@@ -119,74 +118,85 @@ export const RequiredActions = () => {
   }
 
   return (
-    <DraggableTable
-      keyField="name"
-      onDragFinish={async (nameDragged, items) => {
-        const keys = actions.map((e) => e.name);
-        const newIndex = items.indexOf(nameDragged);
-        const oldIndex = keys.indexOf(nameDragged);
-        const dragged = actions[oldIndex].data;
-        if (!dragged.alias) return;
+    <>
+      {selectedAction && (
+        <RequiredActionConfigModal
+          requiredAction={selectedAction}
+          onClose={() => setSelectedAction(undefined)}
+        />
+      )}
+      <DraggableTable
+        keyField="name"
+        onDragFinish={async (nameDragged, items) => {
+          const keys = actions.map((e) => e.name);
+          const newIndex = items.indexOf(nameDragged);
+          const oldIndex = keys.indexOf(nameDragged);
+          const dragged = actions[oldIndex].data;
+          if (!dragged.alias) return;
 
-        const times = newIndex - oldIndex;
-        executeMove(dragged, times);
-      }}
-      columns={[
-        {
-          name: "name",
-          displayKey: "requiredActions",
-        },
-        {
-          name: "config",
-          displayKey: "configure",
-          cellRenderer: (row) =>
-            row.data.configurable ? (
-              <button
-                id={`configure-${toKey(row.name)}`}
+          const times = newIndex - oldIndex;
+          executeMove(dragged, times);
+        }}
+        columns={[
+          {
+            name: "name",
+            displayKey: "action",
+            width: 50,
+          },
+          {
+            name: "enabled",
+            displayKey: "enabled",
+            cellRenderer: (row) => (
+              <Switch
+                id={`enable-${toKey(row.name)}`}
+                label={t("on")}
+                labelOff={t("off")}
+                isChecked={row.enabled}
+                onChange={() => {
+                  updateAction(row.data, "enabled");
+                }}
                 aria-label={toKey(row.name)}
-              >
-                <RequiredActionConfigModal requiredAction={row.data} />
-              </button>
-            ) : (
-              <></>
+              />
             ),
-        },
-        {
-          name: "enabled",
-          displayKey: "enabled",
-          cellRenderer: (row) => (
-            <Switch
-              id={`enable-${toKey(row.name)}`}
-              label={t("on")}
-              labelOff={t("off")}
-              isChecked={row.enabled}
-              onChange={() => {
-                updateAction(row.data, "enabled");
-              }}
-              aria-label={toKey(row.name)}
-            />
-          ),
-        },
-        {
-          name: "default",
-          displayKey: "setAsDefaultAction",
-          thTooltipText: "authDefaultActionTooltip",
-          cellRenderer: (row) => (
-            <Switch
-              id={`default-${toKey(row.name)}`}
-              label={t("on")}
-              isDisabled={!row.enabled}
-              labelOff={!row.enabled ? t("disabledOff") : t("off")}
-              isChecked={row.defaultAction}
-              onChange={() => {
-                updateAction(row.data, "defaultAction");
-              }}
-              aria-label={toKey(row.name)}
-            />
-          ),
-        },
-      ]}
-      data={actions}
-    />
+            width: 20,
+          },
+          {
+            name: "default",
+            displayKey: "setAsDefaultAction",
+            thTooltipText: "authDefaultActionTooltip",
+            cellRenderer: (row) => (
+              <Switch
+                id={`default-${toKey(row.name)}`}
+                label={t("on")}
+                isDisabled={!row.enabled}
+                labelOff={!row.enabled ? t("disabledOff") : t("off")}
+                isChecked={row.defaultAction}
+                onChange={() => {
+                  updateAction(row.data, "defaultAction");
+                }}
+                aria-label={toKey(row.name)}
+              />
+            ),
+            width: 20,
+          },
+          {
+            name: "config",
+            displayKey: "configure",
+            cellRenderer: (row) =>
+              row.data.configurable ? (
+                <Button
+                  variant="plain"
+                  aria-label={t("settings")}
+                  onClick={() => setSelectedAction(row.data)}
+                >
+                  <CogIcon />
+                </Button>
+              ) : undefined,
+            width: 10,
+          },
+        ]}
+        data={actions}
+      />
+    </>
   );
 };
