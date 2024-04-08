@@ -32,6 +32,9 @@ import org.keycloak.events.EventType;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.ModelException;
+import org.keycloak.models.ModelValidationException;
+import org.keycloak.models.RealmModel;
+import org.keycloak.models.RequiredActionConfigModel;
 import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.utils.FormMessage;
@@ -233,5 +236,10 @@ public class UpdatePassword implements RequiredActionProvider, RequiredActionFac
     @Override
     public List<ProviderConfigProperty> getConfigMetadata() {
         return new ArrayList<>(CONFIG_PROPERTIES);
+    }
+
+    @Override
+    public void validateConfig(RealmModel realm, RequiredActionConfigModel model) {
+        // throw new ModelValidationException("config invalid");
     }
 }
