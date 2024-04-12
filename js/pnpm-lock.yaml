@@ -127,8 +127,8 @@ importers:
         specifier: ^18.2.59
         version: 18.2.59
       '@types/react-dom':
-        specifier: ^18.2.19
-        version: 18.2.19
+        specifier: ^18.2.25
+        version: 18.2.25
       '@vitejs/plugin-react-swc':
         specifier: ^3.6.0
         version: 3.6.0(vite@5.1.4)
@@ -251,8 +251,8 @@ importers:
         specifier: ^18.2.59
         version: 18.2.59
       '@types/react-dom':
-        specifier: ^18.2.19
-        version: 18.2.19
+        specifier: ^18.2.25
+        version: 18.2.25
       '@types/uuid':
         specifier: ^9.0.8
         version: 9.0.8
@@ -410,8 +410,8 @@ importers:
         specifier: ^18.2.59
         version: 18.2.59
       '@types/react-dom':
-        specifier: ^18.2.19
-        version: 18.2.19
+        specifier: ^18.2.25
+        version: 18.2.25
       '@vitejs/plugin-react-swc':
         specifier: ^3.6.0
         version: 3.6.0(vite@5.1.4)
@@ -465,8 +465,8 @@ importers:
         specifier: ^18.2.59
         version: 18.2.59
       '@types/react-dom':
-        specifier: ^18.2.19
-        version: 18.2.19
+        specifier: ^18.2.25
+        version: 18.2.25
       '@vitejs/plugin-react-swc':
         specifier: ^3.6.0
         version: 3.6.0(vite@5.1.4)
@@ -1967,7 +1967,7 @@ packages:
     dependencies:
       '@babel/runtime': 7.23.2
       '@testing-library/dom': 9.3.3
-      '@types/react-dom': 18.2.19
+      '@types/react-dom': 18.2.25
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
     dev: true
@@ -2237,8 +2237,8 @@ packages:
   /@types/prop-types@15.7.9:
     resolution: {integrity: sha512-n1yyPsugYNSmHgxDFjicaI2+gCNjsBck8UX9kuofAKlc0h1bL+20oSF72KeNaW2DUlesbEVCFgyV2dPGTiY42g==}
 
-  /@types/react-dom@18.2.19:
-    resolution: {integrity: sha512-aZvQL6uUbIJpjZk4U8JZGbau9KDeAwMfmhyWorxgBkqDIEf6ROjRozcmPIicqsUwPUjbkDfHKgGee1Lq65APcA==}
+  /@types/react-dom@18.2.25:
+    resolution: {integrity: sha512-o/V48vf4MQh7juIKZU2QGDfli6p1+OOi5oXx36Hffpc9adsHeXjVp8rHuPkjd8VT8sOJ2Zp05HR7CdpGTIUFUA==}
     dependencies:
       '@types/react': 18.2.59
     dev: true
