@@ -263,8 +263,8 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0(axe-core@4.9.1)(cypress@13.9.0)
       cypress-split:
-        specifier: ^1.23.2
-        version: 1.23.2(@babel/core@7.24.5)
+        specifier: ^1.23.6
+        version: 1.23.6(@babel/core@7.24.5)
       jsdom:
         specifier: ^24.0.0
         version: 24.0.0
@@ -2270,8 +2270,8 @@ packages:
       axe-core: ^3 || ^4
       cypress: ^10 || ^11 || ^12 || ^13
 
-  cypress-split@1.23.2:
-    resolution: {integrity: sha512-kJeTgrxfH59nE4XD4ZbS8ZQds7J+ShBjyjaPcKfp3akdxcqT41rK/Io/3f4bsV1xMi7QfywgVAc1FoV2WiCLuw==}
+  cypress-split@1.23.6:
+    resolution: {integrity: sha512-HtT7j2oX9Fb63fR9lSEnlEx1L1vTkAyamP1n810cEgUGJzuiD0sEvwY5MRdk/JP1G7moCWzPcyJN0os81xWulA==}
     hasBin: true
 
   cypress@13.9.0:
@@ -2805,8 +2805,8 @@ packages:
     resolution: {integrity: sha512-qOo9F+dMUmC2Lcb4BbVvnKJxTPjCm+RRpe4gDuGrzkL7mEVl/djYSu2OdQ2Pa302N4oqkSg9ir6jaLWJ2USVpQ==}
     engines: {node: '>=8'}
 
-  find-cypress-specs@1.43.2:
-    resolution: {integrity: sha512-SNXfIy9CuKx/tdwzzn20kc7WxoJXyXmC4vzmttRD/z4qZ8eOxbN6ywmB/fuQtDLLQXncqNA7zLYsymhhIRcvTQ==}
+  find-cypress-specs@1.43.4:
+    resolution: {integrity: sha512-GAdz6lfBndbOq9OOJ3psThQ56hqgL8tZUCOLnl60d/l56bvHkC0TNwyqlLfBObiscirSZWSgyGL86jJkrpFMrA==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -2950,10 +2950,12 @@ packages:
 
   glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
+    deprecated: Glob versions prior to v9 are no longer supported
 
   glob@8.1.0:
     resolution: {integrity: sha512-r8hpEjiQEYlF2QU0df3dS+nxxSIreXQS1qRhMJM0Q5NDdR386C7jb7Hwwod8Fgiuex+k0GFjgft18yvxm5XoCQ==}
     engines: {node: '>=12'}
+    deprecated: Glob versions prior to v9 are no longer supported
 
   global-dirs@3.0.1:
     resolution: {integrity: sha512-NBcGGFbBA9s1VzD41QXDG+3++t9Mn5t1FpLdhESY6oKY4gYTFpX4wO3sqGUa0Srjtbfj3szX0RnemmrVRUdULA==}
@@ -3107,6 +3109,7 @@ packages:
 
   inflight@1.0.6:
     resolution: {integrity: sha512-k92I/b08q4wvFscXCLvqfsHCrjrF7yiXsQuIVvVE7N82W3+aqpzuUdBbfhWcy/FZR3/4IgflMgKLOsvPDrGCJA==}
+    deprecated: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
 
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
@@ -4145,6 +4148,7 @@ packages:
 
   rimraf@3.0.2:
     resolution: {integrity: sha512-JZkJMZkAGFFPP2YqXZXPbMlMBgsxzE8ILs4lMIX/2o0L9UBw9O/Y3o6wFw/i9YLapcUJWwqbi3kdxIPdC62TIA==}
+    deprecated: Rimraf versions prior to v4 are no longer supported
     hasBin: true
 
   rollup-plugin-peer-deps-external@2.2.4:
@@ -6946,14 +6950,14 @@ snapshots:
       axe-core: 4.9.1
       cypress: 13.9.0
 
-  cypress-split@1.23.2(@babel/core@7.24.5):
+  cypress-split@1.23.6(@babel/core@7.24.5):
     dependencies:
       '@actions/core': 1.10.1
       arg: 5.0.2
       console.table: 0.10.0
       debug: 4.3.4(supports-color@8.1.1)
       fast-shuffle: 6.1.0
-      find-cypress-specs: 1.43.2(@babel/core@7.24.5)
+      find-cypress-specs: 1.43.4(@babel/core@7.24.5)
       globby: 11.1.0
       humanize-duration: 3.32.0
     transitivePeerDependencies:
@@ -7716,7 +7720,7 @@ snapshots:
     dependencies:
       to-regex-range: 5.0.1
 
-  find-cypress-specs@1.43.2(@babel/core@7.24.5):
+  find-cypress-specs@1.43.4(@babel/core@7.24.5):
     dependencies:
       '@actions/core': 1.10.1
       arg: 5.0.2
