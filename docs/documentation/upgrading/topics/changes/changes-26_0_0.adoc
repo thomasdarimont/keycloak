@@ -20,3 +20,12 @@ This is an optimization to reduce traffic and network related resources.
 
 In {project_name} 26, the new method has a default implementation to keep backward compatibility with custom implementation.
 The default implementation performs a single network call per an event, and it will be removed in a future version of {project_name}.
+
+= Deprecations in `keycloak-common` module
+
+The following items have been deprecated for removal in upcoming {project_name} versions with no replacement:
+
+- `org.keycloak.common.util.reflections.Reflections.newInstance(java.lang.Class<T>)`
+- `org.keycloak.common.util.reflections.Reflections.newInstance(java.lang.Class<?>, java.lang.String)`
+- `org.keycloak.common.util.reflections.SetAccessiblePrivilegedAction`
+- `org.keycloak.common.util.reflections.UnSetAccessiblePrivilegedAction`
