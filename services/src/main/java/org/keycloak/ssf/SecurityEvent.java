@@ -1,10 +1,14 @@
 package org.keycloak.ssf;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Map;
 
 public class SecurityEvent {
+
+    @JsonIgnore
+    protected final String eventType;
 
     /**
      * Current risk level of the device
@@ -42,8 +46,9 @@ public class SecurityEvent {
     @JsonProperty("reason_user")
     protected Map<String, String> reasonUser;
 
-    @JsonProperty("subjects")
-    protected SecurityEventSubjects subjects;
+    public SecurityEvent(String eventType) {
+        this.eventType = eventType;
+    }
 
     public String getCurrentLevel() {
         return currentLevel;
@@ -93,11 +98,7 @@ public class SecurityEvent {
         this.reasonUser = reasonUser;
     }
 
-    public SecurityEventSubjects getSubjects() {
-        return subjects;
-    }
-
-    public void setSubjects(SecurityEventSubjects subjects) {
-        this.subjects = subjects;
+    public String getEventType() {
+        return eventType;
     }
 }
