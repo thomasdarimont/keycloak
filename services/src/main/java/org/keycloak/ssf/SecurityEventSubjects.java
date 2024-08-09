@@ -1,45 +1,50 @@
 package org.keycloak.ssf;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.Map;
 
 public class SecurityEventSubjects {
 
     /**
+     * The user involved with the event
+     */
+    @JsonProperty("user")
+    protected Map<String, String> user;
+
+    /**
      * The device involved with the event
      */
+    @JsonProperty("device")
     protected Map<String, String> device;
+
+    /**
+     * The session involved with the event
+     */
+    @JsonProperty("session")
+    protected Map<String, String> session;
+
+    /**
+     * The application involved with the event
+     */
+    @JsonProperty("application")
+    protected Map<String, String> application;
 
     /**
      * The tenant involved with the event
      */
+    @JsonProperty("tenant")
     protected Map<String, String> tenant;
 
     /**
-     * The user involved with the event
+     * The org_unit involved with the event
      */
-    protected Map<String, String> user;
+    @JsonProperty("org_unit")
+    protected Map<String, String> orgUnit;
 
-    public Map<String, String> getDevice() {
-        return device;
-    }
-
-    public void setDevice(Map<String, String> device) {
-        this.device = device;
-    }
-
-    public Map<String, String> getTenant() {
-        return tenant;
-    }
-
-    public void setTenant(Map<String, String> tenant) {
-        this.tenant = tenant;
-    }
-
-    public Map<String, String> getUser() {
-        return user;
-    }
-
-    public void setUser(Map<String, String> user) {
-        this.user = user;
-    }
+    /**
+     * The group involved with the event
+     */
+    @JsonProperty("group")
+    protected Map<String, String> group;
 }
