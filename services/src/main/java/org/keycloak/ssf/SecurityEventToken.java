@@ -1,81 +1,62 @@
 package org.keycloak.ssf;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import org.keycloak.json.StringOrArrayDeserializer;
-import org.keycloak.json.StringOrArraySerializer;
+import org.keycloak.representations.JsonWebToken;
+import org.keycloak.ssf.subjects.SubjectId;
 
-import java.io.Serializable;
-import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-public class SecurityEventToken implements Serializable {
+public class SecurityEventToken extends JsonWebToken {
 
-    protected Long iat;
+    @JsonProperty("txn")
+    protected String txn;
 
-    @JsonProperty("jti")
-    protected String id;
+    @JsonProperty("sub_id")
+    protected SubjectId subjectId;
 
-    @JsonProperty("iss")
-    protected String issuer;
+    @JsonProperty("events")
+    protected Map<String, SecurityEvent> events;
 
-    @JsonProperty("aud")
-    @JsonSerialize(using = StringOrArraySerializer.class)
-    @JsonDeserialize(using = StringOrArrayDeserializer.class)
-    protected String[] audience;
+    public String getTxn() {
+        return txn;
+    }
 
-    public SecurityEventToken audience(String... audience) {
-        this.audience = audience;
+    public void setTxn(String txn) {
+        this.txn = txn;
+    }
+
+    public SecurityEventToken txn(String txn) {
+        setTxn(txn);
         return this;
     }
 
-    public SecurityEventToken addAudience(String audience) {
-        if (this.audience == null) {
-            this.audience = new String[]{audience};
-        } else {
-            // Check if audience is already there
-            for (String aud : this.audience) {
-                if (audience.equals(aud)) {
-                    return this;
-                }
-            }
+    public SubjectId getSubjectId() {
+        return subjectId;
+    }
 
-            String[] newAudience = Arrays.copyOf(this.audience, this.audience.length + 1);
-            newAudience[this.audience.length] = audience;
-            this.audience = newAudience;
+    public void setSubjectId(SubjectId subjectId) {
+        this.subjectId = subjectId;
+    }
+
+    public SecurityEventToken subjectId(SubjectId subjectId) {
+        setSubjectId(subjectId);
+        return this;
+    }
+
+    public Map<String, SecurityEvent> getEvents() {
+        if (events == null) {
+            events = new LinkedHashMap<>();
         }
+        return events;
+    }
+
+    public void setEvents(Map<String, SecurityEvent> events) {
+        this.events = events;
+    }
+
+    public SecurityEventToken addEvent(SecurityEvent event) {
+        getEvents().put(event.getEventType(), event);
         return this;
-    }
-
-    public String[] getAudience() {
-        return audience;
-    }
-
-    public Long getIat() {
-        return iat;
-    }
-
-    public void setIat(Long iat) {
-        this.iat = iat;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getIssuer() {
-        return issuer;
-    }
-
-    public void setIssuer(String issuer) {
-        this.issuer = issuer;
-    }
-
-    public void setAudience(String[] audience) {
-        this.audience = audience;
     }
 }
