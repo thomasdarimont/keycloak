@@ -1,13 +1,18 @@
-package org.keycloak.ssf.caep.events;
+package org.keycloak.protocol.ssf.caep.events;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
-import org.keycloak.ssf.SecurityEvent;
+import org.keycloak.protocol.ssf.SecurityEvent;
 
 /**
  * Device Compliance Change signals that a device's compliance status has changed.
  */
 public class DeviceComplianceChange extends SecurityEvent {
+
+    /**
+     * See: https://openid.github.io/sharedsignals/openid-caep-1_0.html#name-device-compliance-change
+     */
+    public static final String TYPE = "https://schemas.openid.net/secevent/caep/event-type/device-compliance-change";
 
     /**
      * The compliance status prior to the change that triggered the event
@@ -23,7 +28,7 @@ public class DeviceComplianceChange extends SecurityEvent {
     protected ComplianceChange currentStatus;
 
     public DeviceComplianceChange() {
-        super(CaepEventType.DEVICE_COMPLIANCE_CHANGE);
+        super(TYPE);
     }
 
     public ComplianceChange getPreviousStatus() {
