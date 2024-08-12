@@ -1,11 +1,13 @@
-package org.keycloak.ssf;
+package org.keycloak.protocol.ssf.subjects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.keycloak.ssf.subjects.SubjectId;
 
+/**
+ * See: https://openid.net/specs/openid-sse-framework-1_0.html#sub-id-saml-assertion-id
+ */
 public class SamlAssertionSubjectId extends SubjectId {
 
-    public static final String EVENT_TYPE = "saml_assertion_id";
+    public static final String TYPE = "saml_assertion_id";
 
     @JsonProperty("issuer")
     protected String issuer;
@@ -14,6 +16,6 @@ public class SamlAssertionSubjectId extends SubjectId {
     protected String assertionId;
 
     public SamlAssertionSubjectId(String format) {
-        super(EVENT_TYPE);
+        super(TYPE);
     }
 }

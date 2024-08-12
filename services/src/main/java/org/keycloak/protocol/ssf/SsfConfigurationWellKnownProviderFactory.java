@@ -1,4 +1,4 @@
-package org.keycloak.ssf.transmitter;
+package org.keycloak.protocol.ssf;
 
 import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
@@ -6,7 +6,7 @@ import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.wellknown.WellKnownProvider;
 import org.keycloak.wellknown.WellKnownProviderFactory;
 
-public class TransmitterConfigurationWellKnownProviderFactory implements WellKnownProviderFactory {
+public class SsfConfigurationWellKnownProviderFactory implements WellKnownProviderFactory {
 
     @Override
     public String getId() {
@@ -15,7 +15,7 @@ public class TransmitterConfigurationWellKnownProviderFactory implements WellKno
 
     @Override
     public WellKnownProvider create(KeycloakSession session) {
-        return new TransmitterConfigurationWellKnownProvider(session);
+        return new SsfConfigurationWellKnownProvider(session);
     }
 
     @Override

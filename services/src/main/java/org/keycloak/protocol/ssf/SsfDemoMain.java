@@ -1,14 +1,14 @@
-package org.keycloak.ssf;
+package org.keycloak.protocol.ssf;
 
-import org.keycloak.ssf.caep.events.SessionEstablished;
-import org.keycloak.ssf.caep.events.SessionPresented;
-import org.keycloak.ssf.caep.events.SessionRevoked;
-import org.keycloak.ssf.subjects.ComplexSubjectId;
-import org.keycloak.ssf.subjects.SubjectId;
+import org.keycloak.protocol.ssf.caep.events.SessionEstablished;
+import org.keycloak.protocol.ssf.caep.events.SessionPresented;
+import org.keycloak.protocol.ssf.caep.events.SessionRevoked;
+import org.keycloak.protocol.ssf.subjects.EmailSubjectId;
+import org.keycloak.protocol.ssf.subjects.IssuerSubjectId;
+import org.keycloak.protocol.ssf.subjects.SubjectId;
 import org.keycloak.util.JsonSerialization;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.Set;
 
 public class SsfDemoMain {
@@ -21,13 +21,9 @@ public class SsfDemoMain {
         token.iat(1615305159L);
         token.audience("https://sp.example.com/caep");
         token.txn("8675309");
-        SubjectId subjectId = new ComplexSubjectId() {
+        SubjectId subjectId = new EmailSubjectId() {
             {
-                user = Map.of( //
-                        "format", "iss_sub", //
-                        "iss", "https://idp.example.com/3957ea72-1b66-44d6-a044-d805712b9288/", //
-                        "sub", "jane.smith@example.com" //
-                );
+                setEmail("tester@example.com");
             }
         };
         token.subjectId(subjectId);

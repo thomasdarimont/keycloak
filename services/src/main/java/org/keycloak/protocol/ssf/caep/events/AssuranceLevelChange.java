@@ -1,13 +1,19 @@
-package org.keycloak.ssf.caep.events;
+package org.keycloak.protocol.ssf.caep.events;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
-import org.keycloak.ssf.SecurityEvent;
+import org.keycloak.protocol.ssf.SecurityEvent;
 
 /**
  * The Assurance Level Change event signals that there has been a change in authentication method since the initial user login. This change can be from a weak authentication method to a strong authentication method, or vice versa.
  */
 public class AssuranceLevelChange extends SecurityEvent {
+
+    /**
+     * See: https://openid.github.io/sharedsignals/openid-caep-1_0.html#name-assurance-level-change
+     */
+    public static final String TYPE = "https://schemas.openid.net/secevent/caep/event-type/assurance-level-change";
+
 
     /**
      * The namespace of the values in the current_level and previous_level claims.
@@ -35,7 +41,7 @@ public class AssuranceLevelChange extends SecurityEvent {
     protected ChangeDirection changeDirection;
 
     public AssuranceLevelChange() {
-        super(CaepEventType.ASSURANCE_LEVEL_CHANGE);
+        super(TYPE);
     }
 
     public String getNamespace() {
@@ -44,26 +50,6 @@ public class AssuranceLevelChange extends SecurityEvent {
 
     public void setNamespace(String namespace) {
         this.namespace = namespace;
-    }
-
-    @Override
-    public String getCurrentLevel() {
-        return currentLevel;
-    }
-
-    @Override
-    public void setCurrentLevel(String currentLevel) {
-        this.currentLevel = currentLevel;
-    }
-
-    @Override
-    public String getPreviousLevel() {
-        return previousLevel;
-    }
-
-    @Override
-    public void setPreviousLevel(String previousLevel) {
-        this.previousLevel = previousLevel;
     }
 
     public ChangeDirection getChangeDirection() {
