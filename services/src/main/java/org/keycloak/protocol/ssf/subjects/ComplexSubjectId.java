@@ -1,9 +1,12 @@
-package org.keycloak.ssf.subjects;
+package org.keycloak.protocol.ssf.subjects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Map;
 
+/**
+ * See: https://openid.net/specs/openid-sse-framework-1_0.html#complex-subjects
+ */
 public class ComplexSubjectId extends SubjectId {
 
     public static final String TYPE = "complex";
