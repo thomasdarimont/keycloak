@@ -1,7 +1,7 @@
-package org.keycloak.ssf.caep.events;
+package org.keycloak.protocol.ssf.caep.events;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.keycloak.ssf.SecurityEvent;
+import org.keycloak.protocol.ssf.SecurityEvent;
 
 import java.util.Set;
 
@@ -14,6 +14,11 @@ import java.util.Set;
  * </ul>
  */
 public class SessionPresented extends SecurityEvent {
+
+    /**
+     * See: https://openid.github.io/sharedsignals/openid-caep-1_0.html#name-session-established
+     */
+    public static final String TYPE = "https://schemas.openid.net/secevent/caep/event-type/session-presented";
 
     /**
      * The array of IP addresses of the user as observed by the Transmitter. The value MUST be in the format of an array of strings, each one of which represents the RFC 4001 [RFC4001] string represetation of an IP address. (NOTE, this can be different from the one observed by the Receiver for the same user because of network translation).
@@ -34,7 +39,7 @@ public class SessionPresented extends SecurityEvent {
     protected String extId;
 
     public SessionPresented() {
-        super(CaepEventType.SESSION_PRESENTED);
+        super(TYPE);
     }
 
     public Set<String> getIps() {

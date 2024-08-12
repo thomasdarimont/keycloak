@@ -16,4 +16,5 @@
 #
 
 org.keycloak.events.email.EmailEventListenerProviderFactory
+org.keycloak.protocol.ssf.caep.CaepEventListenerFactory
 org.keycloak.events.log.JBossLoggingEventListenerProviderFactory
