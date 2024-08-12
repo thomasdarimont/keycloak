@@ -1,13 +1,19 @@
-package org.keycloak.ssf.caep.events;
+package org.keycloak.protocol.ssf.caep.events;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
-import org.keycloak.ssf.SecurityEvent;
+import org.keycloak.protocol.ssf.SecurityEvent;
 
 /**
  * The Credential Change event signals that a credential was created, changed, revoked or deleted.
  */
 public class CredentialChange extends SecurityEvent {
+
+    /**
+     * See: https://openid.github.io/sharedsignals/openid-caep-1_0.html#name-credential-change
+     */
+    public static final String TYPE = "https://schemas.openid.net/secevent/caep/event-type/credential-change";
+
 
     /**
      * This MUST be one of the following strings, or any other credential type supported mutually by the Transmitter and the Receiver.
@@ -61,7 +67,7 @@ public class CredentialChange extends SecurityEvent {
     protected String fido2Aaguid;
 
     public CredentialChange() {
-        super(CaepEventType.CREDENTIAL_CHANGE);
+        super(TYPE);
     }
 
     public CredentialType getCredentialType() {

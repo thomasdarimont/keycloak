@@ -1,7 +1,10 @@
-package org.keycloak.ssf.subjects;
+package org.keycloak.protocol.ssf.subjects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+/**
+ * See: https://openid.net/specs/openid-sse-framework-1_0.html#sub-id-jwt-id
+ */
 public class JwtSubjectId extends SubjectId {
 
     public static final String TYPE = "jwt_id";
@@ -12,7 +15,7 @@ public class JwtSubjectId extends SubjectId {
     @JsonProperty("jti")
     protected String jti;
 
-    public JwtSubjectId(String format) {
+    public JwtSubjectId() {
         super(TYPE);
     }
 
