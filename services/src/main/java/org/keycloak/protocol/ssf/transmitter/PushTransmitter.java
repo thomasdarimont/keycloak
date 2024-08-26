@@ -22,7 +22,7 @@ public class PushTransmitter {
     public Object transmit(String encodedSecurityEventToken) {
 
         // TODO make SSF delivery URL configurable
-        SimpleHttp simpleHttp = SimpleHttp.doPost("https://ssf.caep.dev/ssf/streams/poll", session);
+        SimpleHttp simpleHttp = SimpleHttp.doPost("https://ssf.caep.dev/ssf/streams/", session);
         simpleHttp.socketTimeOutMillis(500);
         simpleHttp.connectTimeoutMillis(1000);
         simpleHttp.connectionRequestTimeoutMillis(500);
