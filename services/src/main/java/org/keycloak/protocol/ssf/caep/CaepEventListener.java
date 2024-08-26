@@ -15,6 +15,7 @@ import org.keycloak.protocol.ssf.caep.events.SessionPresented;
 import org.keycloak.protocol.ssf.caep.events.SessionRevoked;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
+import java.util.Map;
 import java.util.Set;
 
 public class CaepEventListener implements EventListenerProvider {
@@ -48,33 +49,39 @@ public class CaepEventListener implements EventListenerProvider {
                     // sessionEstablished.setAcr(...);
                     // TODO how to compute browser fingerprint
                     // sessionEstablished.setFingerPrintUserAgent(...);
+                    event.setReasonUser(Map.of("en", "New user session", "de", "Neue Benutzersitzung"));
                     yield event;
                 } else {
                     SessionPresented event = new SessionPresented();
                     event.setIps(Set.of(context.getConnection().getRemoteAddr()));
+                    event.setReasonUser(Map.of("en", "User session updated", "de", "Benutzersitzung aktualisiert"));
                     yield event;
                 }
             }
             case LOGOUT -> {
                 SessionRevoked event = new SessionRevoked();
+                event.setReasonUser(Map.of("en", "User session ended", "de", "Benutzersitzung beendet"));
                 yield event;
             }
             case UPDATE_PASSWORD -> {
                 CredentialChange event = new CredentialChange();
                 event.setChangeType(CredentialChange.ChangeType.UPDATE);
                 event.setCredentialType(CredentialChange.CredentialType.PASSWORD);
+                event.setReasonUser(Map.of("en", "Password updated", "de", "Passwort aktualisiert"));
                 yield event;
             }
             case UPDATE_TOTP -> {
                 CredentialChange event = new CredentialChange();
                 event.setChangeType(CredentialChange.ChangeType.UPDATE);
                 event.setCredentialType(CredentialChange.CredentialType.FIDO2_U2F);
+                event.setReasonUser(Map.of("en", "FIDO2 device updated", "de", "FIDO2 Gerät aktualisiert"));
                 yield event;
             }
             case REMOVE_TOTP -> {
                 CredentialChange event = new CredentialChange();
                 event.setChangeType(CredentialChange.ChangeType.REVOKE);
                 event.setCredentialType(CredentialChange.CredentialType.FIDO2_U2F);
+                event.setReasonUser(Map.of("en", "FIDO2 device removed", "de", "FIDO2 Gerät entfernt"));
                 yield event;
             }
             default -> null;

@@ -53,12 +53,12 @@ public class SsfConfigurationWellKnownProvider implements WellKnownProvider {
                 entry("remove_subject_endpoint", "https://issuer/ssf/remove_subject_endpoint"), //
                 entry("verification_endpoint", "https://issuer/ssf/verification_endpoint"), //
                 entry("critical_subject_members", List.of("tenant", "user")), //
-                entry("authorization_schemes", List.of( //
-                        Map.of("spec_urn", AuthorizationScheme.OAUTH.getSpecUrn()), //
-                        Map.of("spec_urn", AuthorizationScheme.OAUTH_MTLS.getSpecUrn())
-                )), //
                 entry("default_subjects", List.of("NONE")) // ALL/NONE
                 */
+                , entry("authorization_schemes", List.of( //
+                        Map.of("spec_urn", AuthorizationScheme.OAUTH.getSpecUrn()), //
+                        Map.of("spec_urn", AuthorizationScheme.OAUTH_MTLS.getSpecUrn())
+                )) //
         );
         return config;
     }
