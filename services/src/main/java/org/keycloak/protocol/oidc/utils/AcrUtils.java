@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.jboss.logging.Logger;
+import org.keycloak.common.util.CollectionUtil;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.Constants;
 import org.keycloak.models.RealmModel;
@@ -43,13 +44,27 @@ public class AcrUtils {
     }
 
     public static List<String> getAcrValues(String claimsParam, String acrValuesParam, ClientModel client) {
+
+        if (client != null) {
+            String forcedAcrValues = client.getAttribute("forced.acr.values");
+            if (forcedAcrValues != null) {
+                LOGGER.debugf("Using enforced acrValues values from client. clientId=%s acrValues=%s", client.getClientId(), forcedAcrValues);
+                return List.of(forcedAcrValues.split(" "));
+            }
+        }
+
         List<String> fromParams = getAcrValues(claimsParam, acrValuesParam, false);
         if (!fromParams.isEmpty()) {
+            LOGGER.debugf("Using acrValues values from parameters. acrValues=%s", fromParams);
             return fromParams;
         }
 
         // Fallback to default ACR values of client (if configured)
-        return getDefaultAcrValues(client);
+        List<String> defaultAcrValues = getDefaultAcrValues(client);
+        if (client != null && CollectionUtil.isNotEmpty(defaultAcrValues)) {
+            LOGGER.debugf("Using default acrValues values from client. clientId=%s acrValues=%s", client.getClientId(), fromParams);
+        }
+        return defaultAcrValues;
     }
 
     private static List<String> getAcrValues(String claimsParam, String acrValuesParam, boolean essential) {
