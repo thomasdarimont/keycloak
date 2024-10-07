@@ -2,7 +2,7 @@ package org.keycloak.protocol.ssf.caep.events;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
-import org.keycloak.protocol.ssf.SecurityEvent;
+import org.keycloak.protocol.ssf.set.SecurityEvent;
 
 /**
  * The Assurance Level Change event signals that there has been a change in authentication method since the initial user login. This change can be from a weak authentication method to a strong authentication method, or vice versa.

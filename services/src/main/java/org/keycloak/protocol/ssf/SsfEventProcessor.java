@@ -7,6 +7,8 @@ import org.keycloak.jose.jws.DefaultTokenManager;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
+import org.keycloak.protocol.ssf.set.SecurityEvent;
+import org.keycloak.protocol.ssf.set.SecurityEventToken;
 import org.keycloak.protocol.ssf.subjects.ComplexSubjectId;
 import org.keycloak.protocol.ssf.subjects.SubjectId;
 import org.keycloak.protocol.ssf.transmitter.PushTransmitter;

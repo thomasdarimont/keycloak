@@ -17,3 +17,4 @@
 
 org.keycloak.services.resources.admin.TestLdapConnectionRealmAdminProvider
 org.keycloak.services.resources.admin.LdapServerCapabilitiesRealmAdminProvider
+org.keycloak.protocol.ssf.streams.SsfAdminRealmResourceProviderFactory
