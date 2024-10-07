@@ -1,4 +1,4 @@
-package org.keycloak.protocol.ssf;
+package org.keycloak.protocol.ssf.set;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;

@@ -2,7 +2,7 @@ package org.keycloak.protocol.ssf.caep.events;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
-import org.keycloak.protocol.ssf.SecurityEvent;
+import org.keycloak.protocol.ssf.set.SecurityEvent;
 
 /**
  * The Credential Change event signals that a credential was created, changed, revoked or deleted.

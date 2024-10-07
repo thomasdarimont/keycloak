@@ -1,7 +1,7 @@
 package org.keycloak.protocol.ssf.caep.events;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.keycloak.protocol.ssf.SecurityEvent;
+import org.keycloak.protocol.ssf.set.SecurityEvent;
 
 import java.util.Map;
 

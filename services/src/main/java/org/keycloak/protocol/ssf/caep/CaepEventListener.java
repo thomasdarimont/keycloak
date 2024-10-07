@@ -7,7 +7,7 @@ import org.keycloak.events.admin.AdminEvent;
 import org.keycloak.models.KeycloakContext;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.UserModel;
-import org.keycloak.protocol.ssf.SecurityEvent;
+import org.keycloak.protocol.ssf.set.SecurityEvent;
 import org.keycloak.protocol.ssf.SsfEventProcessor;
 import org.keycloak.protocol.ssf.caep.events.CredentialChange;
 import org.keycloak.protocol.ssf.caep.events.SessionEstablished;

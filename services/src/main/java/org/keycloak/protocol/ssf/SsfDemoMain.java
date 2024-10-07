@@ -3,8 +3,8 @@ package org.keycloak.protocol.ssf;
 import org.keycloak.protocol.ssf.caep.events.SessionEstablished;
 import org.keycloak.protocol.ssf.caep.events.SessionPresented;
 import org.keycloak.protocol.ssf.caep.events.SessionRevoked;
+import org.keycloak.protocol.ssf.set.SecurityEventToken;
 import org.keycloak.protocol.ssf.subjects.EmailSubjectId;
-import org.keycloak.protocol.ssf.subjects.IssuerSubjectId;
 import org.keycloak.protocol.ssf.subjects.SubjectId;
 import org.keycloak.util.JsonSerialization;
 
