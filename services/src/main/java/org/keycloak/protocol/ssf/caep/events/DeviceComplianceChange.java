@@ -2,7 +2,7 @@ package org.keycloak.protocol.ssf.caep.events;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
-import org.keycloak.protocol.ssf.SecurityEvent;
+import org.keycloak.protocol.ssf.set.SecurityEvent;
 
 /**
  * Device Compliance Change signals that a device's compliance status has changed.
