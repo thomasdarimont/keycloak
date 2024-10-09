@@ -42,6 +42,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.*;
@@ -68,9 +69,9 @@ public class InfinispanCrlStorageProviderTest {
         when(keycloakSession.getProvider(TruststoreProvider.class)).thenReturn(truststoreProvider);
         KeyStore keyStore = mock(KeyStore.class);
         when(truststoreProvider.getTruststore()).thenReturn(keyStore);
-        Map<X500Principal, X509Certificate> rootCerts = new HashMap<>();
-        Map<X500Principal, X509Certificate> imCerts = new HashMap<>();
-        rootCerts.put(getCaCert().getSubjectX500Principal(), getCaCert());
+        Map<X500Principal, List<X509Certificate>> rootCerts = new HashMap<>();
+        Map<X500Principal, List<X509Certificate>> imCerts = new HashMap<>();
+        rootCerts.put(getCaCert().getSubjectX500Principal(), List.of(getCaCert()));
         when(truststoreProvider.getRootCertificates()).thenReturn(rootCerts);
         when(truststoreProvider.getIntermediateCertificates()).thenReturn(imCerts);
         InfinispanCrlStorageProvider infinispanCrlStorageProvider = new InfinispanCrlStorageProvider(keycloakSession, getCrlCache(), new HashMap<>(), new CrlLoader(keycloakSession), NEVER_EXPIRE, 1000);
@@ -86,9 +87,9 @@ public class InfinispanCrlStorageProviderTest {
         when(keycloakSession.getProvider(TruststoreProvider.class)).thenReturn(truststoreProvider);
         KeyStore keyStore = mock(KeyStore.class);
         when(truststoreProvider.getTruststore()).thenReturn(keyStore);
-        Map<X500Principal, X509Certificate> rootCerts = new HashMap<>();
-        Map<X500Principal, X509Certificate> imCerts = new HashMap<>();
-        rootCerts.put(getCaCert().getSubjectX500Principal(), getCaCert());
+        Map<X500Principal, List<X509Certificate>> rootCerts = new HashMap<>();
+        Map<X500Principal, List<X509Certificate>> imCerts = new HashMap<>();
+        rootCerts.put(getCaCert().getSubjectX500Principal(), List.of(getCaCert()));
         when(truststoreProvider.getRootCertificates()).thenReturn(rootCerts);
         when(truststoreProvider.getIntermediateCertificates()).thenReturn(imCerts);
         InfinispanCrlStorageProvider infinispanCrlStorageProvider = new InfinispanCrlStorageProvider(keycloakSession, getCrlCache(), new HashMap<>(), new CrlLoader(keycloakSession), NEVER_EXPIRE, 1000);
@@ -113,7 +114,7 @@ public class InfinispanCrlStorageProviderTest {
             final DefaultCacheManager cacheManager = new DefaultCacheManager(gcb.build());
 
             ConfigurationBuilder cb = new ConfigurationBuilder();
-            cb.jmxStatistics().enabled(true);
+            cb.statistics().enabled(true);
             Configuration cfg = cb.build();
             cacheManager.defineConfiguration(InfinispanConnectionProvider.CRLS_CACHE_NAME, cfg);
 

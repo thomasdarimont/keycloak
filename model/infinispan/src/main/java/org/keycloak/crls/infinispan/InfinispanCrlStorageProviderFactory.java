@@ -126,7 +126,7 @@ public class InfinispanCrlStorageProviderFactory implements CrlStorageProviderFa
     }
 
     @Override
-    public boolean isSupported() {
+    public boolean isSupported(Config.Scope config) {
         return true;
     }
 

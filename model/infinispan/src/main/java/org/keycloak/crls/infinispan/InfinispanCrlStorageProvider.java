@@ -32,6 +32,8 @@ import org.wildfly.security.auth.server.SecurityIdentity;
 import javax.security.auth.x500.X500Principal;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
+import java.security.InvalidKeyException;
+import java.security.SignatureException;
 import java.security.cert.*;
 import java.time.Instant;
 import java.util.*;
@@ -189,16 +191,28 @@ public class InfinispanCrlStorageProvider implements CrlStorageProvider {
             throw new GeneralSecurityException("Truststore not available");
         }
 
-        Map<X500Principal, X509Certificate> rootCerts = truststoreProvider.getRootCertificates();
-        Map<X500Principal, X509Certificate> intermediateCerts = truststoreProvider.getIntermediateCertificates();
+        Map<X500Principal, List<X509Certificate>> rootCerts = truststoreProvider.getRootCertificates();
+        Map<X500Principal, List<X509Certificate>> intermediateCerts = truststoreProvider.getIntermediateCertificates();
 
-        X509Certificate crlSignatureCertificate = intermediateCerts.get(crlIssuerPrincipal);
-        if (crlSignatureCertificate == null) {
-            crlSignatureCertificate = rootCerts.get(crlIssuerPrincipal);
+        X509Certificate crlSignatureCertificate = null;
+        List<X509Certificate> crlSignatureCertificates = intermediateCerts.get(crlIssuerPrincipal);
+        if (crlSignatureCertificates == null) {
+            crlSignatureCertificates = rootCerts.get(crlIssuerPrincipal);
         }
 
-        if (crlSignatureCertificate == null) {
+        if (crlSignatureCertificates == null) {
             throw new GeneralSecurityException("Not available certificate for CRL issuer '" + crlIssuerPrincipal + "' in the truststore");
+        }
+
+        // find the one that signed the cert
+        for (X509Certificate cert : crlSignatureCertificates) {
+            try {
+                cert.verify(cert.getPublicKey());
+            } catch (InvalidKeyException | SignatureException e) {
+                continue;
+            }
+            crlSignatureCertificate = cert;
+            break;
         }
 
         return crlSignatureCertificate;
