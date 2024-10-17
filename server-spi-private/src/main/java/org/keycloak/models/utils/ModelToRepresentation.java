@@ -47,10 +47,17 @@ import org.keycloak.events.admin.AuthDetails;
 import org.keycloak.models.*;
 import org.keycloak.models.credential.OTPCredentialModel;
 import org.keycloak.models.light.LightweightUserAdapter;
+import org.keycloak.models.ssf.SharedSignalsStreamModel;
+import org.keycloak.models.ssf.SharedSignalsStreamStatusModel;
 import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.representations.account.CredentialMetadataRepresentation;
 import org.keycloak.representations.idm.*;
 import org.keycloak.representations.idm.authorization.*;
+import org.keycloak.representations.idm.ssf.SharedSignalsStreamRepresentation;
+import org.keycloak.representations.idm.ssf.SharedSignalsStreamRepresentation.PollDeliveryMethodRepresentation;
+import org.keycloak.representations.idm.ssf.SharedSignalsStreamRepresentation.PushDeliveryMethodRepresentation;
+import org.keycloak.representations.idm.ssf.SharedSignalsStreamStatusRepresentation;
+import org.keycloak.representations.idm.ssf.StreamStatus;
 import org.keycloak.storage.StorageId;
 import org.keycloak.util.JsonSerialization;
 import org.keycloak.utils.StringUtil;
@@ -1349,5 +1356,35 @@ public class ModelToRepresentation {
         representation.setName(model.getName());
         representation.setVerified(model.isVerified());
         return representation;
+    }
+
+    public static SharedSignalsStreamRepresentation toRepresentation(SharedSignalsStreamModel model) {
+
+        var rep = new SharedSignalsStreamRepresentation();
+        rep.setId(model.getId());
+        rep.setDescription(model.getDescription());
+        rep.setAudience(model.getAudience());
+        rep.setIssuer(model.getIssuer());
+
+        var endpointUrl = model.getEndpointUrl();
+        rep.setDelivery(switch(model.getDeliveryMethod()) {
+            case POLL_BASED -> new PollDeliveryMethodRepresentation(endpointUrl);
+            case PUSH_BASED -> new PushDeliveryMethodRepresentation(endpointUrl);
+        });
+
+        rep.setMinVerificationInterval(model.getMinVerificationInterval());
+        rep.setEventsDelivered(model.getEventsDelivered());
+        rep.setEventsRequested(model.getEventsRequested());
+        rep.setEventsSupported(model.getEventsSupported());
+
+        return rep;
+    }
+
+    public static SharedSignalsStreamStatusRepresentation toRepresentation(SharedSignalsStreamStatusModel model) {
+        var rep = new SharedSignalsStreamStatusRepresentation();
+        rep.setStream_id(model.getId());
+        rep.setReason(model.getReason());
+        rep.setStatus(StreamStatus.valueOf(model.getStatus().name().toLowerCase()));
+        return rep;
     }
 }

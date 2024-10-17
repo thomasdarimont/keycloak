@@ -6,7 +6,7 @@ import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.services.resources.admin.ext.AdminRealmResourceProvider;
 import org.keycloak.services.resources.admin.ext.AdminRealmResourceProviderFactory;
 
-public class SsfAdminRealmResourceProviderFactory implements AdminRealmResourceProviderFactory {
+public class SharedSignalsAdminRealmResourceProviderFactory implements AdminRealmResourceProviderFactory {
 
     @Override
     public String getId() {
@@ -15,7 +15,7 @@ public class SsfAdminRealmResourceProviderFactory implements AdminRealmResourceP
 
     @Override
     public AdminRealmResourceProvider create(KeycloakSession session) {
-        return new SsfAdminRealmResourceProvider(session);
+        return new SharedSignalsAdminRealmResourceProvider(session);
     }
 
     @Override

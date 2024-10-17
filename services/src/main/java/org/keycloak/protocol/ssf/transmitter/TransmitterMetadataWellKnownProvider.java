@@ -6,6 +6,7 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.protocol.oidc.OIDCLoginProtocol;
 import org.keycloak.protocol.oidc.OIDCLoginProtocolService;
+import org.keycloak.representations.idm.ssf.DeliveryMethod;
 import org.keycloak.services.Urls;
 import org.keycloak.services.resources.RealmsResource;
 import org.keycloak.urls.UrlType;
@@ -16,13 +17,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static java.util.Map.entry;
-
-public class SsfTransmitterMetadataWellKnownProvider implements WellKnownProvider {
+public class TransmitterMetadataWellKnownProvider implements WellKnownProvider {
 
     private final KeycloakSession session;
 
-    public SsfTransmitterMetadataWellKnownProvider(KeycloakSession session) {
+    public TransmitterMetadataWellKnownProvider(KeycloakSession session) {
         this.session = session;
     }
 
@@ -53,7 +52,7 @@ public class SsfTransmitterMetadataWellKnownProvider implements WellKnownProvide
         String specVersion = "1_0-ID2";
         Set<String> deliveryMethods = Set.of(DeliveryMethod.PUSH_BASED.getSpecUrn(), DeliveryMethod.POLL_BASED.getSpecUrn());
 
-        var metadata = new SsfTransmitterMetadata();
+        var metadata = new TransmitterMetadata();
         metadata.setSpecVersion(specVersion);
         metadata.setIssuer(issuer);
         metadata.setJwksUri(jwksUri.toString());
@@ -90,26 +89,6 @@ public class SsfTransmitterMetadataWellKnownProvider implements WellKnownProvide
 
         public String getSpecUrn() {
             return specUrn;
-        }
-    }
-
-    public enum DeliveryMethod {
-        PUSH_BASED("urn:ietf:rfc:8935")
-        , POLL_BASED("urn:ietf:rfc:8936")
-        ;
-
-        private final String specUrn;
-
-        DeliveryMethod(String specUrn) {
-            this.specUrn = specUrn;
-        }
-
-        public String getSpecUrn() {
-            return specUrn;
-        }
-
-        public URI toUri() {
-            return URI.create(specUrn);
         }
     }
 }

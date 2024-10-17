@@ -8,7 +8,7 @@ import org.keycloak.models.KeycloakContext;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.UserModel;
 import org.keycloak.protocol.ssf.set.SecurityEvent;
-import org.keycloak.protocol.ssf.SsfEventProcessor;
+import org.keycloak.protocol.ssf.SharedSignalsEventProcessor;
 import org.keycloak.protocol.ssf.caep.events.CredentialChange;
 import org.keycloak.protocol.ssf.caep.events.SessionEstablished;
 import org.keycloak.protocol.ssf.caep.events.SessionPresented;
@@ -22,11 +22,11 @@ public class CaepEventListener implements EventListenerProvider {
 
     private final KeycloakSession session;
 
-    private final SsfEventProcessor ssfEventProcessor;
+    private final SharedSignalsEventProcessor sharedSignalsEventProcessor;
 
-    public CaepEventListener(KeycloakSession session, SsfEventProcessor ssfEventProcessor) {
+    public CaepEventListener(KeycloakSession session, SharedSignalsEventProcessor sharedSignalsEventProcessor) {
         this.session = session;
-        this.ssfEventProcessor = ssfEventProcessor;
+        this.sharedSignalsEventProcessor = sharedSignalsEventProcessor;
     }
 
     @Override
@@ -96,7 +96,7 @@ public class CaepEventListener implements EventListenerProvider {
 
         UserModel user = resolveUser(userEvent, authSession);
 
-        ssfEventProcessor.process(securityEvent, user);
+        sharedSignalsEventProcessor.process(securityEvent, user);
     }
 
     protected UserModel resolveUser(Event userEvent, AuthenticationSessionModel authSession) {
