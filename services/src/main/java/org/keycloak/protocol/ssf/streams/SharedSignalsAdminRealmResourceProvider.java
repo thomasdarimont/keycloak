@@ -6,17 +6,17 @@ import org.keycloak.services.resources.admin.AdminEventBuilder;
 import org.keycloak.services.resources.admin.ext.AdminRealmResourceProvider;
 import org.keycloak.services.resources.admin.permissions.AdminPermissionEvaluator;
 
-public class SsfAdminRealmResourceProvider implements AdminRealmResourceProvider {
+public class SharedSignalsAdminRealmResourceProvider implements AdminRealmResourceProvider {
 
     private final KeycloakSession session;
 
-    public SsfAdminRealmResourceProvider(KeycloakSession session) {
+    public SharedSignalsAdminRealmResourceProvider(KeycloakSession session) {
         this.session = session;
     }
 
     @Override
     public Object getResource(KeycloakSession session, RealmModel realm, AdminPermissionEvaluator auth, AdminEventBuilder adminEvent) {
-        return new StreamManagementResource(session, realm, auth, adminEvent);
+        return new SharedStreamManagementResource(session, realm, auth, adminEvent);
     }
 
     @Override

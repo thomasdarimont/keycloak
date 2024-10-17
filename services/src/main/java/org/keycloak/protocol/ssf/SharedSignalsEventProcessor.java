@@ -18,15 +18,15 @@ import org.keycloak.urls.UrlType;
 import java.util.Map;
 import java.util.UUID;
 
-public class SsfEventProcessor {
+public class SharedSignalsEventProcessor {
 
-    private static final Logger LOG = Logger.getLogger(SsfEventProcessor.class);
+    private static final Logger LOG = Logger.getLogger(SharedSignalsEventProcessor.class);
 
     private final KeycloakSession session;
 
     private final PushTransmitter pushTransmitter;
 
-    public SsfEventProcessor(KeycloakSession session, PushTransmitter pushTransmitter) {
+    public SharedSignalsEventProcessor(KeycloakSession session, PushTransmitter pushTransmitter) {
         this.session = session;
         this.pushTransmitter = pushTransmitter;
     }

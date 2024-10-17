@@ -1,4 +1,4 @@
-package org.keycloak.protocol.ssf.streams;
+package org.keycloak.representations.idm.ssf;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
@@ -6,7 +6,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.keycloak.protocol.ssf.transmitter.SsfTransmitterMetadataWellKnownProvider.DeliveryMethod;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -19,7 +18,7 @@ import java.util.Objects;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({"iss", "aud", "events_supported", "events_requested", "events_delivered", "delivery", "min_verification_interval", "format"})
-public class StreamRepresentation {
+public class SharedSignalsStreamRepresentation {
 
     //see: https://openid.net/specs/openid-sharedsignals-framework-1_0.html#section-7.1.1
 
@@ -70,7 +69,7 @@ public class StreamRepresentation {
      */
     @JsonProperty("delivery")
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "method")
-    private AbstractDeliveryMethod delivery;
+    private AbstractDeliveryMethodRepresentation delivery;
 
     /**
      * Transmitter-Supplied, OPTIONAL. An integer indicating the minimum amount of time in seconds that must pass in between verification requests. If an Event Receiver submits verification requests more frequently than this, the Event Transmitter MAY respond with a 429 status code. An Event Transmitter SHOULD NOT respond with a 429 status code if an Event Receiver is not exceeding this frequency.
@@ -126,11 +125,11 @@ public class StreamRepresentation {
         this.eventsDelivered = eventsDelivered;
     }
 
-    public AbstractDeliveryMethod getDelivery() {
+    public AbstractDeliveryMethodRepresentation getDelivery() {
         return delivery;
     }
 
-    public void setDelivery(AbstractDeliveryMethod delivery) {
+    public void setDelivery(AbstractDeliveryMethodRepresentation delivery) {
         this.delivery = delivery;
     }
 
@@ -151,7 +150,7 @@ public class StreamRepresentation {
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static abstract class AbstractDeliveryMethod {
+    public static abstract class AbstractDeliveryMethodRepresentation {
 
         /**
          * Receiver-Supplied, REQUIRED. The specific delivery method to be used. This can be any one of "urn:ietf:rfc:8935" (push) or "urn:ietf:rfc:8936" (poll), but not both.
@@ -167,7 +166,7 @@ public class StreamRepresentation {
 
         private final Map<String, Object> metadata;
 
-        protected AbstractDeliveryMethod(DeliveryMethod method, URI endpointUrl) {
+        protected AbstractDeliveryMethodRepresentation(DeliveryMethod method, URI endpointUrl) {
             this.method = method;
             this.endpointUrl = endpointUrl;
             this.metadata = new HashMap<>();
@@ -192,22 +191,22 @@ public class StreamRepresentation {
         }
     }
 
-    public static class PollDeliveryMethod extends AbstractDeliveryMethod {
+    public static class PollDeliveryMethodRepresentation extends AbstractDeliveryMethodRepresentation {
 
         /**
          * @param endpointUrl MUST be supplied by the Transmitter.
          */
-        public PollDeliveryMethod(URI endpointUrl) {
+        public PollDeliveryMethodRepresentation(URI endpointUrl) {
             super(DeliveryMethod.POLL_BASED, Objects.requireNonNull(endpointUrl, "endpointUrl"));
         }
     }
 
-    public static class PushDeliveryMethod extends AbstractDeliveryMethod {
+    public static class PushDeliveryMethodRepresentation extends AbstractDeliveryMethodRepresentation {
 
         /**
          * @param endpointUrl MUST be supplied by the Receiver
          */
-        public PushDeliveryMethod(URI endpointUrl) {
+        public PushDeliveryMethodRepresentation(URI endpointUrl) {
             super(DeliveryMethod.POLL_BASED, Objects.requireNonNull(endpointUrl, "endpointUrl"));
         }
     }

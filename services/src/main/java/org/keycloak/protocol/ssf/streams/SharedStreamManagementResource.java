@@ -1,9 +1,7 @@
 package org.keycloak.protocol.ssf.streams;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonValue;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -22,9 +20,14 @@ import jakarta.ws.rs.core.UriInfo;
 import org.jboss.resteasy.reactive.NoCache;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
+import org.keycloak.models.ssf.SharedSignalsStreamModel;
+import org.keycloak.models.ssf.SharedSignalsStreamStatusModel;
+import org.keycloak.models.utils.ModelToRepresentation;
 import org.keycloak.protocol.ssf.set.SecurityEventToken;
-import org.keycloak.protocol.ssf.streams.StreamRepresentation.AbstractDeliveryMethod;
 import org.keycloak.protocol.ssf.subjects.SubjectId;
+import org.keycloak.representations.idm.ssf.SharedSignalsStreamRepresentation;
+import org.keycloak.representations.idm.ssf.SharedSignalsStreamRepresentation.AbstractDeliveryMethodRepresentation;
+import org.keycloak.representations.idm.ssf.SharedSignalsStreamStatusRepresentation;
 import org.keycloak.services.resources.admin.AdminEventBuilder;
 import org.keycloak.services.resources.admin.permissions.AdminPermissionEvaluator;
 
@@ -33,28 +36,27 @@ import java.util.List;
 
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-public class StreamManagementResource {
+public class SharedStreamManagementResource {
 
     private final KeycloakSession session;
     private final RealmModel realm;
     private final AdminPermissionEvaluator auth;
     private final AdminEventBuilder adminEvent;
 
-    private final SsfStreamProvider streamProvider;
+    private final SharedSignalStreamProvider streamProvider;
 
-    public StreamManagementResource(KeycloakSession session, RealmModel realm, AdminPermissionEvaluator auth, AdminEventBuilder adminEvent) {
+    public SharedStreamManagementResource(KeycloakSession session, RealmModel realm, AdminPermissionEvaluator auth, AdminEventBuilder adminEvent) {
         this.session = session;
         this.realm = realm;
         this.auth = auth;
         this.adminEvent = adminEvent;
-
-        this.streamProvider = new SsfStreamProvider();
+        // TODO lookup provide from session
+        this.streamProvider = new SharedSignalStreamProvider();
     }
 
     /**
      * 7.1.1.1. Creating a Stream
      * See: https://openid.net/specs/openid-sharedsignals-framework-1_0.html#section-7.1.1.1
-     * @param createRequest
      * @param uriInfo
      * @return
      */
@@ -67,10 +69,13 @@ public class StreamManagementResource {
         // TODO check user permissions streams:create
         auth.realm().requireViewRealm();
 
+        // TODO add CreateStreamRequest to parameters
         CreateStreamRequest createRequest = new CreateStreamRequest();
 
-        StreamRepresentation stream = streamProvider.createStream(session, realm, createRequest);
-        String id = stream.getId();
+        var stream = streamProvider.createStream(session, realm, createRequest);
+
+        SharedSignalsStreamRepresentation rep = ModelToRepresentation.toRepresentation(stream);
+        String id = rep.getId();
         URI createdLocation = uriInfo.getAbsolutePathBuilder().path(id).build();
 
         // Errors are signaled with HTTP status codes as follows:
@@ -83,7 +88,7 @@ public class StreamManagementResource {
 
         return Response.status(Response.Status.CREATED)
                 .location(createdLocation)
-                .entity(stream).build();
+                .entity(rep).build();
     }
 
     /**
@@ -103,14 +108,16 @@ public class StreamManagementResource {
             7.1.1.2. Reading a Stream's Configuration
             See: https://openid.net/specs/openid-sharedsignals-framework-1_0.html#section-7.1.1.2
              */
-            StreamRepresentation stream = streamProvider.findStream(session, realm, streamId);
-            if (stream == null) {
+            var stream = streamProvider.getStreamById(session, realm, streamId);
+            var rep = ModelToRepresentation.toRepresentation(stream);
+            if (rep == null) {
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
-            return Response.ok(stream).build();
+            return Response.ok(rep).build();
         }
 
-        List<StreamRepresentation> streams = streamProvider.findStreams(session, realm);
+        List<SharedSignalsStreamModel> streams = streamProvider.findStreams(session, realm);
+        List<SharedSignalsStreamRepresentation> reps = streams.stream().map(ModelToRepresentation::toRepresentation).toList();
 
         // Errors are signaled with HTTP status codes as follows:
         /*
@@ -119,7 +126,7 @@ public class StreamManagementResource {
 404	if there is no Event Stream with the given "stream_id" for this Event Receiver
          */
 
-        return Response.ok(streams).build();
+        return Response.ok(reps).build();
     }
 
     /**
@@ -131,12 +138,13 @@ public class StreamManagementResource {
      */
     @PATCH
     @Path("/streams")
-    public Response updateStream(UpdateStreamRequest updateRequest, @Context UriInfo uriInfo) {
+    public Response updateStream(UpdateSharedSignalsStreamRequest updateRequest, @Context UriInfo uriInfo) {
 
         // TODO check user permissions streams:update
         auth.realm().requireViewRealm();
 
-        StreamRepresentation updated = streamProvider.updateStream(session, realm, updateRequest);
+        SharedSignalsStreamModel stream = streamProvider.updateStream(session, realm, updateRequest);
+        SharedSignalsStreamRepresentation rep = ModelToRepresentation.toRepresentation(stream);
 
         // Pending conditions or errors are signaled with HTTP status codes as follows:
         /*
@@ -147,7 +155,7 @@ public class StreamManagementResource {
 404	if there is no Event Stream with the given "stream_id" for this Event Receiver
          */
 
-        return Response.ok().entity(updated).build();
+        return Response.ok().entity(rep).build();
     }
 
     /**
@@ -159,12 +167,13 @@ public class StreamManagementResource {
      */
     @PUT
     @Path("/streams")
-    public Response replaceStream(ReplaceStreamRequest updateRequest, @Context UriInfo uriInfo) {
+    public Response replaceStream(ReplaceSharedSignalsStreamRequest updateRequest, @Context UriInfo uriInfo) {
 
         // TODO check user permissions streams:update
         auth.realm().requireViewRealm();
 
-        StreamRepresentation replaced = streamProvider.updateStream(session, realm, updateRequest);
+        SharedSignalsStreamModel stream = streamProvider.updateStream(session, realm, updateRequest);
+        SharedSignalsStreamRepresentation rep = ModelToRepresentation.toRepresentation(stream);
 
         // Pending conditions or errors are signaled with HTTP status codes as follows:
         /*
@@ -175,7 +184,7 @@ public class StreamManagementResource {
 404	if there is no Event Stream with the given "stream_id" for this Event Receiver
          */
 
-        return Response.ok().entity(replaced).build();
+        return Response.ok().entity(rep).build();
     }
 
     /**
@@ -245,7 +254,8 @@ public class StreamManagementResource {
         // TODO check user permissions streams:update
         auth.realm().requireViewRealm();
 
-        StreamStatusRepresentation statusRep = streamProvider.getStreamStatus(session, realm, streamId);
+        SharedSignalsStreamStatusModel streamStatusModel = streamProvider.getStreamStatus(session, realm, streamId);
+        SharedSignalsStreamStatusRepresentation statusRep = ModelToRepresentation.toRepresentation(streamStatusModel);
 
         // Errors are signaled with HTTP status codes as follows:
         /*
@@ -267,14 +277,15 @@ public class StreamManagementResource {
      */
     @POST
     @Path("/status")
-    public Response updateStatus(UpdateStatusRequest updateStatusRequest) {
+    public Response updateStatus(UpdateStatusRequestSharedSignals updateStatusRequest) {
 
-        checkRequiredParameter(updateStatusRequest.getId(), "stream_id");
+        checkRequiredParameter(updateStatusRequest.getStream_id(), "stream_id");
         checkRequiredParameter(updateStatusRequest.getStatus(), "status");
 
         // TODO check user permissions stream-status:update
         auth.realm().requireViewRealm();
-        StreamStatusRepresentation newStatus = streamProvider.updateStreamStatus(updateStatusRequest);
+        SharedSignalsStreamStatusModel streamStatusModel = streamProvider.updateStreamStatus(session, realm, updateStatusRequest);
+        SharedSignalsStreamStatusRepresentation statusRep = ModelToRepresentation.toRepresentation(streamStatusModel);
 
         // Errors are signaled with HTTP status codes as follows:
         /*
@@ -287,7 +298,7 @@ public class StreamManagementResource {
 
         // If a Receiver makes a request to update a stream status, and the Transmitter is unable to decide whether or not to complete the request, then the Transmitter MUST respond with a 202 status code.
 
-        return Response.ok().entity(newStatus).build();
+        return Response.ok().entity(statusRep).build();
     }
 
     /**
@@ -468,84 +479,13 @@ public class StreamManagementResource {
         }
     }
 
-    public static class UpdateStatusRequest extends StreamStatusRepresentation{
+    public static class UpdateStatusRequestSharedSignals extends SharedSignalsStreamStatusRepresentation {
     }
 
-    public static class StreamStatusRepresentation {
-
-        @JsonProperty("stream_id")
-        private String id;
-
-        @JsonProperty("status")
-        private StreamStatus status;
-
-        @JsonProperty("reason")
-        private String reason;
-
-        public String getId() {
-            return id;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
-
-        public StreamStatus getStatus() {
-            return status;
-        }
-
-        public void setStatus(StreamStatus status) {
-            this.status = status;
-        }
-
-        public String getReason() {
-            return reason;
-        }
-
-        public void setReason(String reason) {
-            this.reason = reason;
-        }
+    public static class UpdateSharedSignalsStreamRequest extends SharedSignalsStreamRepresentation {
     }
 
-    public enum StreamStatus {
-
-        /**
-         * The Transmitter MUST transmit events over the stream, according to the stream's configured delivery method.
-         */
-        ENABLED("enabled"),
-
-        /**
-         * The Transmitter MUST NOT transmit events over the stream. The Transmitter will hold any events it would have transmitted while paused, and SHOULD transmit them when the stream's status becomes "enabled". If a Transmitter holds successive events that affect the same Subject Principal, then the Transmitter MUST make sure that those events are transmitted in the order of time that they were generated OR the Transmitter MUST send only the last events that do not require the previous events affecting the same Subject Principal to be processed by the Receiver, because the previous events are either cancelled by the later events or the previous events are outdated.
-         */
-        PAUSED("paused"),
-
-        /**
-         * The Transmitter MUST NOT transmit events over the stream and will not hold any events for later transmission.
-         */
-        DISABLED("disabled")
-        ;
-
-        private final String value;
-
-        StreamStatus(String value) {
-            this.value = value;
-        }
-
-        @JsonCreator
-        public static StreamStatus fromString(String value) {
-            return StreamStatus.valueOf(value.toUpperCase());
-        }
-
-        @JsonValue
-        public String getValue() {
-            return value;
-        }
-    }
-
-    public static class UpdateStreamRequest extends StreamRepresentation {
-    }
-
-    public static class ReplaceStreamRequest extends UpdateStreamRequest {
+    public static class ReplaceSharedSignalsStreamRequest extends UpdateSharedSignalsStreamRequest {
     }
 
     public static class CreateStreamRequest {
@@ -561,7 +501,7 @@ public class StreamManagementResource {
          */
         @JsonProperty("delivery")
         @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "method")
-        private AbstractDeliveryMethod delivery;
+        private AbstractDeliveryMethodRepresentation delivery;
 
         /**
          * Receiver-Supplied, OPTIONAL. A string that describes the properties of the stream. This is useful in multi-stream systems to identify the stream for human actors. The transmitter MAY truncate the string beyond an allowed max length.
@@ -577,11 +517,11 @@ public class StreamManagementResource {
             this.eventsRequested = eventsRequested;
         }
 
-        public AbstractDeliveryMethod getDelivery() {
+        public AbstractDeliveryMethodRepresentation getDelivery() {
             return delivery;
         }
 
-        public void setDelivery(AbstractDeliveryMethod delivery) {
+        public void setDelivery(AbstractDeliveryMethodRepresentation delivery) {
             this.delivery = delivery;
         }
 
