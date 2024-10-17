@@ -3,9 +3,19 @@ package org.keycloak.protocol.ssf.streams;
 import jakarta.ws.rs.core.UriInfo;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
+import org.keycloak.models.ssf.SharedSignalsStreamModel;
+import org.keycloak.models.ssf.SharedSignalsStreamStatus;
+import org.keycloak.models.ssf.SharedSignalsStreamStatusModel;
 import org.keycloak.protocol.ssf.caep.events.SessionRevoked;
 import org.keycloak.protocol.ssf.set.SecurityEventToken;
+import org.keycloak.protocol.ssf.streams.SharedStreamManagementResource.AddSubjectRequest;
+import org.keycloak.protocol.ssf.streams.SharedStreamManagementResource.RemoveSubjectRequest;
+import org.keycloak.protocol.ssf.streams.SharedStreamManagementResource.UpdateSharedSignalsStreamRequest;
+import org.keycloak.protocol.ssf.streams.SharedStreamManagementResource.UpdateStatusRequestSharedSignals;
+import org.keycloak.protocol.ssf.streams.SharedStreamManagementResource.VerificationRequest;
 import org.keycloak.protocol.ssf.subjects.EmailSubjectId;
+import org.keycloak.representations.idm.ssf.DeliveryMethod;
+import org.keycloak.representations.idm.ssf.SharedSignalsStreamRepresentation;
 import org.keycloak.services.Urls;
 import org.keycloak.urls.UrlType;
 
@@ -14,16 +24,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
-public class SsfStreamProvider {
+public class SharedSignalStreamProvider {
 
-    public List<StreamRepresentation> findStreams(KeycloakSession session, RealmModel realm) {
+    public List<SharedSignalsStreamModel> findStreams(KeycloakSession session, RealmModel realm) {
 
         // search streams, return empty List if none could be found
 
         UriInfo frontendUriInfo = session.getContext().getUri(UrlType.FRONTEND);
         String issuer = Urls.realmIssuer(frontendUriInfo.getBaseUri(), realm.getName());
 
-        var stream = new StreamRepresentation();
+        var stream = new SharedSignalsStreamModel();
         String streamId = UUID.nameUUIDFromBytes("test123".getBytes(StandardCharsets.UTF_8)).toString();
         stream.setId(streamId);
         stream.setIssuer(URI.create(issuer));
@@ -31,8 +41,8 @@ public class SsfStreamProvider {
         stream.setDescription("Test Stream");
 
         URI pollUri = URI.create(issuer + "/ssf/streams/" + streamId + "/poll");
-        var pollDelivery = new StreamRepresentation.PollDeliveryMethod(pollUri);
-        stream.setDelivery(pollDelivery);
+        stream.setDeliveryMethod(DeliveryMethod.POLL_BASED);
+        stream.setEndpointUrl(pollUri);
 
 //        URI pushUri = URI.create("https://example.com/ssf/streams/1234/push");
 //        var pushDelivery = new PushDeliveryMethod(pushUri);
@@ -52,16 +62,16 @@ public class SsfStreamProvider {
                 URI.create("https://schemas.openid.net/secevent/caep/event-type/session-revoked"),
                 URI.create("https://schemas.openid.net/secevent/caep/event-type/credential-change")
         ));
-        List<StreamRepresentation> streams = List.of(stream);
+        List<SharedSignalsStreamModel> streams = List.of(stream);
         return streams;
     }
 
-    public StreamRepresentation createStream(KeycloakSession session, RealmModel realm, StreamManagementResource.CreateStreamRequest request) {
+    public SharedSignalsStreamModel createStream(KeycloakSession session, RealmModel realm, SharedStreamManagementResource.CreateStreamRequest request) {
 
         UriInfo frontendUriInfo = session.getContext().getUri(UrlType.FRONTEND);
         String issuer = Urls.realmIssuer(frontendUriInfo.getBaseUri(), realm.getName());
 
-        var stream = new StreamRepresentation();
+        var stream = new SharedSignalsStreamModel();
         String streamId = UUID.nameUUIDFromBytes("test123".getBytes(StandardCharsets.UTF_8)).toString();
         stream.setId(streamId);
         stream.setIssuer(URI.create(issuer));
@@ -71,15 +81,15 @@ public class SsfStreamProvider {
 
         UriInfo adminUriInfo = session.getContext().getUri(UrlType.ADMIN);
 
-        StreamRepresentation.AbstractDeliveryMethod deliveryMethod;
+        SharedSignalsStreamRepresentation.AbstractDeliveryMethodRepresentation deliveryMethod;
         if (request.getDelivery() == null) {
             URI pollUri = adminUriInfo.getBaseUriBuilder().path("/admin/realms/{realm}/ssf/streams/" + streamId + "/poll").build(realm.getName());
-            deliveryMethod = new StreamRepresentation.PollDeliveryMethod(pollUri);
+            stream.setDeliveryMethod(DeliveryMethod.POLL_BASED);
+            stream.setEndpointUrl(pollUri);
         } else {
-            deliveryMethod = request.getDelivery();
+            stream.setDeliveryMethod(request.getDelivery().getMethod());
+            stream.setEndpointUrl(request.getDelivery().getEndpointUrl());
         }
-        stream.setDelivery(deliveryMethod);
-
 
         List<URI> eventsRequested = request.getEventsRequested();
         if (eventsRequested == null) {
@@ -102,13 +112,13 @@ public class SsfStreamProvider {
         return stream;
     }
 
-    public StreamRepresentation findStream(KeycloakSession session, RealmModel realm, String streamId) {
+    public SharedSignalsStreamModel getStreamById(KeycloakSession session, RealmModel realm, String streamId) {
         return null;
     }
 
-    public StreamRepresentation updateStream(KeycloakSession session, RealmModel realm, StreamManagementResource.UpdateStreamRequest updateRequest) {
+    public SharedSignalsStreamModel updateStream(KeycloakSession session, RealmModel realm, UpdateSharedSignalsStreamRequest updateRequest) {
 
-        if (updateRequest instanceof StreamManagementResource.ReplaceStreamRequest) {
+        if (updateRequest instanceof SharedStreamManagementResource.ReplaceSharedSignalsStreamRequest) {
             // replace eixsting definition with current configuration
         } else {
 
@@ -133,23 +143,42 @@ public class SsfStreamProvider {
         return true;
     }
 
-    public StreamManagementResource.StreamStatusRepresentation getStreamStatus(KeycloakSession session, RealmModel realm, String streamId) {
+    public SharedSignalsStreamStatusModel getStreamStatus(KeycloakSession session, RealmModel realm, String streamId) {
 
-        // fetch stream
-        // compute status
+        var stream = getStreamById(session, realm, streamId);
+        if (stream == null) {
+            return null;
+        }
 
-        StreamManagementResource.StreamStatusRepresentation streamStatusRepresentation = new StreamManagementResource.StreamStatusRepresentation();
-        return streamStatusRepresentation;
+        var statusModel = new SharedSignalsStreamStatusModel();
+        statusModel.setId(stream.getId());
+        statusModel.setReason(stream.getStatusReason());
+        statusModel.setStatus(stream.getStatus());
+
+        return statusModel;
     }
 
-    public StreamManagementResource.StreamStatusRepresentation updateStreamStatus(StreamManagementResource.UpdateStatusRequest updateStatusRequest) {
-        // fetch stream
-        // update status
-        StreamManagementResource.StreamStatusRepresentation streamStatusRepresentation = new StreamManagementResource.StreamStatusRepresentation();
-        return streamStatusRepresentation;
+    public SharedSignalsStreamStatusModel updateStreamStatus(KeycloakSession session, RealmModel realm, UpdateStatusRequestSharedSignals updateStatusRequest) {
+
+        var stream = getStreamById(session, realm, updateStatusRequest.getStream_id());
+        if (stream == null) {
+            return null;
+        }
+
+        stream.setStatus(SharedSignalsStreamStatus.valueOf(updateStatusRequest.getStatus().name()));
+        stream.setStatusReason(updateStatusRequest.getReason());
+
+        // TODO update status
+
+        var statusModel = new SharedSignalsStreamStatusModel();
+        statusModel.setReason(updateStatusRequest.getReason());
+        statusModel.setId(stream.getId());
+        statusModel.setStatus(stream.getStatus());
+
+        return statusModel;
     }
 
-    public boolean addStreamSubject(KeycloakSession session, RealmModel realm, StreamManagementResource.AddSubjectRequest addSubjectRequest) {
+    public boolean addStreamSubject(KeycloakSession session, RealmModel realm, AddSubjectRequest addSubjectRequest) {
 
         // resolve stream by streamid
         // resolve user from subject
@@ -162,7 +191,7 @@ public class SsfStreamProvider {
         return true;
     }
 
-    public boolean removeSubject(KeycloakSession session, RealmModel realm, StreamManagementResource.RemoveSubjectRequest removeSubjectRequest) {
+    public boolean removeSubject(KeycloakSession session, RealmModel realm, RemoveSubjectRequest removeSubjectRequest) {
         // resolve stream by streamid
         // resolve user from subject
         // unregister user to streams
@@ -173,7 +202,7 @@ public class SsfStreamProvider {
         return true;
     }
 
-    public boolean addVerificationEvent(KeycloakSession session, RealmModel realm, StreamManagementResource.VerificationRequest verificationRequest) {
+    public boolean addVerificationEvent(KeycloakSession session, RealmModel realm, VerificationRequest verificationRequest) {
         // resolve stream by streamid
         // extract state
         // if state present add to receiver event, see: https://openid.net/specs/openid-sharedsignals-framework-1_0.html#figure-42

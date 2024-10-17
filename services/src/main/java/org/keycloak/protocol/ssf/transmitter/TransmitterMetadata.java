@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class SsfTransmitterMetadata {
+public class TransmitterMetadata {
 
     @JsonProperty("spec_version")
     private String specVersion;

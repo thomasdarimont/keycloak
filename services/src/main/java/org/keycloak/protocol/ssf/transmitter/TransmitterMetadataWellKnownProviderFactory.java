@@ -9,7 +9,7 @@ import org.keycloak.wellknown.WellKnownProviderFactory;
 /**
  * http://localhost:8081/auth/realms/demo/.well-known/ssf-configuration
  */
-public class SsfTransmitterMetadataWellKnownProviderFactory implements WellKnownProviderFactory {
+public class TransmitterMetadataWellKnownProviderFactory implements WellKnownProviderFactory {
 
     @Override
     public String getId() {
@@ -18,7 +18,7 @@ public class SsfTransmitterMetadataWellKnownProviderFactory implements WellKnown
 
     @Override
     public WellKnownProvider create(KeycloakSession session) {
-        return new SsfTransmitterMetadataWellKnownProvider(session);
+        return new TransmitterMetadataWellKnownProvider(session);
     }
 
     @Override
