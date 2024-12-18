@@ -90,8 +90,8 @@ importers:
         specifier: ^5.4.9
         version: 5.4.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       i18next:
-        specifier: ^23.16.4
-        version: 23.16.4
+        specifier: ^24.1.2
+        version: 24.1.2(typescript@5.6.3)
       i18next-http-backend:
         specifier: ^2.6.2
         version: 2.6.2
@@ -112,7 +112,7 @@ importers:
         version: 7.53.1(react@18.3.1)
       react-i18next:
         specifier: ^15.1.0
-        version: 15.1.0(i18next@23.16.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 15.1.0(i18next@24.1.2(typescript@5.6.3))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react-router-dom:
         specifier: ^6.28.0
         version: 6.28.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -176,7 +176,7 @@ importers:
         version: 5.4.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       admin-ui:
         specifier: 'file:'
-        version: '@keycloak/keycloak-admin-ui@file:js/apps/admin-ui(@types/react@18.3.12)'
+        version: '@keycloak/keycloak-admin-ui@file:js/apps/admin-ui(@types/react@18.3.12)(typescript@5.6.3)'
       dagre:
         specifier: ^0.8.5
         version: 0.8.5
@@ -187,8 +187,8 @@ importers:
         specifier: ^6.0.1
         version: 6.0.1
       i18next:
-        specifier: ^23.16.4
-        version: 23.16.4
+        specifier: ^24.1.2
+        version: 24.1.2(typescript@5.6.3)
       i18next-http-backend:
         specifier: ^2.6.2
         version: 2.6.2
@@ -215,7 +215,7 @@ importers:
         version: 7.53.1(react@18.3.1)
       react-i18next:
         specifier: ^15.1.0
-        version: 15.1.0(i18next@23.16.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 15.1.0(i18next@24.1.2(typescript@5.6.3))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react-router-dom:
         specifier: ^6.28.0
         version: 6.28.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -395,8 +395,8 @@ importers:
         specifier: ^5.4.9
         version: 5.4.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       i18next:
-        specifier: ^23.16.4
-        version: 23.16.4
+        specifier: ^24.1.2
+        version: 24.1.2(typescript@5.6.3)
       keycloak-js:
         specifier: workspace:*
         version: link:../keycloak-js
@@ -414,7 +414,7 @@ importers:
         version: 7.53.1(react@18.3.1)
       react-i18next:
         specifier: ^15.1.0
-        version: 15.1.0(i18next@23.16.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 15.1.0(i18next@24.1.2(typescript@5.6.3))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
     devDependencies:
       '@types/lodash-es':
         specifier: ^4.17.12
@@ -3250,8 +3250,13 @@ packages:
   i18next-http-backend@2.6.2:
     resolution: {integrity: sha512-Hp/kd8/VuoxIHmxsknJXjkTYYHzivAyAF15pzliKzk2TiXC25rZCEerb1pUFoxz4IVrG3fCvQSY51/Lu4ECV4A==}
 
-  i18next@23.16.4:
-    resolution: {integrity: sha512-9NIYBVy9cs4wIqzurf7nLXPyf3R78xYbxExVqHLK9od3038rjpyOEzW+XB130kZ1N4PZ9inTtJ471CRJ4Ituyg==}
+  i18next@24.1.2:
+    resolution: {integrity: sha512-th/075GW0Ub1gYDMHLiZXMGSfGv1aP1VqjT3fma/12hNHCNlH8oJMftvlDzycT/R+KoULWk+xLU8H1JRwV85qw==}
+    peerDependencies:
+      typescript: ^5
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   iconv-lite@0.6.3:
     resolution: {integrity: sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==}
@@ -5658,7 +5663,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@keycloak/keycloak-admin-ui@file:js/apps/admin-ui(@types/react@18.3.12)':
+  '@keycloak/keycloak-admin-ui@file:js/apps/admin-ui(@types/react@18.3.12)(typescript@5.6.3)':
     dependencies:
       '@keycloak/keycloak-admin-client': link:js/libs/keycloak-admin-client
       '@keycloak/keycloak-ui-shared': link:js/libs/ui-shared
@@ -5671,7 +5676,7 @@ snapshots:
       dagre: 0.8.5
       file-saver: 2.0.5
       flat: 6.0.1
-      i18next: 23.16.4
+      i18next: 24.1.2(typescript@5.6.3)
       i18next-http-backend: 2.6.2
       keycloak-js: link:js/libs/keycloak-js
       lodash-es: 4.17.21
@@ -5680,7 +5685,7 @@ snapshots:
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
       react-hook-form: 7.53.1(react@18.3.1)
-      react-i18next: 15.1.0(i18next@23.16.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react-i18next: 15.1.0(i18next@24.1.2(typescript@5.6.3))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react-router-dom: 6.28.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       reactflow: 11.11.4(@types/react@18.3.12)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       use-react-router-breadcrumbs: 4.0.1(react-router-dom@6.28.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
@@ -5689,6 +5694,7 @@ snapshots:
       - encoding
       - immer
       - react-native
+      - typescript
 
   '@kwsites/file-exists@1.1.1':
     dependencies:
@@ -8173,9 +8179,11 @@ snapshots:
     transitivePeerDependencies:
       - encoding
 
-  i18next@23.16.4:
+  i18next@24.1.2(typescript@5.6.3):
     dependencies:
       '@babel/runtime': 7.25.7
+    optionalDependencies:
+      typescript: 5.6.3
 
   iconv-lite@0.6.3:
     dependencies:
@@ -9038,11 +9046,11 @@ snapshots:
     dependencies:
       react: 18.3.1
 
-  react-i18next@15.1.0(i18next@23.16.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  react-i18next@15.1.0(i18next@24.1.2(typescript@5.6.3))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@babel/runtime': 7.25.7
       html-parse-stringify: 3.0.1
-      i18next: 23.16.4
+      i18next: 24.1.2(typescript@5.6.3)
       react: 18.3.1
     optionalDependencies:
       react-dom: 18.3.1(react@18.3.1)
