@@ -1,11 +1,27 @@
+/*
+ * Copyright 2025 Red Hat, Inc. and/or its affiliates
+ * and other contributors as indicated by the @author tags.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.keycloak.representations.idm.ssf;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -68,7 +84,6 @@ public class SharedSignalsStreamRepresentation {
      * REQUIRED. A JSON object containing a set of name/value pairs specifying configuration parameters for the SET delivery method. The actual delivery method is identified by the special key "method" with the value being a URI as defined in Section 10.3.1. The value of the "delivery" field contains two sub-fields:
      */
     @JsonProperty("delivery")
-    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "method")
     private AbstractDeliveryMethodRepresentation delivery;
 
     /**
@@ -164,6 +179,7 @@ public class SharedSignalsStreamRepresentation {
         @JsonProperty("endpoint_url")
         private final URI endpointUrl;
 
+        @JsonProperty("metadata")
         private final Map<String, Object> metadata;
 
         protected AbstractDeliveryMethodRepresentation(DeliveryMethod method, URI endpointUrl) {
@@ -188,6 +204,14 @@ public class SharedSignalsStreamRepresentation {
         @JsonAnyGetter
         public Object getMetadataValue(String key) {
             return this.metadata.get(key);
+        }
+
+        @JsonCreator
+        public static AbstractDeliveryMethodRepresentation create(@JsonProperty("method") DeliveryMethod method, @JsonProperty("endpoint_url") URI endpointUrl) {
+            return switch(method) {
+                case PUSH_BASED -> new PushDeliveryMethodRepresentation(endpointUrl);
+                case POLL_BASED -> new PollDeliveryMethodRepresentation(endpointUrl);
+            };
         }
     }
 

@@ -1,9 +1,25 @@
+/*
+ * Copyright 2025 Red Hat, Inc. and/or its affiliates
+ * and other contributors as indicated by the @author tags.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.keycloak.protocol.ssf.streams;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.POST;
@@ -30,6 +46,7 @@ import org.keycloak.representations.idm.ssf.SharedSignalsStreamRepresentation.Ab
 import org.keycloak.representations.idm.ssf.SharedSignalsStreamStatusRepresentation;
 import org.keycloak.services.resources.admin.AdminEventBuilder;
 import org.keycloak.services.resources.admin.permissions.AdminPermissionEvaluator;
+import org.keycloak.utils.AccessTokenUtils;
 
 import java.net.URI;
 import java.util.List;
@@ -52,6 +69,14 @@ public class SharedStreamManagementResource {
         this.adminEvent = adminEvent;
         // TODO lookup provide from session
         this.streamProvider = new SharedSignalStreamProvider();
+
+        auth.realm().requireViewRealm();
+    }
+
+    private void requireScopeOneOf(String ... scopes) {
+        if (!AccessTokenUtils.hasAnyScope(auth.adminAuth().getToken(), scopes)){
+            throw new ForbiddenException("Missing required scopes in access token");
+        }
     }
 
     /**
@@ -64,13 +89,10 @@ public class SharedStreamManagementResource {
     @Produces(MediaType.APPLICATION_JSON)
     @POST
     @Path("/streams")
-    public Response createStream(@Context UriInfo uriInfo) {
+    public Response createStream(CreateStreamRequest createRequest, @Context UriInfo uriInfo) {
 
         // TODO check user permissions streams:create
-        auth.realm().requireViewRealm();
-
-        // TODO add CreateStreamRequest to parameters
-        CreateStreamRequest createRequest = new CreateStreamRequest();
+        requireScopeOneOf("ssf.manage");
 
         var stream = streamProvider.createStream(session, realm, createRequest);
 
@@ -100,8 +122,8 @@ public class SharedStreamManagementResource {
     @Path("/streams")
     public Response findStreams(@QueryParam("stream_id") String streamId) {
 
-        // TODO check user permissions streams:view
-        auth.realm().requireViewRealm();
+        // TODO check user permissions streams:read
+        requireScopeOneOf("ssf.manage", "ssf.read");
 
         if (streamId != null) {
             /*
@@ -109,10 +131,10 @@ public class SharedStreamManagementResource {
             See: https://openid.net/specs/openid-sharedsignals-framework-1_0.html#section-7.1.1.2
              */
             var stream = streamProvider.getStreamById(session, realm, streamId);
-            var rep = ModelToRepresentation.toRepresentation(stream);
-            if (rep == null) {
+            if (stream == null) {
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
+            var rep = ModelToRepresentation.toRepresentation(stream);
             return Response.ok(rep).build();
         }
 
@@ -141,7 +163,7 @@ public class SharedStreamManagementResource {
     public Response updateStream(UpdateSharedSignalsStreamRequest updateRequest, @Context UriInfo uriInfo) {
 
         // TODO check user permissions streams:update
-        auth.realm().requireViewRealm();
+        requireScopeOneOf("ssf.manage");
 
         SharedSignalsStreamModel stream = streamProvider.updateStream(session, realm, updateRequest);
         SharedSignalsStreamRepresentation rep = ModelToRepresentation.toRepresentation(stream);
@@ -170,9 +192,9 @@ public class SharedStreamManagementResource {
     public Response replaceStream(ReplaceSharedSignalsStreamRequest updateRequest, @Context UriInfo uriInfo) {
 
         // TODO check user permissions streams:update
-        auth.realm().requireViewRealm();
+        requireScopeOneOf("ssf.manage");
 
-        SharedSignalsStreamModel stream = streamProvider.updateStream(session, realm, updateRequest);
+        SharedSignalsStreamModel stream = streamProvider.replaceStream(session, realm, updateRequest);
         SharedSignalsStreamRepresentation rep = ModelToRepresentation.toRepresentation(stream);
 
         // Pending conditions or errors are signaled with HTTP status codes as follows:
@@ -202,7 +224,7 @@ public class SharedStreamManagementResource {
         checkRequiredParameter(streamId, "stream_id");
 
         // TODO check user permissions streams:update
-        auth.realm().requireViewRealm();
+        requireScopeOneOf("ssf.manage");
 
         boolean deleted = streamProvider.deleteStream(session, realm, streamId);
 
@@ -222,7 +244,7 @@ public class SharedStreamManagementResource {
     @Path("/streams/{streamId}/poll")
     public Response pollStreamEvents(@PathParam("streamId") String streamId) {
 
-        auth.realm().requireViewRealm();
+        requireScopeOneOf("ssf.read");
 
         List<SecurityEventToken> tokens = streamProvider.retrieveEvents(session, realm, streamId);
 
@@ -252,7 +274,7 @@ public class SharedStreamManagementResource {
         checkRequiredParameter(streamId, "stream_id");
 
         // TODO check user permissions streams:update
-        auth.realm().requireViewRealm();
+        requireScopeOneOf("ssf.read");
 
         SharedSignalsStreamStatusModel streamStatusModel = streamProvider.getStreamStatus(session, realm, streamId);
         SharedSignalsStreamStatusRepresentation statusRep = ModelToRepresentation.toRepresentation(streamStatusModel);
@@ -283,7 +305,8 @@ public class SharedStreamManagementResource {
         checkRequiredParameter(updateStatusRequest.getStatus(), "status");
 
         // TODO check user permissions stream-status:update
-        auth.realm().requireViewRealm();
+        requireScopeOneOf("ssf.read");
+
         SharedSignalsStreamStatusModel streamStatusModel = streamProvider.updateStreamStatus(session, realm, updateStatusRequest);
         SharedSignalsStreamStatusRepresentation statusRep = ModelToRepresentation.toRepresentation(streamStatusModel);
 
@@ -313,7 +336,7 @@ public class SharedStreamManagementResource {
         checkRequiredParameter(addSubjectRequest.getStreamId(), "stream_id");
         checkRequiredParameter(addSubjectRequest.getSubject(), "subject");
 
-        auth.realm().requireViewRealm();
+        requireScopeOneOf("ssf.manage");
 
         boolean added = streamProvider.addStreamSubject(session, realm, addSubjectRequest);
 
@@ -332,7 +355,7 @@ public class SharedStreamManagementResource {
         checkRequiredParameter(removeSubjectRequest.getStreamId(), "stream_id");
         checkRequiredParameter(removeSubjectRequest.getSubject(), "subject");
 
-        auth.realm().requireViewRealm();
+        requireScopeOneOf("ssf.manage");
 
         boolean removed = streamProvider.removeSubject(session, realm, removeSubjectRequest);
 
@@ -359,7 +382,7 @@ public class SharedStreamManagementResource {
 
         checkRequiredParameter(verificationRequest.getStreamId(), "stream_id");
 
-        auth.realm().requireViewRealm();
+        requireScopeOneOf("ssf.manage");
 
         // Errors are signaled with HTTP status codes as follows:
         /*
@@ -500,7 +523,6 @@ public class SharedStreamManagementResource {
          * Receiver-Supplied, OPTIONAL. A JSON object containing a set of name/value pairs specifying configuration parameters for the SET delivery method. The actual delivery method is identified by the special key "method" with the value being a URI as defined in Section 10.3.1. The value of the "delivery" field contains two sub-fields:
          */
         @JsonProperty("delivery")
-        @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "method")
         private AbstractDeliveryMethodRepresentation delivery;
 
         /**
