@@ -208,10 +208,14 @@ public class SharedSignalsStreamRepresentation {
 
         @JsonCreator
         public static AbstractDeliveryMethodRepresentation create(@JsonProperty("method") DeliveryMethod method, @JsonProperty("endpoint_url") URI endpointUrl) {
-            return switch(method) {
-                case PUSH_BASED -> new PushDeliveryMethodRepresentation(endpointUrl);
-                case POLL_BASED -> new PollDeliveryMethodRepresentation(endpointUrl);
-            };
+            switch (method) {
+                case PUSH_BASED:
+                    return new PushDeliveryMethodRepresentation(endpointUrl);
+                case POLL_BASED:
+                    return new PollDeliveryMethodRepresentation(endpointUrl);
+                default:
+                    throw new IllegalArgumentException();
+            }
         }
     }
 
