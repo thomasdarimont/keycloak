@@ -87,8 +87,8 @@ importers:
         specifier: ^5.4.2
         version: 5.4.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@patternfly/react-table':
-        specifier: ^5.4.12
-        version: 5.4.12(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: ^5.4.16
+        version: 5.4.16(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       i18next:
         specifier: ^24.1.2
         version: 24.1.2(typescript@5.7.2)
@@ -169,8 +169,8 @@ importers:
         specifier: ^5.4.1
         version: 5.4.1
       '@patternfly/react-table':
-        specifier: ^5.4.12
-        version: 5.4.12(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: ^5.4.16
+        version: 5.4.16(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@uiw/react-textarea-code-editor':
         specifier: ^3.1.0
         version: 3.1.0(@babel/runtime@7.26.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -386,8 +386,8 @@ importers:
         specifier: ^5.4.1
         version: 5.4.1
       '@patternfly/react-table':
-        specifier: ^5.4.12
-        version: 5.4.12(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: ^5.4.16
+        version: 5.4.16(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       i18next:
         specifier: ^24.1.2
         version: 24.1.2(typescript@5.7.2)
@@ -1320,8 +1320,8 @@ packages:
       react: ^17 || ^18
       react-dom: ^17 || ^18
 
-  '@patternfly/react-core@5.4.11':
-    resolution: {integrity: sha512-+WgxVnnqiZiASB+zMBA8Z1YuaX32/ehJ8Y4UB+j2xIB/tjvBqKNVn7n4VPy56F+G9nJ92Kv8Tekccau6bL6jFg==}
+  '@patternfly/react-core@5.4.14':
+    resolution: {integrity: sha512-oXVMzLs9Pa+xmdc39L2u05zbXfY3mWuOFi4GDv44GPdDexZUFy5W69+Nv5P8cwfMim55Nf5kKYpcqmatD2bBXw==}
     peerDependencies:
       react: ^17 || ^18
       react-dom: ^17 || ^18
@@ -1335,8 +1335,8 @@ packages:
   '@patternfly/react-styles@5.4.1':
     resolution: {integrity: sha512-XA8PXksD8uiA3RTwxdUwJXOCf+V6sVd+2HKapWAdRLvtSV+Sdk7NgCvalb4IAQncsddLopjPQD8gAHA298+N8w==}
 
-  '@patternfly/react-table@5.4.12':
-    resolution: {integrity: sha512-ZpW/49bWR9JkZCyBGBCbHNdJt0Vn34g5BaXlVF/P7Tl0WPdxFLWS5EQywiXEhu8qoOhz3uGcyGwACCJCvmqCSg==}
+  '@patternfly/react-table@5.4.16':
+    resolution: {integrity: sha512-K/xNdTvFKFyD6WhuBU/GCq/3LTrSaObdXSTmzefWWcPcN0gcf/J3ouiuapj951JIsP13CMmwJBNtEa3aHR8igg==}
     peerDependencies:
       react: ^17 || ^18
       react-dom: ^17 || ^18
@@ -3714,6 +3714,7 @@ packages:
 
   jquery@3.4.1:
     resolution: {integrity: sha512-36+AdBzCL+y6qjw5Tx7HgzeGCzC81MDDgaUP8ld2zhx58HdqXGoBd+tHdrBMiyjGQs0Hxs/MLZTu/eHNJJuWPw==}
+    deprecated: This version is deprecated. Please upgrade to the latest version or find support at https://www.herodevs.com/support/jquery-nes.
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -4395,6 +4396,12 @@ packages:
 
   react-dropzone@14.3.5:
     resolution: {integrity: sha512-9nDUaEEpqZLOz5v5SUcFA0CjM4vq8YbqO0WRls+EYT7+DvxUdzDPKNCPLqGfj3YL9MsniCLCD4RFA6M95V6KMQ==}
+    engines: {node: '>= 10.13'}
+    peerDependencies:
+      react: '>= 16.8 || 18.0.0'
+
+  react-dropzone@14.3.8:
+    resolution: {integrity: sha512-sBgODnq+lcA4P296DY4wacOZz3JFpD99fp+hb//iBO2HHnyeZU3FwWyXJ6salNpqQdsZrgMrotuko/BdJMV8Ug==}
     engines: {node: '>= 10.13'}
     peerDependencies:
       react: '>= 16.8 || 18.0.0'
@@ -6079,7 +6086,7 @@ snapshots:
       '@patternfly/react-core': 5.4.10(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@patternfly/react-icons': 5.4.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@patternfly/react-styles': 5.4.1
-      '@patternfly/react-table': 5.4.12(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@patternfly/react-table': 5.4.16(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@uiw/react-textarea-code-editor': 3.1.0(@babel/runtime@7.26.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       dagre: 0.8.5
       file-saver: 2.0.5
@@ -6238,7 +6245,7 @@ snapshots:
       react-dropzone: 14.3.5(react@18.3.1)
       tslib: 2.8.1
 
-  '@patternfly/react-core@5.4.11(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@patternfly/react-core@5.4.14(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@patternfly/react-icons': 5.4.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@patternfly/react-styles': 5.4.1
@@ -6246,7 +6253,7 @@ snapshots:
       focus-trap: 7.6.2
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-      react-dropzone: 14.3.5(react@18.3.1)
+      react-dropzone: 14.3.8(react@18.3.1)
       tslib: 2.8.1
 
   '@patternfly/react-icons@5.4.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
@@ -6256,9 +6263,9 @@ snapshots:
 
   '@patternfly/react-styles@5.4.1': {}
 
-  '@patternfly/react-table@5.4.12(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@patternfly/react-table@5.4.16(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
-      '@patternfly/react-core': 5.4.11(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@patternfly/react-core': 5.4.14(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@patternfly/react-icons': 5.4.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@patternfly/react-styles': 5.4.1
       '@patternfly/react-tokens': 5.4.1
@@ -9644,6 +9651,13 @@ snapshots:
       scheduler: 0.23.2
 
   react-dropzone@14.3.5(react@18.3.1):
+    dependencies:
+      attr-accept: 2.2.5
+      file-selector: 2.1.2
+      prop-types: 15.8.1
+      react: 18.3.1
+
+  react-dropzone@14.3.8(react@18.3.1):
     dependencies:
       attr-accept: 2.2.5
       file-selector: 2.1.2
