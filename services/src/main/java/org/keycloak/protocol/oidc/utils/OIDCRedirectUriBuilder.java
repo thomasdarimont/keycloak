@@ -35,6 +35,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.net.URI;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -170,6 +171,70 @@ public abstract class OIDCRedirectUriBuilder {
                         .append("\" VALUE=\"")
                         .append(HtmlUtils.escapeAttribute(param.getValue()))
                         .append("\" />");
+            }
+
+            builder.append("      <NOSCRIPT>");
+            builder.append("        <P>JavaScript is disabled. We strongly recommend to enable it. Click the button below to continue .</P>");
+            builder.append("        <INPUT name=\"continue\" TYPE=\"SUBMIT\" VALUE=\"CONTINUE\" />");
+            builder.append("      </NOSCRIPT>");
+            builder.append("    </FORM>");
+            builder.append("  </BODY>");
+            builder.append("</HTML>");
+
+            return Response.status(Response.Status.OK)
+                    .type(MediaType.TEXT_HTML_TYPE)
+                    .entity(builder.toString()).build();
+        }
+
+    }
+
+    public static class FormPostAuthRequestSubmitterBuilder extends OIDCRedirectUriBuilder {
+
+        private final String displayName;
+        private Map<String, List<String>> params = new HashMap<>();
+
+        public FormPostAuthRequestSubmitterBuilder(String displayName, KeycloakUriBuilder uriBuilder) {
+            super(uriBuilder);
+            this.displayName = displayName;
+        }
+
+        @Override
+        public OIDCRedirectUriBuilder addParam(String paramName, String paramValue) {
+            params.put(paramName, List.of(paramValue));
+            return this;
+        }
+
+        public OIDCRedirectUriBuilder addParam(String paramName, List<String> paramValues) {
+            params.put(paramName, paramValues);
+            return this;
+        }
+
+        @Override
+        public Response build() {
+            StringBuilder builder = new StringBuilder();
+            URI authorizeUrl = uriBuilder.build();
+
+            builder.append("<HTML>");
+            builder.append("  <HEAD>");
+            builder.append("    <TITLE>" + displayName + "</TITLE>");
+            builder.append("  </HEAD>");
+            builder.append("  <BODY Onload=\"document.forms[0].submit()\">");
+
+            builder.append("    <FORM METHOD=\"POST\" ACTION=\"")
+                    .append(HtmlUtils.escapeAttribute(authorizeUrl.toString()))
+                    .append("\">");
+
+            for (Map.Entry<String, List<String>> param : params.entrySet()) {
+
+                String key = param.getKey();
+                List<String> values = param.getValue();
+                for (String value : values) {
+                    builder.append("  <INPUT TYPE=\"HIDDEN\" NAME=\"")
+                            .append(key)
+                            .append("\" VALUE=\"")
+                            .append(HtmlUtils.escapeAttribute(value))
+                            .append("\" />");
+                }
             }
 
             builder.append("      <NOSCRIPT>");

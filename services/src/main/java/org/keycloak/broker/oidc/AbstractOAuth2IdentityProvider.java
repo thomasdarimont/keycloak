@@ -19,6 +19,7 @@ package org.keycloak.broker.oidc;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jboss.logging.Logger;
+import org.keycloak.common.util.KeycloakUriBuilder;
 import org.keycloak.crypto.KeyType;
 import org.keycloak.crypto.KeyUse;
 import org.keycloak.http.HttpRequest;
@@ -58,6 +59,7 @@ import org.keycloak.models.UserSessionModel;
 import org.keycloak.models.utils.KeycloakModelUtils;
 import org.keycloak.protocol.oidc.OIDCLoginProtocol;
 import org.keycloak.protocol.oidc.endpoints.AuthorizationEndpoint;
+import org.keycloak.protocol.oidc.utils.OIDCRedirectUriBuilder;
 import org.keycloak.protocol.oidc.utils.PkceUtils;
 import org.keycloak.representations.AccessTokenResponse;
 import org.keycloak.representations.JsonWebToken;
@@ -83,10 +85,15 @@ import jakarta.ws.rs.core.UriBuilder;
 import jakarta.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -137,10 +144,34 @@ public abstract class AbstractOAuth2IdentityProvider<C extends OAuth2IdentityPro
         try {
             URI authorizationUrl = createAuthorizationUrl(request).build();
 
+            if ("POST".equals(getConfig().getConfig().getOrDefault("requestMethod", "GET"))) {
+                return createAuthorizationRequestFormPost(authorizationUrl);
+            }
+
             return Response.seeOther(authorizationUrl).build();
         } catch (Exception e) {
             throw new IdentityBrokerException("Could not create authentication request.", e);
         }
+    }
+
+    protected Response createAuthorizationRequestFormPost(URI authorizationUrl) {
+        OIDCRedirectUriBuilder.FormPostAuthRequestSubmitterBuilder builder = new OIDCRedirectUriBuilder.FormPostAuthRequestSubmitterBuilder(getConfig().getDisplayName(), KeycloakUriBuilder.fromUri(getConfig().getAuthorizationUrl()));
+        String query = authorizationUrl.getQuery();
+        Map<String, List<String>> paramMap = new HashMap<>();
+        if (query != null) {
+            for (String param : query.split("&")) {
+                String[] pair = param.split("=", 2);
+                String key = URLDecoder.decode(pair[0], StandardCharsets.UTF_8);
+                String value = pair.length > 1 ? URLDecoder.decode(pair[1], StandardCharsets.UTF_8) : "";
+                paramMap.computeIfAbsent(key, k -> new ArrayList<>()).add(value);
+            }
+        }
+
+        for (Map.Entry<String, List<String>> entry : paramMap.entrySet()) {
+            builder.addParam(entry.getKey(), entry.getValue());
+        }
+
+        return builder.build();
     }
 
     @Override
