@@ -19,7 +19,7 @@ package org.keycloak.protocol.oid4vc.model;
 
 
 /**
- * Enum to handle potential errors in issuing credentials with the error types defined in OID4VCI
+ * Enum to handle potential errors in issuing credentials with the error types defined in OpenID4VCI
  * {@see https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html}
  *
  * @author <a href="https://github.com/wistefan">Stefan Wiedemann</a>

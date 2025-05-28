@@ -21,7 +21,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Represents an error response, containing the error type as defined by OID4VCI
+ * Represents an error response, containing the error type as defined by OpenID4VCI
  *
  * @author <a href="https://github.com/wistefan">Stefan Wiedemann</a>
  */

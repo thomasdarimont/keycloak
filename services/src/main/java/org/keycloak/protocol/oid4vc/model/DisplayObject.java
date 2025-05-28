@@ -25,7 +25,7 @@ import org.keycloak.util.JsonSerialization;
 import java.io.IOException;
 
 /**
- * Represents a DisplayObject, as used in the OID4VCI Credentials Issuer Metadata
+ * Represents a DisplayObject, as used in the OpenID4VCI Credential Issuer Metadata
  * {@see https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-issuer-metadata}
  *
  * @author <a href="https://github.com/wistefan">Stefan Wiedemann</a>

@@ -10,15 +10,15 @@ This is an experimental feature and should not be used in production. Backward c
 
 === Introduction
 
-This chapter provides step-by-step instructions for configuring {project_name} as a Verifiable Credential Issuer using the OpenID for Verifiable Credential Issuance (OID4VCI) protocol. It outlines the process for setting up a {project_name} instance to securely issue and manage Verifiable Credentials (VCs), supporting decentralized identity solutions.
+This chapter provides step-by-step instructions for configuring {project_name} as a Verifiable Credential Issuer using the OpenID for Verifiable Credential Issuance (OpenID4VCI) protocol. It outlines the process for setting up a {project_name} instance to securely issue and manage Verifiable Credentials (VCs), supporting decentralized identity solutions.
 
 === What are Verifiable Credentials (VCs)?
 
 Verifiable Credentials (VCs) are cryptographically signed, tamper-evident data structures that represent claims about an entity, such as a person, organization, or device. They are foundational to decentralized identity systems, allowing secure and privacy-preserving identity verification without reliance on centralized authorities. VCs support advanced features like selective disclosure and zero-knowledge proofs, enhancing user privacy and security.
 
-=== What is OID4VCI?
+=== What is OpenID4VCI?
 
-OpenID for Verifiable Credential Issuance (OID4VCI) is an extension of the OpenID Connect (OIDC) protocol. It defines a standardized, interoperable framework for credential issuers to deliver VCs to holders, who can then present them to verifiers. OID4VCI leverages {project_name}'s existing authentication and authorization capabilities to streamline VC issuance.
+OpenID for Verifiable Credential Issuance (OpenID4VCI) is an extension of the OpenID Connect (OIDC) protocol. It defines a standardized, interoperable framework for credential issuers to deliver VCs to holders, who can then present them to verifiers. OpenID4VCI leverages {project_name}'s existing authentication and authorization capabilities to streamline VC issuance.
 
 === Scope of This Chapter
 
@@ -359,7 +359,7 @@ A successful response returns a JSON object containing details such as:
 
 === Conclusion
 
-You have successfully configured **{project_name} as a Verifiable Credential Issuer** using the **OID4VCI protocol**.
+You have successfully configured **{project_name} as a Verifiable Credential Issuer** using the **OpenID4VCI protocol**.
 This setup leverages {project_name}'s robust **identity management capabilities** to issue secure, **standards-compliant VCs**.
 
 For a **complete reference implementation**, see the sample project:

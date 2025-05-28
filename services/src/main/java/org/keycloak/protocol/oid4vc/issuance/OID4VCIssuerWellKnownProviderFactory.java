@@ -25,7 +25,7 @@ import org.keycloak.wellknown.WellKnownProvider;
 import org.keycloak.wellknown.WellKnownProviderFactory;
 
 /**
- * {@link  WellKnownProviderFactory} implementation for the OID4VCI metadata
+ * {@link  WellKnownProviderFactory} implementation for the OpenID4VCI metadata
  * <p>
  * {@see https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-11.2.2}
  *

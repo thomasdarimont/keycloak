@@ -115,7 +115,7 @@ public class Profile {
 
         PERSISTENT_USER_SESSIONS("Persistent online user sessions across restarts and upgrades", Type.DEFAULT),
 
-        OID4VC_VCI("Support for the OID4VCI protocol as part of OID4VC.", Type.EXPERIMENTAL),
+        OID4VC_VCI("Support for the OpenID for Verifiable Credential Issuance protocol as part of OpenID4VC.", Type.EXPERIMENTAL),
 
         OPENTELEMETRY("OpenTelemetry Tracing", Type.DEFAULT),
 

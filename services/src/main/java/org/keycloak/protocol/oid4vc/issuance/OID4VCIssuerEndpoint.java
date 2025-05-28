@@ -199,7 +199,7 @@ public class OID4VCIssuerEndpoint {
     }
 
     /**
-     * Provides the URI to the OID4VCI compliant credentials offer
+     * Provides the URI to the OpenID4VCI compliant credentials offer
      */
     @GET
     @Produces({MediaType.APPLICATION_JSON, RESPONSE_TYPE_IMG_PNG})
@@ -271,7 +271,7 @@ public class OID4VCIssuerEndpoint {
     }
 
     /**
-     * Provides an OID4VCI compliant credentials offer
+     * Provides an OpenID4VCI compliant credentials offer
      */
     @GET
     @Produces(MediaType.APPLICATION_JSON)

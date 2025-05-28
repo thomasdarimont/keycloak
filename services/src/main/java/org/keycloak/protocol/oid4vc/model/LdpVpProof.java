@@ -21,10 +21,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * LDP-VP Proof for Credential Request in OID4VCI (Section 8.2.1.1).
+ * LDP-VP Proof for Credential Request in OpenID4VCI (Section 8.2.1.1).
  * Represents a JSON-LD Verifiable Presentation for holder binding.
  *
- * @see <a href="https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request">OID4VCI Credential Request</a>
+ * @see <a href="https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request">OpenID4VCI Credential Request</a>
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class LdpVpProof implements Proof {

@@ -21,7 +21,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Represents a transaction code as used in the pre-authorized grant in the Credential Offer in OID4VCI
+ * Represents a transaction code as used in the pre-authorized grant in the Credential Offer in OpenID4VCI
  * {@see https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer}
  *
  * @author <a href="https://github.com/wistefan">Stefan Wiedemann</a>

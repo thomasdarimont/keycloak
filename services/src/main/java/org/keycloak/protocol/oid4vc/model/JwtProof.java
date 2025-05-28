@@ -21,7 +21,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * JWT Proof for Credential Request in OID4VCI (Section 8.2.1.1).
+ * JWT Proof for Credential Request in OpenID4VCI (Section 8.2.1.1).
  * Represents a signed JWT for holder binding.
  *
  * @author <a href="https://github.com/wistefan">Stefan Wiedemann</a>

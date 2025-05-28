@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Represents a CredentialsOffer according to the OID4VCI Spec
+ * Represents a CredentialsOffer according to the OpenID4VCI Spec
  * {@see https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer}
  *
  * @author <a href="https://github.com/wistefan">Stefan Wiedemann</a>

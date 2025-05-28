@@ -21,7 +21,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Represents a CredentialResponse according to the OID4VCI Spec
+ * Represents a CredentialResponse according to the OpenID4VCI Spec
  * {@see https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-response}
  *
  * @author <a href="https://github.com/wistefan">Stefan Wiedemann</a>

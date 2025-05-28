@@ -30,7 +30,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * A supported credential, as used in the Credentials Issuer Metadata in OID4VCI
+ * A supported credential, as used in the Credentials Issuer Metadata in OpenID4VCI
  * {@see https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-issuer-metadata}
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)

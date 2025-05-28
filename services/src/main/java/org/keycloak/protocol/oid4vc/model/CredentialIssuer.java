@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Represents a credentials issuer according to the OID4VCI Credentials Issuer Metadata
+ * Represents a credentials issuer according to the OpenID4VCI Credential Issuer Metadata
  * {@see https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-issuer-metadata}
  *
  * @author <a href="https://github.com/wistefan">Stefan Wiedemann</a>
