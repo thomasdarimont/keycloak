@@ -31,6 +31,7 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.util.Arrays.asList;
 
@@ -169,8 +170,30 @@ public final class Database {
                         return jdbcUrl;
                     }
 
+                    /**
+                     * This allows multiple process to access the same database.
+                     * This is useful to be able to export a realm from a running Keycloak with embedded h2 database.
+                     */
+                    private String addH2AutoServer(String jdbcUrl) {
+                        if (!jdbcUrl.contains("AUTO_SERVER=")) {
+                            jdbcUrl = jdbcUrl + ";AUTO_SERVER=true";
+                        }
+                        return jdbcUrl;
+                    }
+
                     private String amendH2(String jdbcUrl) {
-                        return addH2CloseOnExit(addH2NonKeywords(jdbcUrl));
+
+                        String adjustedJdbcUrl = addH2NonKeywords(jdbcUrl);
+
+                        // See: org.keycloak.quarkus.runtime.configuration.ConfigArgsConfigSource
+                        String cliArgs = System.getProperty("kc.config.args");
+                        String command = Stream.of(cliArgs.split(", ")).dropWhile(option -> option.startsWith("--")).findFirst().orElse(null);
+                        // find better way to detect start-dev and export command
+                        if ("start-dev".equals(command) || "export".equals(command)) {
+                            return addH2AutoServer(adjustedJdbcUrl);
+                        }
+
+                        return addH2CloseOnExit(adjustedJdbcUrl);
                     }
                 },
                 asList("liquibase.database.core.H2Database"),
