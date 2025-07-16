@@ -17,6 +17,7 @@
 
 package org.keycloak.jose.jws;
 
+import org.keycloak.jose.jws.crypto.ECDSAProvider;
 import org.keycloak.jose.jws.crypto.RSAProvider;
 import org.keycloak.jose.jws.crypto.SignatureProvider;
 
@@ -37,9 +38,9 @@ public enum Algorithm {
     PS256(AlgorithmType.RSA, null),
     PS384(AlgorithmType.RSA, null),
     PS512(AlgorithmType.RSA, null),
-    ES256(AlgorithmType.ECDSA, null),
-    ES384(AlgorithmType.ECDSA, null),
-    ES512(AlgorithmType.ECDSA, null),
+    ES256(AlgorithmType.ECDSA, new ECDSAProvider()),
+    ES384(AlgorithmType.ECDSA, new ECDSAProvider()),
+    ES512(AlgorithmType.ECDSA, new ECDSAProvider()),
     EdDSA(AlgorithmType.EDDSA, null),
     Ed25519(AlgorithmType.EDDSA, null),
     Ed448(AlgorithmType.EDDSA, null)
