@@ -17,8 +17,8 @@
 
 package org.keycloak.protocol.oidc;
 
-import jakarta.ws.rs.HEAD;
 import org.jboss.resteasy.reactive.NoCache;
+import org.keycloak.common.Profile;
 import org.keycloak.http.HttpRequest;
 import org.keycloak.OAuthErrorException;
 import org.keycloak.common.ClientConnection;
@@ -28,6 +28,7 @@ import org.keycloak.jose.jwk.JSONWebKeySet;
 import org.keycloak.models.Constants;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
+import org.keycloak.protocol.oauth2.attestation.AttestationChallengeEndpoint;
 import org.keycloak.protocol.oidc.endpoints.AuthorizationEndpoint;
 import org.keycloak.protocol.oidc.endpoints.LoginStatusIframeEndpoint;
 import org.keycloak.protocol.oidc.endpoints.LogoutEndpoint;
@@ -177,6 +178,19 @@ public class OIDCLoginProtocolService {
     @Path("token")
     public Object token() {
         return new TokenEndpoint(session, tokenManager, event);
+    }
+
+    /**
+     * Attestation based Client Authentication Challenge Endpoint
+     * @return
+     */
+    @Path("challenge")
+    public Object challenge() {
+        if (Profile.isFeatureEnabled(Profile.Feature.OAUTH_ABCA)) {
+            return new AttestationChallengeEndpoint(session, event);
+        } else {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
     }
 
     @Path("login-status-iframe.html")

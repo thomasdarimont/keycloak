@@ -33,6 +33,7 @@ import { useServerInfo } from "../../context/server-info/ServerInfoProvider";
 import { FormFields } from "../ClientDetails";
 import { ClientSecret } from "./ClientSecret";
 import { SignedJWT } from "./SignedJWT";
+import { ClientAttestation } from "./ClientAttestation";
 import { X509 } from "./X509";
 import { convertAttributeNameToForm } from "../../util";
 
@@ -181,6 +182,9 @@ export const Credentials = ({ client, save, refresh }: CredentialsProps) => {
               <FormGroup>
                 <Alert variant="info" isInline title={t("signedJWTConfirm")} />
               </FormGroup>
+            )}
+            {clientAuthenticatorType === "client-attestation" && (
+              <ClientAttestation />
             )}
             {clientAuthenticatorType === "client-x509" && <X509 />}
             {providerProperties && (

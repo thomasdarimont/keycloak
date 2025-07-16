@@ -25,6 +25,7 @@ import org.keycloak.jose.jws.JWSHeader;
 import org.keycloak.jose.jws.JWSInput;
 import org.keycloak.jose.jws.JWSInputException;
 import org.keycloak.crypto.SignatureVerifierContext;
+import org.keycloak.jose.jws.crypto.ECDSAProvider;
 import org.keycloak.jose.jws.crypto.HMACProvider;
 import org.keycloak.jose.jws.crypto.RSAProvider;
 import org.keycloak.representations.JsonWebToken;
@@ -461,6 +462,13 @@ public class TokenVerifier<T extends JsonWebToken> {
                         throw new TokenSignatureInvalidException(token, "Invalid token signature");
                     }
                     break;
+                case ECDSA:
+                    if (publicKey == null) {
+                        throw new VerificationException("Public key not set");
+                    }
+                    if (!ECDSAProvider.verify(jws, publicKey)) {
+                        throw new TokenSignatureInvalidException(token, "Invalid token signature");
+                    }
                 default:
                     throw new VerificationException("Unknown or unsupported token algorithm");
             }

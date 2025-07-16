@@ -155,6 +155,21 @@ public class OIDCConfigurationRepresentation {
     @JsonProperty("code_challenge_methods_supported")
     private List<String> codeChallengeMethodsSupported;
 
+    /**
+     * See: https://datatracker.ietf.org/doc/html/draft-ietf-oauth-attestation-based-client-auth-07#section-10.1
+     */
+    @JsonProperty("client_attestation_signing_alg_values_supported")
+    private List<String> clientAttestationSigningAlgValuesSupported;
+
+    /**
+     * See: https://datatracker.ietf.org/doc/html/draft-ietf-oauth-attestation-based-client-auth-07#section-10.1
+     */
+    @JsonProperty("client_attestation_pop_signing_alg_values_supported")
+    private List<String> clientAttestationPopSigningAlgValuesSupported;
+
+    @JsonProperty("challenge_endpoint")
+    private String challengeEndpoint;
+
     // KEYCLOAK-6771 Certificate Bound Token
     // https://tools.ietf.org/html/draft-ietf-oauth-mtls-08#section-6.2
     @JsonProperty("tls_client_certificate_bound_access_tokens")
@@ -664,5 +679,29 @@ public class OIDCConfigurationRepresentation {
 
     public void setPromptValuesSupported(List<String> promptValuesSupported) {
         this.promptValuesSupported = promptValuesSupported;
+    }
+
+    public List<String> getClientAttestationSigningAlgValuesSupported() {
+        return clientAttestationSigningAlgValuesSupported;
+    }
+
+    public void setClientAttestationSigningAlgValuesSupported(List<String> clientAttestationSigningAlgValuesSupported) {
+        this.clientAttestationSigningAlgValuesSupported = clientAttestationSigningAlgValuesSupported;
+    }
+
+    public List<String> getClientAttestationPopSigningAlgValuesSupported() {
+        return clientAttestationPopSigningAlgValuesSupported;
+    }
+
+    public void setClientAttestationPopSigningAlgValuesSupported(List<String> clientAttestationPopSigningAlgValuesSupported) {
+        this.clientAttestationPopSigningAlgValuesSupported = clientAttestationPopSigningAlgValuesSupported;
+    }
+
+    public String getChallengeEndpoint() {
+        return challengeEndpoint;
+    }
+
+    public void setChallengeEndpoint(String challengeEndpoint) {
+        this.challengeEndpoint = challengeEndpoint;
     }
 }

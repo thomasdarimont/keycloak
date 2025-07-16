@@ -151,10 +151,21 @@ public class OIDCWellKnownProvider implements WellKnownProvider {
 
         config.setPromptValuesSupported(getPromptValuesSupported(realm));
 
-        config.setTokenEndpointAuthMethodsSupported(getClientAuthMethodsSupported());
+        List<String> clientAuthMethodsSupported = getClientAuthMethodsSupported();
+        config.setTokenEndpointAuthMethodsSupported(clientAuthMethodsSupported);
         config.setTokenEndpointAuthSigningAlgValuesSupported(getSupportedClientSigningAlgorithms(false));
-        config.setIntrospectionEndpointAuthMethodsSupported(getClientAuthMethodsSupported());
+        config.setIntrospectionEndpointAuthMethodsSupported(clientAuthMethodsSupported);
         config.setIntrospectionEndpointAuthSigningAlgValuesSupported(getSupportedClientSigningAlgorithms(false));
+
+        if (Profile.isFeatureEnabled(Profile.Feature.OAUTH_ABCA)) {
+            if (clientAuthMethodsSupported.contains(OIDCLoginProtocol.OAUTH2_CLIENT_ATTESTATION)) {
+
+                // TODO make ABCA algs configurable
+                config.setClientAttestationSigningAlgValuesSupported(getSupportedSigningAlgorithms(false));
+                config.setClientAttestationPopSigningAlgValuesSupported(getSupportedSigningAlgorithms(false));
+                config.setChallengeEndpoint(backendUriBuilder.clone().path(OIDCLoginProtocolService.class, "challenge").build(realm.getName(), OIDCLoginProtocol.LOGIN_PROTOCOL).toString());
+            }
+        }
 
         config.setAuthorizationSigningAlgValuesSupported(getSupportedSigningAlgorithms(false));
         config.setAuthorizationEncryptionAlgValuesSupported(getSupportedEncryptionAlg(false));
@@ -197,7 +208,7 @@ public class OIDCWellKnownProvider implements WellKnownProvider {
         // NOTE: Don't hardcode HTTPS checks here. JWKS URI is exposed just in the development/testing environment. For the production environment, the OIDCWellKnownProvider
         // is not exposed over "http" at all.
         config.setRevocationEndpoint(revocationEndpoint.toString());
-        config.setRevocationEndpointAuthMethodsSupported(getClientAuthMethodsSupported());
+        config.setRevocationEndpointAuthMethodsSupported(clientAuthMethodsSupported);
         config.setRevocationEndpointAuthSigningAlgValuesSupported(getSupportedClientSigningAlgorithms(false));
 
         config.setBackchannelLogoutSupported(true);
