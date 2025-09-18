@@ -41,6 +41,7 @@ import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.authentication.FlowStatus;
 import org.keycloak.authentication.authenticators.browser.IdentityProviderAuthenticator;
 import org.keycloak.authentication.authenticators.browser.WebAuthnConditionalUIAuthenticator;
+import org.keycloak.constants.AdapterConstants;
 import org.keycloak.email.freemarker.beans.ProfileBean;
 import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.forms.login.freemarker.model.AuthenticationContextBean;
@@ -96,7 +97,7 @@ public class OrganizationAuthenticator extends IdentityProviderAuthenticator {
             context.getAuthenticationSession().setClientNote(LOGIN_HINT_ALREADY_HANDLED, "true");
         }
 
-        OrganizationModel organization = Organizations.resolveOrganization(session);
+        OrganizationModel organization = resolveOrganization(provider, context);
 
         if (organization == null) {
             initialChallenge(context);
@@ -106,6 +107,20 @@ public class OrganizationAuthenticator extends IdentityProviderAuthenticator {
             authSession.setAuthNote(OrganizationModel.ORGANIZATION_ATTRIBUTE, organization.getId());
             action(context);
         }
+    }
+
+    protected OrganizationModel resolveOrganization(OrganizationProvider provider, AuthenticationFlowContext context) {
+
+        var queryParameters = context.getUriInfo().getQueryParameters();
+        String orgHint = queryParameters.getFirst(AdapterConstants.KC_ORG_HINT);
+        if (orgHint != null) {
+            OrganizationModel org = provider.getByAlias(orgHint);
+            if (org != null) {
+                return org;
+            }
+        }
+
+        return Organizations.resolveOrganization(session);
     }
 
     @Override
@@ -128,6 +143,7 @@ public class OrganizationAuthenticator extends IdentityProviderAuthenticator {
         UserModel user = resolveUser(context, username);
         String domain = getEmailDomain(username);
         OrganizationModel organization = resolveOrganization(user, domain);
+        OrganizationProvider organizationProvider = getOrganizationProvider();
 
         if (organization == null) {
             if (shouldUserSelectOrganization(context, user)) {
@@ -154,7 +170,7 @@ public class OrganizationAuthenticator extends IdentityProviderAuthenticator {
             return;
         }
 
-        if (tryRedirectBroker(context, organization, user, username, domain)) {
+        if (tryRedirectBroker(context, organizationProvider, organization, user, username, domain)) {
             return;
         }
 
@@ -182,7 +198,7 @@ public class OrganizationAuthenticator extends IdentityProviderAuthenticator {
         return realm.isOrganizationsEnabled();
     }
 
-    private OrganizationModel resolveOrganization(UserModel user, String domain) {
+    protected OrganizationModel resolveOrganization(UserModel user, String domain) {
         KeycloakContext context = session.getContext();
         HttpRequest request = context.getHttpRequest();
         AuthenticationSessionModel authSession = context.getAuthenticationSession();
@@ -249,18 +265,30 @@ public class OrganizationAuthenticator extends IdentityProviderAuthenticator {
         return false;
     }
 
-    private boolean tryRedirectBroker(AuthenticationFlowContext context, OrganizationModel organization, UserModel user, String username, String domain) {
+    protected boolean tryRedirectBroker(AuthenticationFlowContext context, OrganizationProvider organizationProvider, OrganizationModel organization, UserModel user, String username, String domain) {
         // the user has credentials set; do not redirect to allow the user to pick how to authenticate
         if (user != null && user.credentialManager().getStoredCredentialsStream().findAny().isPresent()) {
             return false;
         }
 
-        List<IdentityProviderModel> broker = resolveHomeBroker(session, user);
+        List<IdentityProviderModel> homeBrokers = resolveHomeBroker(session, user);
 
-        if (broker.size() == 1) {
+        if (homeBrokers.size() == 1) {
             // user is a managed member and associated with a broker, redirect automatically
-            redirect(context, broker.get(0).getAlias(), user.getEmail());
+            redirect(context, homeBrokers.get(0).getAlias(), user.getEmail());
             return true;
+        }
+
+        String kcOrgHint = session.getContext().getHttpRequest().getUri().getQueryParameters().getFirst(AdapterConstants.KC_ORG_HINT);
+        if (kcOrgHint != null) {
+            OrganizationModel org = organizationProvider.getByAlias(kcOrgHint);
+            if (org != null) {
+                IdentityProviderModel idp = org.getIdentityProviders().findFirst().orElse(null);
+                if (idp != null) {
+                    redirect(context, idp.getAlias(), null);
+                    return true;
+                }
+            }
         }
 
         domain = domain == null ? getEmailDomain(user) : domain;
