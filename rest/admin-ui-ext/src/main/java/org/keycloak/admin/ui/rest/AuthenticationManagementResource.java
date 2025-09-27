@@ -1,6 +1,7 @@
 package org.keycloak.admin.ui.rest;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -25,9 +26,9 @@ import org.keycloak.admin.ui.rest.model.AuthenticationMapper;
 import org.keycloak.admin.ui.rest.model.ConfigurableRequiredActionProviderRepresentation;
 import org.keycloak.authentication.RequiredActionFactory;
 import org.keycloak.authentication.RequiredActionProvider;
+import org.keycloak.models.AuthenticationFlowBindings;
 import org.keycloak.models.AuthenticationFlowModel;
 import org.keycloak.models.ClientModel;
-import org.keycloak.models.IdentityProviderModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.RequiredActionProviderModel;
@@ -98,21 +99,32 @@ public class AuthenticationManagementResource extends RoleMappingResource {
 
         final AuthenticationFlowModel flow = realm.getAuthenticationFlowsStream().filter(f -> id.equals(f.getId())).toList().get(0);
 
+        String flowId = flow.getId();
         if ("clients".equals(type)) {
             final Stream<ClientModel> clients = realm.getClientsStream();
-            return clients.filter(
-                            c -> c.getAuthenticationFlowBindingOverrides().get("browser") != null && c.getAuthenticationFlowBindingOverrides()
-                                    .get("browser").equals(flow.getId()) || c.getAuthenticationFlowBindingOverrides()
-                                    .get("direct_grant") != null && c.getAuthenticationFlowBindingOverrides().get("direct_grant").equals(flow.getId()))
+            return clients.filter(c -> isFlowUsedByClientOverrides(c, flowId))
                     .map(ClientModel::getClientId).filter(f -> f.contains(search))
-                    .skip("".equals(search) ? first : 0).limit(max).collect(Collectors.toList());
+                    .skip("".equals(search) ? first : 0)
+                    .limit(max)
+                    .collect(Collectors.toList());
         }
 
         if ("idp".equals(type)) {
-            return session.identityProviders().getByFlow(flow.getId(), search, first, max).toList();
+            return session.identityProviders().getByFlow(flowId, search, first, max).toList();
         }
 
         throw new IllegalArgumentException("Invalid type");
+    }
+
+    protected boolean isFlowUsedByClientOverrides(ClientModel c, String flowId) {
+        return isFlowUsedInClientOverride(c, flowId, AuthenticationFlowBindings.BROWSER_BINDING)
+               || isFlowUsedInClientOverride(c, flowId, AuthenticationFlowBindings.DIRECT_GRANT_BINDING)
+               || isFlowUsedInClientOverride(c, flowId, AuthenticationFlowBindings.CLIENT_BINDING);
+    }
+
+    protected boolean isFlowUsedInClientOverride(ClientModel client, String flowId, String flowBinding) {
+        Map<String, String> overrides = client.getAuthenticationFlowBindingOverrides();
+        return overrides != null && flowId.equals(overrides.get(flowBinding));
     }
 
     /**
