@@ -24,10 +24,18 @@ export const AuthenticationOverrides = ({
 
   const { t } = useTranslation();
   const [flows, setFlows] = useState<AuthenticationFlowRepresentation[]>([]);
+  const [clientFlows, setClientFlows] = useState<
+    AuthenticationFlowRepresentation[]
+  >([]);
 
   useFetch(
     () => adminClient.authenticationManagement.getFlows(),
     (flows) => {
+      let clientFlows = [
+        ...flows.filter((flow) => flow.providerId === "client-flow"),
+      ];
+      clientFlows = sortBy(clientFlows, [(f) => f.alias]);
+      setClientFlows(clientFlows);
       let filteredFlows = [
         ...flows.filter((flow) => flow.providerId !== "client-flow"),
       ];
@@ -56,18 +64,35 @@ export const AuthenticationOverrides = ({
         ]}
       />
       {protocol === "openid-connect" && (
-        <SelectControl
-          name="authenticationFlowBindingOverrides.direct_grant"
-          label={t("directGrant")}
-          labelIcon={t("directGrantHelp")}
-          controller={{
-            defaultValue: "",
-          }}
-          options={[
-            { key: "", value: t("choose") },
-            ...flows.map(({ id, alias }) => ({ key: id!, value: alias! })),
-          ]}
-        />
+        <>
+          <SelectControl
+            name="authenticationFlowBindingOverrides.direct_grant"
+            label={t("directGrant")}
+            labelIcon={t("directGrantHelp")}
+            controller={{
+              defaultValue: "",
+            }}
+            options={[
+              { key: "", value: t("choose") },
+              ...flows.map(({ id, alias }) => ({ key: id!, value: alias! })),
+            ]}
+          />
+          <SelectControl
+            name="authenticationFlowBindingOverrides.clients"
+            label={t("clientsFlow")}
+            labelIcon={t("clientsFlowHelp")}
+            controller={{
+              defaultValue: "",
+            }}
+            options={[
+              { key: "", value: t("choose") },
+              ...clientFlows.map(({ id, alias }) => ({
+                key: id!,
+                value: alias!,
+              })),
+            ]}
+          />
+        </>
       )}
       <ActionGroup>
         <Button

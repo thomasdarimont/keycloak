@@ -5,9 +5,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.keycloak.models.AuthenticationFlowBindings;
 import org.keycloak.models.AuthenticationFlowModel;
 import org.keycloak.models.ClientModel;
-import org.keycloak.models.IdentityProviderModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 
@@ -28,9 +28,10 @@ public class AuthenticationMapper {
         }
 
 
-        Stream<ClientModel> browserFlowOverridingClients = realm.searchClientByAuthenticationFlowBindingOverrides(Collections.singletonMap("browser", flow.getId()), 0, MAX_USED_BY);
-        Stream<ClientModel> directGrantFlowOverridingClients = realm.searchClientByAuthenticationFlowBindingOverrides(Collections.singletonMap("direct_grant", flow.getId()), 0, MAX_USED_BY);
-        final List<String> usedClients = Stream.concat(browserFlowOverridingClients, directGrantFlowOverridingClients)
+        Stream<ClientModel> browserFlowOverridingClients = realm.searchClientByAuthenticationFlowBindingOverrides(Collections.singletonMap(AuthenticationFlowBindings.BROWSER_BINDING, flow.getId()), 0, MAX_USED_BY);
+        Stream<ClientModel> directGrantFlowOverridingClients = realm.searchClientByAuthenticationFlowBindingOverrides(Collections.singletonMap(AuthenticationFlowBindings.DIRECT_GRANT_BINDING, flow.getId()), 0, MAX_USED_BY);
+        Stream<ClientModel> clientsFlowOverridingClients = realm.searchClientByAuthenticationFlowBindingOverrides(Collections.singletonMap(AuthenticationFlowBindings.CLIENT_BINDING, flow.getId()), 0, MAX_USED_BY);
+        final List<String> usedClients = Stream.concat(Stream.concat(browserFlowOverridingClients, directGrantFlowOverridingClients), clientsFlowOverridingClients)
                 .limit(MAX_USED_BY)
                 .map(ClientModel::getClientId).collect(Collectors.toList());
 

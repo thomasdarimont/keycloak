@@ -23,6 +23,7 @@ package org.keycloak.models;
  * @version $Revision: 1 $
  */
 public interface AuthenticationFlowBindings {
+    String CLIENT_BINDING = "clients";
     String BROWSER_BINDING = "browser";
     String DIRECT_GRANT_BINDING = "direct_grant";
 }

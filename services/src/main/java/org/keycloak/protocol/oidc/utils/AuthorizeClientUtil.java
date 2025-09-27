@@ -18,13 +18,17 @@
 package org.keycloak.protocol.oidc.utils;
 
 import org.jboss.logging.Logger;
+import org.keycloak.OAuth2Constants;
 import org.keycloak.authentication.AuthenticationProcessor;
 import org.keycloak.authentication.ClientAuthenticator;
 import org.keycloak.authentication.ClientAuthenticatorFactory;
 import org.keycloak.events.Errors;
 import org.keycloak.events.EventBuilder;
+import org.keycloak.http.HttpRequest;
+import org.keycloak.models.AuthenticationFlowBindings;
 import org.keycloak.models.AuthenticationFlowModel;
 import org.keycloak.models.ClientModel;
+import org.keycloak.models.KeycloakContext;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.protocol.oidc.OIDCLoginProtocol;
@@ -86,21 +90,49 @@ public class AuthorizeClientUtil {
     }
 
     public static AuthenticationProcessor getAuthenticationProcessor(KeycloakSession session, EventBuilder event) {
-        RealmModel realm = session.getContext().getRealm();
+        KeycloakContext context = session.getContext();
+        RealmModel realm = context.getRealm();
+
+        HttpRequest httpRequest = context.getHttpRequest();
+        ClientModel client = resolveClient(context, httpRequest, realm);
 
         AuthenticationFlowModel clientAuthFlow = realm.getClientAuthenticationFlow();
         String flowId = clientAuthFlow.getId();
+        if (client != null) {
+            String overrideFlowId = client.getAuthenticationFlowBindingOverride(AuthenticationFlowBindings.CLIENT_BINDING);
+            if(overrideFlowId != null) {
+                flowId = overrideFlowId;
+            }
+        }
 
         AuthenticationProcessor processor = new AuthenticationProcessor();
         processor.setFlowId(flowId)
-                .setConnection(session.getContext().getConnection())
+                .setConnection(context.getConnection())
                 .setEventBuilder(event)
                 .setRealm(realm)
                 .setSession(session)
-                .setUriInfo(session.getContext().getUri())
-                .setRequest(session.getContext().getHttpRequest());
+                .setUriInfo(context.getUri())
+                .setRequest(httpRequest);
 
         return processor;
+    }
+
+    private static ClientModel resolveClient(KeycloakContext context, HttpRequest httpRequest, RealmModel realm) {
+
+        ClientModel client = context.getClient();
+        if (client != null) {
+            return client;
+        }
+
+        String clientId = httpRequest.getDecodedFormParameters().getFirst(OAuth2Constants.CLIENT_ID);
+        if (clientId == null) {
+            clientId = httpRequest.getUri().getQueryParameters().getFirst(OAuth2Constants.CLIENT_ID);
+        }
+
+        if (clientId != null) {
+            client = realm.getClientByClientId(clientId);
+        }
+        return client;
     }
 
     public static ClientAuthenticatorFactory findClientAuthenticatorForOIDCAuthMethod(KeycloakSession session, String oidcAuthMethod) {
