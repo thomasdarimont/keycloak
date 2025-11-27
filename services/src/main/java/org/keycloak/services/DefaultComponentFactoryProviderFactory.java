@@ -30,6 +30,7 @@ import org.keycloak.Config;
 import org.keycloak.Config.Scope;
 import org.keycloak.cluster.ClusterProvider;
 import org.keycloak.common.util.StackUtil;
+import org.keycloak.component.ComponentFactory;
 import org.keycloak.component.ComponentFactoryProviderFactory;
 import org.keycloak.component.ComponentModel;
 import org.keycloak.component.ComponentModelScope;
@@ -37,8 +38,6 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.utils.KeycloakModelUtils;
 import org.keycloak.provider.InvalidationHandler;
-import org.keycloak.provider.InvalidationHandler.InvalidableObjectType;
-import org.keycloak.provider.InvalidationHandler.ObjectType;
 import org.keycloak.provider.Provider;
 import org.keycloak.provider.ProviderFactory;
 
@@ -90,20 +89,47 @@ public class DefaultComponentFactoryProviderFactory implements ComponentFactoryP
     @SuppressWarnings("unchecked")
     public <T extends Provider> ProviderFactory<T> getProviderFactory(Class<T> clazz, String realmId, String componentId, Function<KeycloakSessionFactory, ComponentModel> modelGetter) {
         ProviderFactory res = componentsMap.get().get(componentId);
-        if (res != null) {
+
+        if (res instanceof ComponentFactory<?,?> componentProviderFactory) {
+            LOG.tracef("Found cached ComponentFactory for %s in (%s, %s)", clazz, realmId, componentId);
+            final ComponentModel cm = resolveComponentModel(clazz, realmId, componentId, modelGetter);
+
+            if (cm == null) {
+                return res;
+            }
+
+            return new ProviderFactory<T>() {
+                @Override
+                public T create(KeycloakSession session) {
+                    return (T)componentProviderFactory.create(session, cm);
+                }
+
+                @Override
+                public void init(Scope config) {
+                    componentProviderFactory.init(config);
+                }
+
+                @Override
+                public void postInit(KeycloakSessionFactory factory) {
+                    componentProviderFactory.postInit(factory);
+                }
+
+                @Override
+                public void close() {
+                    componentProviderFactory.close();
+                }
+
+                @Override
+                public String getId() {
+                    return componentProviderFactory.getId();
+                }
+            };
+        } else if (res != null) {
             LOG.tracef("Found cached ProviderFactory for %s in (%s, %s)", clazz, realmId, componentId);
             return res;
         }
 
-        // Apply the expensive operation before putting it into the cache
-        final ComponentModel cm;
-        if (modelGetter == null) {
-            LOG.debugf("Getting component configuration for component (%s, %s) from realm configuration", clazz, realmId, componentId);
-            cm = KeycloakModelUtils.getComponentModel(factory, realmId, componentId);
-        } else {
-            LOG.debugf("Getting component configuration for component (%s, %s) via provided method", realmId, componentId);
-            cm = modelGetter.apply(factory);
-        }
+        final ComponentModel cm = resolveComponentModel(clazz, realmId, componentId, modelGetter);
 
         if (cm == null) {
             return null;
@@ -136,7 +162,50 @@ public class DefaultComponentFactoryProviderFactory implements ComponentFactoryP
         } else {
             providerFactory = initializeFactory(clazz, realmId, componentId, newFactory, configScope);
         }
+
+        if (providerFactory instanceof ComponentFactory componentProviderFactory) {
+            return new ProviderFactory<T>() {
+                @Override
+                public T create(KeycloakSession session) {
+                    return (T)componentProviderFactory.create(session, cm);
+                }
+
+                @Override
+                public void init(Scope config) {
+                    componentProviderFactory.init(config);
+                }
+
+                @Override
+                public void postInit(KeycloakSessionFactory factory) {
+                    componentProviderFactory.postInit(factory);
+                }
+
+                @Override
+                public void close() {
+                    componentProviderFactory.close();
+                }
+
+                @Override
+                public String getId() {
+                    return componentProviderFactory.getId();
+                }
+            };
+        }
+
         return providerFactory;
+    }
+
+    private <T extends Provider> ComponentModel resolveComponentModel(Class<T> clazz, String realmId, String componentId, Function<KeycloakSessionFactory, ComponentModel> modelGetter) {
+        // Apply the expensive operation before putting it into the cache
+        final ComponentModel cm;
+        if (modelGetter == null) {
+            LOG.debugf("Getting component configuration for component (%s, %s) from realm configuration", clazz, realmId, componentId);
+            cm = KeycloakModelUtils.getComponentModel(factory, realmId, componentId);
+        } else {
+            LOG.debugf("Getting component configuration for component (%s, %s) via provided method", realmId, componentId);
+            cm = modelGetter.apply(factory);
+        }
+        return cm;
     }
 
     @SuppressWarnings("unchecked")
