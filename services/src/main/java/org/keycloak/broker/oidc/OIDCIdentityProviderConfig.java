@@ -34,6 +34,7 @@ public class OIDCIdentityProviderConfig extends OAuth2IdentityProviderConfig imp
     public static final String VALIDATE_SIGNATURE = "validateSignature";
     public static final String IS_ACCESS_TOKEN_JWT = "isAccessTokenJWT";
     public static final String SUPPORTS_CLIENT_ASSERTIONS = "supportsClientAssertions";
+    public static final String CLIENT_ASSERTION_MAX_EXPIRATION_TIME = "clientAssertionMaxExpirationTime";
     public static final String SUPPORTS_CLIENT_ASSERTION_REUSE = "supportsClientAssertionReuse";
     public static final String ALLOW_CLIENT_ID_AS_AUDIENCE = "allowClientIdAsAudience";
 
@@ -160,6 +161,22 @@ public class OIDCIdentityProviderConfig extends OAuth2IdentityProviderConfig imp
 
     public void setAllowClientIdAsAudience(boolean allowClientIdAsAudience) {
         getConfig().put(ALLOW_CLIENT_ID_AS_AUDIENCE, String.valueOf(allowClientIdAsAudience));
+    }
+
+    public int getClientAssertionMaxExpirationTime() {
+        String clientAssertionMaxExpirationTime = getConfig().get(CLIENT_ASSERTION_MAX_EXPIRATION_TIME);
+        if (clientAssertionMaxExpirationTime == null || clientAssertionMaxExpirationTime.isEmpty()) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(clientAssertionMaxExpirationTime);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    public void setClientAssertionMaxExpirationTime(int clientAssertionMaxExpirationTime) {
+        getConfig().put(CLIENT_ASSERTION_MAX_EXPIRATION_TIME, String.valueOf(clientAssertionMaxExpirationTime));
     }
 
     @Override
