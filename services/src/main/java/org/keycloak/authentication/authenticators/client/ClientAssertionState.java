@@ -16,6 +16,7 @@ public class ClientAssertionState {
     private static final Supplier SUPPLIER = new Supplier();
 
     private ClientModel client;
+    private String allowedAudience;
     private final String clientAssertionType;
     private final String clientAssertion;
     private final JWSInput jws;
@@ -50,6 +51,14 @@ public class ClientAssertionState {
 
     public ClientModel getClient() {
         return client;
+    }
+
+    public String getAllowedAudience() {
+        return allowedAudience;
+    }
+
+    public void setAllowedAudience(String allowedAudience) {
+        this.allowedAudience = allowedAudience;
     }
 
     public static ClientAuthenticationFlowContextSupplier<ClientAssertionState> supplier() {

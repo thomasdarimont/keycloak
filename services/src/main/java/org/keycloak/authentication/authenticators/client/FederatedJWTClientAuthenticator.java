@@ -36,6 +36,7 @@ public class FederatedJWTClientAuthenticator extends AbstractClientAuthenticator
 
     public static final String JWT_CREDENTIAL_ISSUER_KEY = "jwt.credential.issuer";
     public static final String JWT_CREDENTIAL_SUBJECT_KEY = "jwt.credential.sub";
+    public static final String JWT_CREDENTIAL_AUDIENCE_KEY = "jwt.credential.audience";
 
     private static final List<ProviderConfigProperty> CLIENT_CONFIG =
             ProviderConfigurationBuilder.create()
@@ -51,6 +52,12 @@ public class FederatedJWTClientAuthenticator extends AbstractClientAuthenticator
                     .helpText("External clientId (subject) as provided by the identity provider.")
                     .type(ProviderConfigProperty.STRING_TYPE)
                     .required(true)
+                    .add()
+                    .property().name(JWT_CREDENTIAL_AUDIENCE_KEY)
+                    .label("Federated Audience")
+                    .helpText("Federated Audience provided by the identity provider. If empty, depending on the Identity Provider configuration, the realm issuer URL will be used")
+                    .type(ProviderConfigProperty.STRING_TYPE)
+                    .required(false)
                     .add()
                     .build();
 
@@ -104,6 +111,7 @@ public class FederatedJWTClientAuthenticator extends AbstractClientAuthenticator
             ClientAssertionIdentityProvider<?> identityProvider = getClientAssertionIdentityProvider(context.getSession(), lookup.identityProviderModel());
             ClientModel client = lookup.clientModel();
             clientAssertionState.setClient(client);
+            clientAssertionState.setAllowedAudience(client.getAttribute(FederatedJWTClientAuthenticator.JWT_CREDENTIAL_AUDIENCE_KEY));
 
             if (!PROVIDER_ID.equals(client.getClientAuthenticatorType())) return;
 
