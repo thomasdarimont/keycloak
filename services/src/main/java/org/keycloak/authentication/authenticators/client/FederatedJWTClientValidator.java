@@ -1,5 +1,6 @@
 package org.keycloak.authentication.authenticators.client;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -30,9 +31,15 @@ public class FederatedJWTClientValidator extends AbstractJWTClientValidator {
 
     @Override
     protected List<String> getExpectedAudiences() {
-        return validAudiences.isEmpty()
+        var audiences = validAudiences.isEmpty()
                 ? List.of(Urls.realmIssuer(context.getUriInfo().getBaseUri(), realm.getName()))
                 : validAudiences;
+        if (clientAssertionState.getAllowedAudience() != null) {
+            var extendedAudiences = new ArrayList<>(audiences);
+            extendedAudiences.add(clientAssertionState.getAllowedAudience());
+            audiences = List.copyOf(extendedAudiences);
+        }
+        return audiences;
     }
 
     @Override
