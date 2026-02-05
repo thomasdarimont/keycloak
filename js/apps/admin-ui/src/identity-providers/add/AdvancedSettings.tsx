@@ -24,6 +24,7 @@ import type { FieldProps } from "../component/FormGroupField";
 import { FormGroupField } from "../component/FormGroupField";
 import { SwitchField } from "../component/SwitchField";
 import { TextField } from "../component/TextField";
+import { TimeSelector } from "../../components/time-selector/TimeSelector";
 
 const LoginFlow = ({
   field,
@@ -346,6 +347,28 @@ export const AdvancedSettings = ({
             field="config.allowClientIdAsAudience"
             label="allowClientIdAsAudience"
           />
+        )}
+      {isOIDC &&
+        ((isClientAuthFederatedEnabled &&
+          supportsClientAssertions === "true") ||
+          (jwtAuthorizationGrant &&
+            jwtAuthorizationGrantEnabled === "true")) && (
+          <FormGroupField label="clientAssertionMaxExpirationTime">
+            <Controller
+              name="config.clientAssertionMaxExpirationTime"
+              defaultValue={""}
+              control={control}
+              render={({ field }) => (
+                <TimeSelector
+                  className="kc-client-assertion-max-expiration-time"
+                  data-testid="client-assertion-max-expiration-time-input"
+                  value={field.value!}
+                  onChange={field.onChange}
+                  units={["minute", "hour", "day"]}
+                />
+              )}
+            />
+          </FormGroupField>
         )}
     </>
   );
