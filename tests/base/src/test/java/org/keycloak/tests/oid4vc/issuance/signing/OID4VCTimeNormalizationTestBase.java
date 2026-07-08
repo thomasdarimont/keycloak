@@ -14,6 +14,7 @@ import org.keycloak.tests.oid4vc.OID4VCProofTestUtils;
 import org.keycloak.testsuite.util.oauth.AccessTokenResponse;
 
 import static org.keycloak.OID4VCConstants.OPENID_CREDENTIAL;
+import static org.keycloak.tests.oid4vc.OID4VCAuthorizationDetailsUtil.oid4vciAuthorizationDetails;
 
 /**
  * Shared base for time-normalization integration tests.
@@ -51,7 +52,7 @@ abstract class OID4VCTimeNormalizationTestBase extends OID4VCIssuerEndpointTest 
         String authCode = getAuthorizationCode(oauth, managedClient.admin().toRepresentation(), "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
         String token = tokenResponse.getAccessToken();
-        String credentialIdentifier = tokenResponse.getOID4VCAuthorizationDetails()
+        String credentialIdentifier = oid4vciAuthorizationDetails(tokenResponse)
                 .get(0).getCredentialIdentifiers().get(0);
         String cNonce = oauth.oid4vc().nonceRequest().send().getNonce();
 

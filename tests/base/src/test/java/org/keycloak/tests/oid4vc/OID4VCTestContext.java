@@ -21,6 +21,8 @@ import org.keycloak.testsuite.util.oauth.oid4vc.CredentialOfferResponse;
 import org.keycloak.testsuite.util.oauth.oid4vc.CredentialOfferUriResponse;
 import org.keycloak.testsuite.util.oauth.oid4vc.Oid4vcCredentialResponse;
 
+import static org.keycloak.tests.oid4vc.OID4VCAuthorizationDetailsUtil.oid4vciAuthorizationDetails;
+
 
 /**
  * A context that can maintain state across OID4VCI message flows.
@@ -89,7 +91,7 @@ public class OID4VCTestContext {
 
     public List<OID4VCAuthorizationDetail> getAuthorizationDetails() {
         AccessTokenResponse response = assertAttachment(ACCESS_TOKEN_RESPONSE_ATTACHMENT_KEY);
-        return response.getOID4VCAuthorizationDetails();
+        return oid4vciAuthorizationDetails(response);
     }
 
     public OID4VCAuthorizationDetail getAuthorizationDetail() {

@@ -41,6 +41,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.keycloak.OID4VCConstants.OPENID_CREDENTIAL;
+import static org.keycloak.tests.oid4vc.OID4VCAuthorizationDetailsUtil.oid4vciAuthorizationDetails;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -297,7 +298,7 @@ public abstract class OID4VCAuthorizationCodeFlowTestBase extends OID4VCIssuerTe
         assertEquals(200, refreshed.getStatusCode(), "Refresh token exchange should succeed");
 
         String credentialIdentifier = null;
-        List<OID4VCAuthorizationDetail> authDetails = refreshed.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetails = oid4vciAuthorizationDetails(refreshed);
         if (authDetails != null && !authDetails.isEmpty()) {
             List<String> ids = authDetails.get(0).getCredentialIdentifiers();
             if (ids != null && !ids.isEmpty()) {
@@ -627,7 +628,7 @@ public abstract class OID4VCAuthorizationCodeFlowTestBase extends OID4VCIssuerTe
                 "Token exchange should succeed without authorization_details");
         assertNotNull(tokenResponse.getAccessToken(), "Access token should be present");
 
-        List<OID4VCAuthorizationDetail> authDetails = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetails = oid4vciAuthorizationDetails(tokenResponse);
         assertNotNull(authDetails, "authorization_details should be derived from requested OID4VC scope");
         assertFalse(authDetails.isEmpty(), "authorization_details should not be empty");
         assertEquals(ctx.getCredentialConfigurationId(),
@@ -961,7 +962,7 @@ public abstract class OID4VCAuthorizationCodeFlowTestBase extends OID4VCIssuerTe
      * @return the first credential identifier found in the response.
      */
     protected String assertTokenResponse(AccessTokenResponse tokenResponse) {
-        List<OID4VCAuthorizationDetail> authDetails = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetails = oid4vciAuthorizationDetails(tokenResponse);
         assertNotNull(authDetails, "authorization_details should be present in the response");
         assertEquals(1, authDetails.size());
 

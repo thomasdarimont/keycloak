@@ -97,6 +97,7 @@ import static org.keycloak.OID4VCConstants.CREDENTIAL_SUBJECT;
 import static org.keycloak.OID4VCConstants.OPENID_CREDENTIAL;
 import static org.keycloak.OID4VCConstants.SDJWT_DELIMITER;
 import static org.keycloak.protocol.oid4vc.issuance.OID4VCIssuerWellKnownProvider.ATTR_REQUEST_ENCRYPTION_REQUIRED;
+import static org.keycloak.tests.oid4vc.OID4VCAuthorizationDetailsUtil.oid4vciAuthorizationDetails;
 import static org.keycloak.tests.oid4vc.OID4VCProofTestUtils.generateJwtProof;
 import static org.keycloak.tests.oid4vc.OID4VCProofTestUtils.generateJwtProofWithClaims;
 import static org.keycloak.tests.oid4vc.OID4VCProofTestUtils.jwtProofs;
@@ -297,7 +298,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
 
         String token = tokenResponse.getAccessToken();
-        List<OID4VCAuthorizationDetail> authDetailsResponse = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(tokenResponse);
         String credentialIdentifier = authDetailsResponse.get(0).getCredentialIdentifiers().get(0);
         String cNonce = getCNonce();
         String credentialIssuerId = credentialIssuer.getCredentialIssuer();
@@ -454,7 +455,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
 
         String token = tokenResponse.getAccessToken();
-        List<OID4VCAuthorizationDetail> authDetailsResponse = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(tokenResponse);
 
         assertNotNull(authDetailsResponse, "authorization_details should be present in the response");
         assertFalse(authDetailsResponse.isEmpty(), "authorization_details should not be empty");
@@ -518,7 +519,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         assertNotNull(token, "Access token should be present");
 
         // Extract credential_identifier from authorization_details in token response
-        List<OID4VCAuthorizationDetail> authDetailsResponse = accessTokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(accessTokenResponse);
         assertNotNull(authDetailsResponse, "authorization_details should be present in the response");
         assertFalse(authDetailsResponse.isEmpty(), "authorization_details should not be empty");
 
@@ -616,7 +617,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         assertTrue(accessTokenResponse.isSuccess(), "Access token request should succeed");
         assertNotNull(accessTokenResponse.getAccessToken(), "Access token should be present");
 
-        List<OID4VCAuthorizationDetail> authDetailsResponse = accessTokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(accessTokenResponse);
         assertNotNull(authDetailsResponse, "authorization_details should be present in the token response");
         assertFalse(authDetailsResponse.isEmpty(), "authorization_details should not be empty");
 
@@ -723,7 +724,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
 
         String token = tokenResponse.getAccessToken();
-        List<OID4VCAuthorizationDetail> authDetailsResponse = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(tokenResponse);
         String credentialIdentifier = authDetailsResponse.get(0).getCredentialIdentifiers().get(0);
 
         String cNonce = getCNonce();
@@ -847,7 +848,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         String authCode = getAuthorizationCode(oauth, client, "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
         String token = tokenResponse.getAccessToken();
-        String credentialIdentifier = tokenResponse.getOID4VCAuthorizationDetails().get(0).getCredentialIdentifiers().get(0);
+        String credentialIdentifier = oid4vciAuthorizationDetails(tokenResponse).get(0).getCredentialIdentifiers().get(0);
         String cNonce = getCNonce();
 
         String issuer = credentialIssuer.getCredentialIssuer();
@@ -882,7 +883,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         String authCode = getAuthorizationCode(oauth, client, "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
         String token = tokenResponse.getAccessToken();
-        String credentialIdentifier = tokenResponse.getOID4VCAuthorizationDetails().get(0).getCredentialIdentifiers().get(0);
+        String credentialIdentifier = oid4vciAuthorizationDetails(tokenResponse).get(0).getCredentialIdentifiers().get(0);
         String cNonce = getCNonce();
 
         String issuer = credentialIssuer.getCredentialIssuer();
@@ -916,7 +917,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         String authCode = getAuthorizationCode(oauth, client, "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
         String token = tokenResponse.getAccessToken();
-        String credentialIdentifier = tokenResponse.getOID4VCAuthorizationDetails().get(0).getCredentialIdentifiers().get(0);
+        String credentialIdentifier = oid4vciAuthorizationDetails(tokenResponse).get(0).getCredentialIdentifiers().get(0);
         String cNonce = getCNonce();
 
         String issuer = credentialIssuer.getCredentialIssuer();
@@ -952,7 +953,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         String authCode = getAuthorizationCode(oauth, client, "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
         String token = tokenResponse.getAccessToken();
-        String credentialIdentifier = tokenResponse.getOID4VCAuthorizationDetails().get(0).getCredentialIdentifiers().get(0);
+        String credentialIdentifier = oid4vciAuthorizationDetails(tokenResponse).get(0).getCredentialIdentifiers().get(0);
         String cNonce = getCNonce();
 
         String issuer = credentialIssuer.getCredentialIssuer();
@@ -987,7 +988,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         String authCode = getAuthorizationCode(oauth, client, "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
         String token = tokenResponse.getAccessToken();
-        String credentialIdentifier = tokenResponse.getOID4VCAuthorizationDetails().get(0).getCredentialIdentifiers().get(0);
+        String credentialIdentifier = oid4vciAuthorizationDetails(tokenResponse).get(0).getCredentialIdentifiers().get(0);
         String cNonce = getCNonce();
 
         String issuer = credentialIssuer.getCredentialIssuer();
@@ -1027,7 +1028,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         String authCode = getAuthorizationCode(oauth, client, "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
         String token = tokenResponse.getAccessToken();
-        String credentialIdentifier = tokenResponse.getOID4VCAuthorizationDetails().get(0).getCredentialIdentifiers().get(0);
+        String credentialIdentifier = oid4vciAuthorizationDetails(tokenResponse).get(0).getCredentialIdentifiers().get(0);
         String cNonce = getCNonce();
 
         String issuer = credentialIssuer.getCredentialIssuer();
@@ -1074,7 +1075,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         String authCode = getAuthorizationCode(oauth, client, "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
         String token = tokenResponse.getAccessToken();
-        String credentialIdentifier = tokenResponse.getOID4VCAuthorizationDetails().get(0).getCredentialIdentifiers().get(0);
+        String credentialIdentifier = oid4vciAuthorizationDetails(tokenResponse).get(0).getCredentialIdentifiers().get(0);
         String cNonce = getCNonce();
 
         String issuer = credentialIssuer.getCredentialIssuer();
@@ -1115,7 +1116,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         String authCode = getAuthorizationCode(oauth, client, "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
         String token = tokenResponse.getAccessToken();
-        String credentialIdentifier = tokenResponse.getOID4VCAuthorizationDetails().get(0).getCredentialIdentifiers().get(0);
+        String credentialIdentifier = oid4vciAuthorizationDetails(tokenResponse).get(0).getCredentialIdentifiers().get(0);
         String cNonce = getCNonce();
 
         String issuer = credentialIssuer.getCredentialIssuer();
@@ -1156,7 +1157,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         String authCode = getAuthorizationCode(oauth, client, "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
         String token = tokenResponse.getAccessToken();
-        String credentialIdentifier = tokenResponse.getOID4VCAuthorizationDetails().get(0).getCredentialIdentifiers().get(0);
+        String credentialIdentifier = oid4vciAuthorizationDetails(tokenResponse).get(0).getCredentialIdentifiers().get(0);
         String cNonce = getCNonce();
 
         String issuer = credentialIssuer.getCredentialIssuer();
@@ -1191,7 +1192,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         String authCode = getAuthorizationCode(oauth, client, "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
         String token = tokenResponse.getAccessToken();
-        String credentialIdentifier = tokenResponse.getOID4VCAuthorizationDetails().get(0).getCredentialIdentifiers().get(0);
+        String credentialIdentifier = oid4vciAuthorizationDetails(tokenResponse).get(0).getCredentialIdentifiers().get(0);
         String cNonce = getCNonce();
 
         String issuer = credentialIssuer.getCredentialIssuer();
@@ -1365,7 +1366,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         String authCode = getAuthorizationCode(oauth, client, "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode);
 
-        List<OID4VCAuthorizationDetail> authDetails = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetails = oid4vciAuthorizationDetails(tokenResponse);
         assertEquals(1, authDetails.size(), "Expected one OID4VCAuthorizationDetail");
 
         // Server now requires credential_identifier when authorization_details are present,
@@ -1392,7 +1393,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
 
         String token = tokenResponse.getAccessToken();
-        List<OID4VCAuthorizationDetail> authDetailsResponse = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(tokenResponse);
 
         assertNotNull(authDetailsResponse, "authorization_details should be present in the response");
         assertFalse(authDetailsResponse.isEmpty(), "authorization_details should not be empty");
@@ -1444,7 +1445,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
 
         String token = tokenResponse.getAccessToken();
-        List<OID4VCAuthorizationDetail> authDetailsResponse = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(tokenResponse);
         String credentialIdentifier = authDetailsResponse.get(0).getCredentialIdentifiers().get(0);
 
         try {
@@ -1530,7 +1531,7 @@ public class OID4VCJWTIssuerEndpointTest extends OID4VCIssuerEndpointTest {
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
 
         String token = tokenResponse.getAccessToken();
-        List<OID4VCAuthorizationDetail> authDetailsResponse = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(tokenResponse);
         String credentialIdentifier = authDetailsResponse.get(0).getCredentialIdentifiers().get(0);
 
         CredentialRequest credentialRequest = new CredentialRequest()

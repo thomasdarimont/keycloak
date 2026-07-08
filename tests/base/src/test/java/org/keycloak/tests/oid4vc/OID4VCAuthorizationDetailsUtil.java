@@ -30,7 +30,7 @@ public final class OID4VCAuthorizationDetailsUtil {
      *
      * @return a list of authorization details, or an empty list if none are present.
      */
-    public static List<OID4VCAuthorizationDetail> getAuthorizationDetails(AccessTokenResponse response) {
+    public static List<OID4VCAuthorizationDetail> oid4vciAuthorizationDetails(AccessTokenResponse response) {
         return Optional.ofNullable(response.getAuthorizationDetails()).orElse(List.of()).stream()
                 .filter(authzResponse -> OID4VCConstants.OPENID_CREDENTIAL.equals(authzResponse.getType()))
                 // using a type narrowing value conversion should be sufficient here

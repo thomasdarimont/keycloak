@@ -25,6 +25,7 @@ import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.Test;
 
 import static org.keycloak.OID4VCConstants.OPENID_CREDENTIAL;
+import static org.keycloak.tests.oid4vc.OID4VCAuthorizationDetailsUtil.oid4vciAuthorizationDetails;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -129,7 +130,7 @@ public class OID4VCAuthorizationCodeFlowWithPARTest extends OID4VCAuthorizationC
         assertEquals(HttpStatus.SC_OK, tokenResponse.getStatusCode());
 
         // Step 4: Verify authorization_details is present in token response
-        List<OID4VCAuthorizationDetail> authDetailsResponse = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(tokenResponse);
         assertNotNull(authDetailsResponse, "authorization_details should be present in the response");
         assertEquals(1, authDetailsResponse.size(), "Should have exactly one authorization detail");
 
@@ -283,7 +284,7 @@ public class OID4VCAuthorizationCodeFlowWithPARTest extends OID4VCAuthorizationC
         assertEquals(HttpStatus.SC_OK, tokenResponse.getStatusCode());
 
         // Step 4: Verify authorization_details are derived from requested OID4VC scope
-        List<OID4VCAuthorizationDetail> authDetailsResponse = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(tokenResponse);
         assertNotNull(authDetailsResponse, "authorization_details should be present in the token response");
         assertFalse(authDetailsResponse.isEmpty(), "authorization_details should not be empty");
         OID4VCAuthorizationDetail firstAuthorizationDetail = authDetailsResponse.get(0);

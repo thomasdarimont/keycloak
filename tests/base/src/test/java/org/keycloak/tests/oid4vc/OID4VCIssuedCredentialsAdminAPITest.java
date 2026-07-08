@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.keycloak.OID4VCConstants.OPENID_CREDENTIAL;
 import static org.keycloak.tests.oid4vc.OID4VCAuthorizationDetailsUtil.getAuthorizationDetailsFromAccessToken;
+import static org.keycloak.tests.oid4vc.OID4VCAuthorizationDetailsUtil.oid4vciAuthorizationDetails;
 import static org.keycloak.tests.oid4vc.OID4VCProofTestUtils.jwtProofs;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -132,7 +133,7 @@ public class OID4VCIssuedCredentialsAdminAPITest extends OID4VCIssuerEndpointTes
 
         String authCode = getAuthorizationCode(oauth, client, "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode);
-        List<OID4VCAuthorizationDetail> authDetailsResponse = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(tokenResponse);
         String credentialIdentifier = authDetailsResponse.get(0).getCredentialIdentifiers().get(0);
 
         // Right now, the single issued-verifiable credential should exists

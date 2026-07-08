@@ -43,6 +43,7 @@ import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import static org.keycloak.tests.oid4vc.OID4VCAuthorizationDetailsUtil.oid4vciAuthorizationDetails;
 import static org.keycloak.tests.oid4vc.OID4VCProofTestUtils.jwtProofs;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -116,7 +117,7 @@ public class OID4VCJWTIssuerEndpointPreAuthTest extends OID4VCIssuerEndpointTest
         assertNotNull(theToken, "Access token should be present");
 
         // Extract credential_identifier from authorization_details in token response
-        List<OID4VCAuthorizationDetail> authDetailsResponse = accessTokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(accessTokenResponse);
         assertNotNull(authDetailsResponse, "authorization_details should be present in the response");
         assertFalse(authDetailsResponse.isEmpty(), "authorization_details should not be empty");
 
