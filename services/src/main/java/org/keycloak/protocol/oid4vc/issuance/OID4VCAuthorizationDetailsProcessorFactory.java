@@ -16,11 +16,9 @@
  */
 package org.keycloak.protocol.oid4vc.issuance;
 
-import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.protocol.oid4vc.OID4VCEnvironmentProviderFactory;
 import org.keycloak.protocol.oidc.rar.AuthorizationDetailsProcessorFactory;
-import org.keycloak.util.AuthorizationDetailsParser;
 
 import static org.keycloak.OID4VCConstants.OPENID_CREDENTIAL;
 
@@ -36,12 +34,11 @@ public class OID4VCAuthorizationDetailsProcessorFactory implements Authorization
 
     @Override
     public OID4VCAuthorizationDetailsProcessor create(KeycloakSession session) {
-        return new OID4VCAuthorizationDetailsProcessor(session);
+        return new OID4VCAuthorizationDetailsProcessor(session, getAuthorizationDetailsParser());
     }
 
-    @Override
-    public void init(Config.Scope config) {
-        AuthorizationDetailsParser.registerParser(OPENID_CREDENTIAL, new OID4VCAuthorizationDetailsParser());
+    protected OID4VCAuthorizationDetailsParser getAuthorizationDetailsParser() {
+        return new OID4VCAuthorizationDetailsParser();
     }
 
     @Override

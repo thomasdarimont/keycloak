@@ -6,9 +6,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 
+import org.keycloak.OID4VCConstants;
 import org.keycloak.jose.jws.JWSInput;
 import org.keycloak.jose.jws.JWSInputException;
 import org.keycloak.protocol.oid4vc.model.OID4VCAuthorizationDetail;
+import org.keycloak.testsuite.util.oauth.AccessTokenResponse;
 import org.keycloak.util.JsonSerialization;
 
 import static org.keycloak.OAuth2Constants.AUTHORIZATION_DETAILS;
@@ -20,6 +22,21 @@ public final class OID4VCAuthorizationDetailsUtil {
 
     // Hide ctor
     private OID4VCAuthorizationDetailsUtil() {}
+
+    /**
+     * Access the OID4VCI-specific authorization details from the token endpoint response.
+     * Entries whose type is not {@link OID4VCConstants#OPENID_CREDENTIAL} are ignored, as those
+     * are handled by their own processors.
+     *
+     * @return a list of authorization details, or an empty list if none are present.
+     */
+    public static List<OID4VCAuthorizationDetail> getAuthorizationDetails(AccessTokenResponse response) {
+        return Optional.ofNullable(response.getAuthorizationDetails()).orElse(List.of()).stream()
+                .filter(authzResponse -> OID4VCConstants.OPENID_CREDENTIAL.equals(authzResponse.getType()))
+                // using a type narrowing value conversion should be sufficient here
+                .map(authzResponse -> JsonSerialization.mapper.convertValue(authzResponse, OID4VCAuthorizationDetail.class))
+                .toList();
+    }
 
     /**
      * Access AuthorizationDetails from the AccessToken JWT

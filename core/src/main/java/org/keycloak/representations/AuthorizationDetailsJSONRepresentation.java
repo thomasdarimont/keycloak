@@ -22,8 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import org.keycloak.util.AuthorizationDetailsParser;
-
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -133,15 +131,6 @@ public class AuthorizationDetailsJSONRepresentation implements Serializable {
                 ", privileges=" + privileges +
                 ", customData=" + customData +
                 '}';
-    }
-
-    /**
-     * @param clazz Subtype of {@link AuthorizationDetailsJSONRepresentation}, which will be returned by calling this method
-     * @return this authorizationDetails content cast to the class specified by clazz parameter as long as parser corresponding to the type returned by {@link #getType}
-     * is able to parse this authorizationDetails and convert it to that subtype
-     */
-    public <T extends AuthorizationDetailsJSONRepresentation> T asSubtype(Class<T> clazz) {
-        return AuthorizationDetailsParser.parseToSubtype(this, clazz);
     }
 
     @JsonIgnore

@@ -3,10 +3,11 @@ package org.keycloak.protocol.oid4vc.issuance;
 import java.util.List;
 import java.util.Map;
 
+import org.keycloak.OID4VCConstants;
 import org.keycloak.protocol.oid4vc.model.ClaimsDescription;
 import org.keycloak.protocol.oid4vc.model.OID4VCAuthorizationDetail;
 import org.keycloak.representations.AuthorizationDetailsJSONRepresentation;
-import org.keycloak.util.AuthorizationDetailsParser;
+import org.keycloak.util.AbstractAuthorizationDetailsParser;
 
 import static org.keycloak.OID4VCConstants.CREDENTIAL_CONFIGURATION_ID;
 import static org.keycloak.OID4VCConstants.CREDENTIAL_IDENTIFIERS;
@@ -16,10 +17,19 @@ import static org.keycloak.protocol.oid4vc.model.OID4VCAuthorizationDetail.CLAIM
 import static org.keycloak.protocol.oid4vc.model.OID4VCAuthorizationDetail.CREDENTIALS_OFFER_ID;
 import static org.keycloak.protocol.oid4vc.model.OID4VCAuthorizationDetail.ISSUED_CREDENTIAL_ID;
 
-public class OID4VCAuthorizationDetailsParser implements AuthorizationDetailsParser {
+public class OID4VCAuthorizationDetailsParser extends AbstractAuthorizationDetailsParser<OID4VCAuthorizationDetail> {
 
     @Override
-    public <T extends AuthorizationDetailsJSONRepresentation> T asSubtype(AuthorizationDetailsJSONRepresentation authzDetail, Class<T> clazz) {
+    protected void checkAuthorizationDetails(AuthorizationDetailsJSONRepresentation authzDetail) {
+        super.checkAuthorizationDetails(authzDetail);
+
+        if (!OID4VCConstants.OPENID_CREDENTIAL.equals(authzDetail.getType())) {
+            throw new IllegalArgumentException("Type of authzDetail entry must be 'type' set to " + OID4VCConstants.OPENID_CREDENTIAL + ". The used authzDetail entry was: " + authzDetail);
+        }
+    }
+
+    @Override
+    public OID4VCAuthorizationDetail asSubtype(AuthorizationDetailsJSONRepresentation authzDetail, Class<OID4VCAuthorizationDetail> clazz) {
         if (OID4VCAuthorizationDetail.class.equals(clazz)) {
             if (authzDetail instanceof OID4VCAuthorizationDetail) {
                 return clazz.cast(authzDetail);

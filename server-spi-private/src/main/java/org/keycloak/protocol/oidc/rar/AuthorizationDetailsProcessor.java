@@ -17,6 +17,7 @@
 package org.keycloak.protocol.oidc.rar;
 
 import java.util.List;
+import java.util.Set;
 
 import org.keycloak.models.ClientSessionContext;
 import org.keycloak.models.UserSessionModel;
@@ -40,15 +41,45 @@ public interface AuthorizationDetailsProcessor<ADR extends AuthorizationDetailsJ
     boolean isSupported();
 
     /**
+     * Checks if this processor is able to process the given type of authorization_details.
+     * @param type
+     * @return
+     */
+    default boolean isSupportedType(String type) {
+        return getSupportedTypes().contains(type);
+    }
+
+    /**
      * @return supported type of authorization_details "type" claim, which this processor is able to process. This should usually correspond with the "providerId" of
      * the {@link AuthorizationDetailsProcessorFactory}, which created this processor
+     *
+     * @deprecated use {@link #getSupportedTypes()} instead
      */
-    String getSupportedType();
+    @Deprecated
+    default String getSupportedType() {
+        return getSupportedTypes().iterator().next();
+    }
+
+    /**
+     * @return supported types of authorization_details "type" claim, which this processor is able to process.
+     */
+    Set<String> getSupportedTypes();
 
     /**
      * @return supported Java type of {@link AuthorizationDetailsJSONRepresentation} subclass, which this processor can create in the token response
+     * @deprecated use {@link #getSupportedResponseJavaType(String)} instead
      */
-    Class<ADR> getSupportedResponseJavaType();
+    @Deprecated
+    default Class<ADR> getSupportedResponseJavaType() {
+        return getSupportedResponseJavaType(getSupportedTypes().iterator().next());
+    }
+
+    /**
+     * @return supported Java type of {@link AuthorizationDetailsJSONRepresentation} subclass for the given type, which this processor can create in the token response
+     *
+     * @param type the type of the authorization_details
+     */
+    Class<ADR> getSupportedResponseJavaType(String type);
 
     /**
      * Validates an authorization detail against supported credentials and other constraints.
@@ -125,8 +156,10 @@ public interface AuthorizationDetailsProcessor<ADR extends AuthorizationDetailsJ
             return null;
         }
         return authzDetailsResponse.stream()
-                .filter(authDetailsResponse -> getSupportedType().equals(authDetailsResponse.getType()))
-                .map(authDetailsResponse -> authDetailsResponse.asSubtype(getSupportedResponseJavaType()))
+                .filter(authDetailsResponse -> this.isSupportedType(authDetailsResponse.getType()))
+                .map(this::narrowRepresentation)
                 .toList();
     }
+
+    ADR narrowRepresentation(AuthorizationDetailsJSONRepresentation authzDetail);
 }

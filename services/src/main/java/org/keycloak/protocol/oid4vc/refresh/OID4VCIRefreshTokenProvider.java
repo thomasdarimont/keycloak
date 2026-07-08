@@ -21,11 +21,14 @@ import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.UserSessionModel;
 import org.keycloak.models.oid4vci.CredentialScopeModel;
+import org.keycloak.protocol.oid4vc.issuance.OID4VCAuthorizationDetailsProcessor;
+import org.keycloak.protocol.oid4vc.issuance.OID4VCAuthorizationDetailsProcessorFactory;
 import org.keycloak.protocol.oid4vc.model.OID4VCAuthorizationDetail;
 import org.keycloak.protocol.oid4vc.utils.CredentialScopeUtils;
 import org.keycloak.protocol.oid4vc.utils.OID4VCUtil;
 import org.keycloak.protocol.oidc.OIDCLoginProtocol;
 import org.keycloak.protocol.oidc.TokenManager;
+import org.keycloak.protocol.oidc.rar.AuthorizationDetailsProcessor;
 import org.keycloak.protocol.oidc.refresh.AbstractRefreshTokenProvider;
 import org.keycloak.protocol.oidc.refresh.InitialRefreshTokenContext;
 import org.keycloak.protocol.oidc.refresh.RefreshTokenContext;
@@ -272,9 +275,13 @@ public class OID4VCIRefreshTokenProvider extends AbstractRefreshTokenProvider im
     }
 
     private OID4VCAuthorizationDetail getOid4vcAuthzDetail(List<AuthorizationDetailsJSONRepresentation> authzDetails) {
+
+        // This cast is safe here since we are expecting an OID4VCAuthorizationDetailsProcessor anyways.
+        OID4VCAuthorizationDetailsProcessor processor = OID4VCAuthorizationDetailsProcessor.class.cast(session.getProvider(AuthorizationDetailsProcessor.class, OID4VCAuthorizationDetailsProcessorFactory.PROVIDER_ID));
+
         List<OID4VCAuthorizationDetail> oid4vcAuthzDetails = authzDetails.stream()
                 .filter(authzDetail -> OPENID_CREDENTIAL.equals(authzDetail.getType()))
-                .map(authzDetail -> authzDetail.asSubtype(OID4VCAuthorizationDetail.class))
+                .map(authzDetail -> processor.narrowRepresentation(authzDetail))
                 .toList();
         // Aligned with other places in Keycloak codebase to support single VC
         if (oid4vcAuthzDetails.size() != 1) {

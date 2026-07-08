@@ -16,6 +16,7 @@
  */
 package org.keycloak.protocol.oidc.rar;
 
+import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.provider.ProviderFactory;
@@ -32,6 +33,11 @@ public interface AuthorizationDetailsProcessorFactory extends ProviderFactory<Au
 
     @Override
     default void postInit(KeycloakSessionFactory factory) {
+        // Default implementation does nothing
+    }
+
+    @Override
+    default void init(Config.Scope config) {
         // Default implementation does nothing
     }
 

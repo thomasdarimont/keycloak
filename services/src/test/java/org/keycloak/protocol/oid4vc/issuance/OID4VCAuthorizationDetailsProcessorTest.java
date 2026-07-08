@@ -23,11 +23,9 @@ import java.util.List;
 import org.keycloak.protocol.oid4vc.model.ClaimsDescription;
 import org.keycloak.protocol.oid4vc.model.OID4VCAuthorizationDetail;
 import org.keycloak.representations.AuthorizationDetailsJSONRepresentation;
-import org.keycloak.util.AuthorizationDetailsParser;
 import org.keycloak.util.JsonSerialization;
 
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.keycloak.OID4VCConstants.CREDENTIAL_IDENTIFIERS;
@@ -51,11 +49,6 @@ import static org.junit.Assert.assertTrue;
  * @author <a href="mailto:Forkim.Akwichek@adorsys.com">Forkim Akwichek</a>
  */
 public class OID4VCAuthorizationDetailsProcessorTest {
-
-    @BeforeClass
-    public static void beforeClass() {
-        AuthorizationDetailsParser.registerParser(OPENID_CREDENTIAL, new OID4VCAuthorizationDetailsParser());
-    }
 
     /**
      * Creates a valid AuthorizationDetail for testing
@@ -514,7 +507,8 @@ public class OID4VCAuthorizationDetailsProcessorTest {
                 convertToResponseType(validDetail2),
                 convertToResponseType(invalidDetail1)
         );
-        List<OID4VCAuthorizationDetail> authzResponses = new OID4VCAuthorizationDetailsProcessor(null).getSupportedAuthorizationDetails(responses);
+        List<OID4VCAuthorizationDetail> authzResponses = new OID4VCAuthorizationDetailsProcessor(null, new OID4VCAuthorizationDetailsParser())
+                .getSupportedAuthorizationDetails(responses);
 
         Assert.assertEquals(2, authzResponses.size());
         assertValidAuthorizationDetailResponse(authzResponses.get(0));

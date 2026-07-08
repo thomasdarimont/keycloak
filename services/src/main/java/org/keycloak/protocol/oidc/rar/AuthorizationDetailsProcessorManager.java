@@ -1,11 +1,11 @@
 package org.keycloak.protocol.oidc.rar;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiFunction;
-import java.util.stream.Collectors;
 
 import org.keycloak.models.ClientSessionContext;
 import org.keycloak.models.KeycloakSession;
@@ -67,7 +67,8 @@ public class AuthorizationDetailsProcessorManager {
         Map<String, AuthorizationDetailsProcessor<?>> processors = getAuthorizationDetailsProcessorMap();
         for (AuthorizationDetailsJSONRepresentation authzDetailResponse : authorizationDetailsResponse) {
             AuthorizationDetailsProcessor processor = findProcessorForAuthorizationDetails(processors, authzDetailResponse);
-            processor.afterAuthorizationDetailsProcessed(userSession, clientSessionCtx, authzDetailResponse.asSubtype(processor.getSupportedResponseJavaType()));
+            AuthorizationDetailsJSONRepresentation subtype = processor.narrowRepresentation(authzDetailResponse);
+            processor.afterAuthorizationDetailsProcessed(userSession, clientSessionCtx, subtype);
         }
     }
 
@@ -82,7 +83,7 @@ public class AuthorizationDetailsProcessorManager {
             Map<String, AuthorizationDetailsProcessor<?>> processors = getAuthorizationDetailsProcessorMap();
             for (AuthorizationDetailsJSONRepresentation authzDetail : tokenResponse.getAuthorizationDetails()) {
                 AuthorizationDetailsProcessor processor = findProcessorForAuthorizationDetails(processors, authzDetail);
-                AuthorizationDetailsJSONRepresentation subAuthzDetail = authzDetail.asSubtype(processor.getSupportedResponseJavaType());
+                AuthorizationDetailsJSONRepresentation subAuthzDetail = processor.narrowRepresentation(authzDetail);
                 outAuthzDetails.add(processor.sanitizeBeforeSendingTokenResponse(subAuthzDetail));
             }
             tokenResponse.setAuthorizationDetails(outAuthzDetails);
@@ -91,10 +92,32 @@ public class AuthorizationDetailsProcessorManager {
 
     // Private ---------------------------------------------------------------------------------------------------------
 
+    /**
+     * Builds a lookup map from authorization_details "type" to the processor that handles it. A single processor may
+     * register more than one type via {@link AuthorizationDetailsProcessor#getSupportedTypes()}, so the mapping is
+     * driven by the supported types rather than by the {@link ProviderFactory#getId() provider id}. If multiple
+     * processors claim the same type, the one whose factory has the higher {@link ProviderFactory#order() order} wins.
+     */
     private Map<String, AuthorizationDetailsProcessor<?>> getAuthorizationDetailsProcessorMap() {
-        return session.getKeycloakSessionFactory()
+        Map<String, AuthorizationDetailsProcessor<?>> processorsByType = new HashMap<>();
+        session.getKeycloakSessionFactory()
                 .getProviderFactoriesStream(AuthorizationDetailsProcessor.class)
-                .collect(Collectors.toMap(ProviderFactory::getId, factory -> (AuthorizationDetailsProcessor<?>) session.getProvider(AuthorizationDetailsProcessor.class, factory.getId())));
+                // Highest order first, so putIfAbsent lets the higher-order processor win on type collisions
+                .sorted((f1, f2) -> f2.order() - f1.order())
+                .forEach(factory -> {
+                    AuthorizationDetailsProcessor<?> processor = (AuthorizationDetailsProcessor<?>) session.getProvider(AuthorizationDetailsProcessor.class, factory.getId());
+                    if (processor == null) {
+                        return;
+                    }
+                    for (String supportedType : processor.getSupportedTypes()) {
+                        AuthorizationDetailsProcessor<?> existing = processorsByType.putIfAbsent(supportedType, processor);
+                        if (existing != null) {
+                            logger.warnf("Multiple AuthorizationDetailsProcessor providers support authorization_details type '%s'. Keeping '%s' and ignoring '%s'.",
+                                    supportedType, existing, processor);
+                        }
+                    }
+                });
+        return processorsByType;
     }
 
     private List<AuthorizationDetailsJSONRepresentation> processAuthorizationDetailsInternal(String authorizationDetailsParam,

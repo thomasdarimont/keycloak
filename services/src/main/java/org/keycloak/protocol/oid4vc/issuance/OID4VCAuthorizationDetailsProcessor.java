@@ -70,8 +70,11 @@ public class OID4VCAuthorizationDetailsProcessor implements AuthorizationDetails
 
     private final KeycloakSession session;
 
-    public OID4VCAuthorizationDetailsProcessor(KeycloakSession session) {
+    protected final OID4VCAuthorizationDetailsParser authorizationDetailsParser;
+
+    public OID4VCAuthorizationDetailsProcessor(KeycloakSession session, OID4VCAuthorizationDetailsParser authorizationDetailsParser) {
         this.session = session;
+        this.authorizationDetailsParser = authorizationDetailsParser;
     }
 
     @Override
@@ -80,18 +83,21 @@ public class OID4VCAuthorizationDetailsProcessor implements AuthorizationDetails
     }
 
     @Override
-    public String getSupportedType() {
-        return OPENID_CREDENTIAL;
+    public Set<String> getSupportedTypes() {
+        return Set.of(OPENID_CREDENTIAL);
     }
 
     @Override
-    public Class<OID4VCAuthorizationDetail> getSupportedResponseJavaType() {
-        return OID4VCAuthorizationDetail.class;
+    public Class<OID4VCAuthorizationDetail> getSupportedResponseJavaType(String type) {
+        if (OPENID_CREDENTIAL.equals(type)) {
+            return OID4VCAuthorizationDetail.class;
+        }
+        return null;
     }
 
     @Override
     public OID4VCAuthorizationDetail process(UserSessionModel userSession, ClientSessionContext clientSessionCtx, AuthorizationDetailsJSONRepresentation authzDetail) {
-        OID4VCAuthorizationDetail requestAuthDetail = authzDetail.asSubtype(OID4VCAuthorizationDetail.class);
+        OID4VCAuthorizationDetail requestAuthDetail = authorizationDetailsParser.parseToSubtype(authzDetail, OID4VCAuthorizationDetail.class);
         validateAuthorizationDetail(requestAuthDetail);
         return buildAuthorizationDetailResponse(clientSessionCtx, requestAuthDetail);
     }
@@ -99,7 +105,7 @@ public class OID4VCAuthorizationDetailsProcessor implements AuthorizationDetails
     @Override
     public OID4VCAuthorizationDetail validateAuthorizationDetail(AuthorizationDetailsJSONRepresentation authzDetail) throws InvalidAuthorizationDetailsException {
 
-        OID4VCAuthorizationDetail requestAuthDetail = authzDetail.asSubtype(OID4VCAuthorizationDetail.class);
+        OID4VCAuthorizationDetail requestAuthDetail = narrowRepresentation(authzDetail);
 
         CredentialIssuer issuerMetadata = new OID4VCIssuerWellKnownProvider(session).getIssuerMetadata();
         Map<String, SupportedCredentialConfiguration> supportedCredentials = issuerMetadata.getCredentialsSupported();
@@ -168,6 +174,11 @@ public class OID4VCAuthorizationDetailsProcessor implements AuthorizationDetails
         cloned.setIssuedCredentialId(null);
         cloned.setCredentialsOfferId(null);
         return cloned;
+    }
+
+    @Override
+    public OID4VCAuthorizationDetail narrowRepresentation(AuthorizationDetailsJSONRepresentation authzDetail) {
+        return authorizationDetailsParser.asSubtype(authzDetail, getSupportedResponseJavaType(authzDetail.getType()));
     }
 
     // Private ---------------------------------------------------------------------------------------------------------
