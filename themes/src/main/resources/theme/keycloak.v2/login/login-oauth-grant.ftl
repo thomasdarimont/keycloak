@@ -1,5 +1,33 @@
 <#import "template.ftl" as layout>
 <#import "buttons.ftl" as buttons>
+<#-- Renders a tree of authorization_details entries recursively (RFC 9396 entries can be deeply nested). -->
+<#macro authzDetailEntries entries>
+    <ul class="${properties.kcListClass!} kc-authorization-details-entries">
+        <#list entries as entry>
+            <li>
+                <#if entry.label?? && entry.value??>
+                    <span>${advancedMsg(entry.label)}: <b>${entry.value}</b></span>
+                <#elseif entry.label??>
+                    <span>${advancedMsg(entry.label)}</span>
+                <#elseif entry.value??>
+                    <span><b>${entry.value}</b></span>
+                </#if>
+                <#if entry.fields?has_content><@authzDetailEntries entry.fields/></#if>
+            </li>
+        </#list>
+    </ul>
+</#macro>
+<#-- Renders the authorization_details associated with a client scope, underneath its consent line. -->
+<#macro authorizationDetails details>
+    <#if details?has_content>
+        <#list details as detail>
+            <div class="kc-authorization-details" data-authz-type="${detail.type}">
+                <#if detail.title??><span class="kc-authorization-details-title">${advancedMsg(detail.title)}</span></#if>
+                <@authzDetailEntries detail.entries/>
+            </div>
+        </#list>
+    </#if>
+</#macro>
 <@layout.registrationLayout bodyClass="oauth"; section>
     <#if section = "header">
         <#if client.attributes.logoUri??>
@@ -25,6 +53,7 @@
                                         ${advancedMsg(clientScope.consentScreenText, clientScope.parameterizedScopeParameter)}
                                 </#if>
                             </span>
+                            <@authorizationDetails clientScope.authorizationDetails/>
                         </li>
                     </#list>
                 </#if>

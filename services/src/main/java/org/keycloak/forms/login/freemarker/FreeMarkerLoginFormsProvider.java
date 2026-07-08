@@ -87,6 +87,8 @@ import org.keycloak.models.UserModel;
 import org.keycloak.models.utils.FormMessage;
 import org.keycloak.organization.forms.login.freemarker.model.OrganizationAwareIdentityProviderBean;
 import org.keycloak.protocol.oidc.OIDCLoginProtocol;
+import org.keycloak.protocol.oidc.rar.AuthorizationDetailDisplay;
+import org.keycloak.protocol.oidc.rar.AuthorizationDetailsConsentResolver;
 import org.keycloak.rar.AuthorizationDetails;
 import org.keycloak.representations.idm.OAuth2ErrorRepresentation;
 import org.keycloak.services.Urls;
@@ -319,8 +321,10 @@ public class FreeMarkerLoginFormsProvider implements LoginFormsProvider {
                 attributes.put("profile", rb);
                 break;
             case OAUTH_GRANT:
+                Map<String, List<AuthorizationDetailDisplay>> authzDetailsByScope =
+                        getAuthorizationDetailsConsentResolver().resolve(authenticationSession, clientScopesRequested);
                 attributes.put("oauth",
-                        new OAuthGrantBean(accessCode, client, clientScopesRequested));
+                        new OAuthGrantBean(accessCode, client, clientScopesRequested, authzDetailsByScope));
                 break;
             case CODE:
                 attributes.remove("message"); // No need to include "message" attribute as error is included in separate field anyway
@@ -348,6 +352,10 @@ public class FreeMarkerLoginFormsProvider implements LoginFormsProvider {
         }
 
         return processTemplate(theme, Templates.getTemplate(page), locale);
+    }
+
+    protected AuthorizationDetailsConsentResolver getAuthorizationDetailsConsentResolver() {
+        return new AuthorizationDetailsConsentResolver(session);
     }
 
     /**

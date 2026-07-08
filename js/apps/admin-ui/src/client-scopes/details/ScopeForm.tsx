@@ -549,6 +549,16 @@ export const ScopeForm = ({ clientScope, save }: ScopeFormProps) => {
           min={0}
         />
 
+        {isNotSaml && (
+          <TextAreaControl
+            name={convertAttributeNameToForm<ClientScopeDefaultOptionalType>(
+              "attributes.authorization_details.types",
+            )}
+            label={t("authorizationDetailsTypes")}
+            labelIcon={t("authorizationDetailsTypesHelp")}
+          />
+        )}
+
         {isOid4vcProtocol && isOid4vcEnabled && (
           <>
             <TextControl

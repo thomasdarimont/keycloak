@@ -162,4 +162,19 @@ public interface AuthorizationDetailsProcessor<ADR extends AuthorizationDetailsJ
     }
 
     ADR narrowRepresentation(AuthorizationDetailsJSONRepresentation authzDetail);
+
+    /**
+     * Converts the given {@code authorization_details} entry into a read-only, theme-facing structure so that it can be
+     * rendered on the OAuth grant (consent) screen. Whether it is actually shown is gated elsewhere by associating the
+     * type with a requested client scope. The default produces a generic tree from the RFC 9396 common fields and any
+     * type-specific data (see {@link AuthorizationDetailDisplay#generic}); processors override this to curate the
+     * output, and can branch on {@link AuthorizationDetailsJSONRepresentation#getType()} when they support several types.
+     * Return {@code null} to suppress rendering for a given entry.
+     *
+     * @param authzDetail a single {@code authorization_details} entry whose type is supported by this processor
+     * @return a display representation, or {@code null} if this entry should not be rendered on the consent screen
+     */
+    default AuthorizationDetailDisplay toConsentDisplay(AuthorizationDetailsJSONRepresentation authzDetail) {
+        return AuthorizationDetailDisplay.generic(authzDetail);
+    }
 }

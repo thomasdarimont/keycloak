@@ -90,6 +90,16 @@ public class AuthorizationDetailsProcessorManager {
         }
     }
 
+    /**
+     * @return the processor that handles the given authorization_details "type", or {@code null} if none is registered.
+     */
+    public AuthorizationDetailsProcessor<?> getProcessor(String type) {
+        if (type == null) {
+            return null;
+        }
+        return getAuthorizationDetailsProcessorMap().get(type);
+    }
+
     // Private ---------------------------------------------------------------------------------------------------------
 
     /**

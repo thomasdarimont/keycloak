@@ -20,6 +20,7 @@ package org.keycloak.protocol.oid4vc.issuance;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -47,6 +48,7 @@ import org.keycloak.protocol.oid4vc.model.OID4VCAuthorizationDetail;
 import org.keycloak.protocol.oid4vc.model.SupportedCredentialConfiguration;
 import org.keycloak.protocol.oid4vc.utils.ClaimsPathPointer;
 import org.keycloak.protocol.oid4vc.utils.OID4VCUtil;
+import org.keycloak.protocol.oidc.rar.AuthorizationDetailDisplay;
 import org.keycloak.protocol.oidc.rar.AuthorizationDetailsProcessor;
 import org.keycloak.protocol.oidc.rar.InvalidAuthorizationDetailsException;
 import org.keycloak.representations.AuthorizationDetailsJSONRepresentation;
@@ -179,6 +181,35 @@ public class OID4VCAuthorizationDetailsProcessor implements AuthorizationDetails
     @Override
     public OID4VCAuthorizationDetail narrowRepresentation(AuthorizationDetailsJSONRepresentation authzDetail) {
         return authorizationDetailsParser.asSubtype(authzDetail, getSupportedResponseJavaType(authzDetail.getType()));
+    }
+
+    @Override
+    public AuthorizationDetailDisplay toConsentDisplay(AuthorizationDetailsJSONRepresentation authzDetail) {
+        OID4VCAuthorizationDetail detail = narrowRepresentation(authzDetail);
+
+        List<AuthorizationDetailDisplay.Entry> entries = new ArrayList<>();
+        if (detail.getCredentialConfigurationId() != null) {
+            entries.add(new AuthorizationDetailDisplay.Entry("oid4vciConsentCredentialConfigurationId", detail.getCredentialConfigurationId()));
+        }
+
+        List<ClaimsDescription> claims = detail.getClaims();
+        if (claims != null && !claims.isEmpty()) {
+            List<AuthorizationDetailDisplay.Entry> claimEntries = claims.stream()
+                    .map(ClaimsDescription::getPath)
+                    .filter(Objects::nonNull)
+                    .map(path -> path.stream().map(String::valueOf).collect(Collectors.joining(".")))
+                    .filter(p -> !p.isEmpty())
+                    .map(p -> new AuthorizationDetailDisplay.Entry(null, p))
+                    .collect(Collectors.toList());
+            if (!claimEntries.isEmpty()) {
+                entries.add(new AuthorizationDetailDisplay.Entry("oid4vciConsentClaims", null, claimEntries));
+            }
+        }
+
+        if (entries.isEmpty()) {
+            return null;
+        }
+        return new AuthorizationDetailDisplay(detail.getType(), "oid4vciConsentTitle", entries);
     }
 
     // Private ---------------------------------------------------------------------------------------------------------

@@ -18,10 +18,12 @@ package org.keycloak.forms.login.freemarker.model;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.ClientScopeModel;
 import org.keycloak.models.OrderedModel;
+import org.keycloak.protocol.oidc.rar.AuthorizationDetailDisplay;
 import org.keycloak.rar.AuthorizationDetails;
 
 /**
@@ -36,12 +38,18 @@ public class OAuthGrantBean {
     private ClientModel client;
 
     public OAuthGrantBean(String code, ClientModel client, List<AuthorizationDetails> clientScopesRequested) {
+        this(code, client, clientScopesRequested, Map.of());
+    }
+
+    public OAuthGrantBean(String code, ClientModel client, List<AuthorizationDetails> clientScopesRequested,
+                          Map<String, List<AuthorizationDetailDisplay>> authorizationDetailsByScopeId) {
         this.code = code;
         this.client = client;
 
         for (AuthorizationDetails authDetails : clientScopesRequested) {
             ClientScopeModel clientScope = authDetails.getClientScope();
-            this.clientScopesRequested.add(new ClientScopeEntry(clientScope.getConsentScreenText(), clientScope.getGuiOrder(), authDetails));
+            List<AuthorizationDetailDisplay> details = clientScope == null ? null : authorizationDetailsByScopeId.get(clientScope.getId());
+            this.clientScopesRequested.add(new ClientScopeEntry(clientScope.getConsentScreenText(), clientScope.getGuiOrder(), authDetails, details));
         }
         this.clientScopesRequested.sort(COMPARATOR_INSTANCE);
     }
@@ -67,11 +75,14 @@ public class OAuthGrantBean {
         private final String consentScreenText;
         private final String guiOrder;
         private final String parameterizedScopeParameter;
+        private final List<AuthorizationDetailDisplay> authorizationDetails;
 
-        public ClientScopeEntry(String consentScreenText, String guiOrder, AuthorizationDetails authorizationDetails) {
+        public ClientScopeEntry(String consentScreenText, String guiOrder, AuthorizationDetails authorizationDetails,
+                                List<AuthorizationDetailDisplay> authorizationDetailDisplays) {
             this.consentScreenText = consentScreenText;
             this.guiOrder = guiOrder;
             this.parameterizedScopeParameter = authorizationDetails.getParameterizedScopeParam();
+            this.authorizationDetails = authorizationDetailDisplays == null ? List.of() : authorizationDetailDisplays;
         }
 
         public String getConsentScreenText() {
@@ -85,6 +96,14 @@ public class OAuthGrantBean {
 
         public String getParameterizedScopeParameter() {
             return parameterizedScopeParameter;
+        }
+
+        /**
+         * @return the RAR {@code authorization_details} entries associated with this scope, rendered underneath its
+         * consent line. Never {@code null}; empty when there are none.
+         */
+        public List<AuthorizationDetailDisplay> getAuthorizationDetails() {
+            return authorizationDetails;
         }
     }
 }

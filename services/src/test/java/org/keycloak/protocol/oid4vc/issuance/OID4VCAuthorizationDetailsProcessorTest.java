@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.keycloak.protocol.oid4vc.model.ClaimsDescription;
 import org.keycloak.protocol.oid4vc.model.OID4VCAuthorizationDetail;
+import org.keycloak.protocol.oidc.rar.AuthorizationDetailDisplay;
 import org.keycloak.representations.AuthorizationDetailsJSONRepresentation;
 import org.keycloak.util.JsonSerialization;
 
@@ -520,6 +521,84 @@ public class OID4VCAuthorizationDetailsProcessorTest {
 
     private AuthorizationDetailsJSONRepresentation convertToResponseType(OID4VCAuthorizationDetail oid4vcDetails) throws IOException {
         return JsonSerialization.readValue(JsonSerialization.writeValueAsString(oid4vcDetails), AuthorizationDetailsJSONRepresentation.class);
+    }
+
+    // Consent display -------------------------------------------------------------------------------------------------
+
+    private OID4VCAuthorizationDetailsProcessor processor() {
+        return new OID4VCAuthorizationDetailsProcessor(null, new OID4VCAuthorizationDetailsParser());
+    }
+
+    private AuthorizationDetailsJSONRepresentation parse(String json) throws IOException {
+        return JsonSerialization.readValue(json, AuthorizationDetailsJSONRepresentation.class);
+    }
+
+    @Test
+    public void toConsentDisplayRendersCredentialConfiguration() throws IOException {
+        AuthorizationDetailsJSONRepresentation entry = parse(
+                "{ \"type\": \"openid_credential\", \"credential_configuration_id\": \"UniversityDegreeCredential\" }");
+
+        AuthorizationDetailDisplay display = processor().toConsentDisplay(entry);
+
+        assertNotNull(display);
+        assertEquals(OPENID_CREDENTIAL, display.getType());
+        assertEquals("oid4vciConsentTitle", display.getTitle());
+        assertEquals(1, display.getEntries().size());
+        AuthorizationDetailDisplay.Entry credential = display.getEntries().get(0);
+        assertEquals("oid4vciConsentCredentialConfigurationId", credential.getLabel());
+        assertEquals("UniversityDegreeCredential", credential.getValue());
+        assertTrue(credential.getFields().isEmpty());
+    }
+
+    @Test
+    public void toConsentDisplayIgnoresLocationsForCuratedDisplay() throws IOException {
+        AuthorizationDetailsJSONRepresentation entry = parse(
+                "{ \"type\": \"openid_credential\", \"locations\": [ \"https://credential-issuer.example.com\" ], "
+                        + "\"credential_configuration_id\": \"UniversityDegreeCredential\" }");
+
+        AuthorizationDetailDisplay display = processor().toConsentDisplay(entry);
+
+        // The curated OID4VC display surfaces only the credential (+ claims), not RFC common fields like locations.
+        assertEquals(1, display.getEntries().size());
+        assertEquals("oid4vciConsentCredentialConfigurationId", display.getEntries().get(0).getLabel());
+        assertTrue(display.getEntries().stream().noneMatch(e -> "locations".equals(e.getLabel())));
+    }
+
+    @Test
+    public void toConsentDisplayRendersClaimsAsNestedFields() throws IOException {
+        AuthorizationDetailDisplay display = processor().toConsentDisplay(convertToResponseType(createValidAuthorizationDetailWithClaims()));
+
+        AuthorizationDetailDisplay.Entry claims = display.getEntries().stream()
+                .filter(e -> "oid4vciConsentClaims".equals(e.getLabel()))
+                .findFirst().orElse(null);
+        assertNotNull(claims);
+        assertNull(claims.getValue());
+        List<String> paths = claims.getFields().stream().map(AuthorizationDetailDisplay.Entry::getValue).toList();
+        assertTrue(paths.contains("credentialSubject.given_name"));
+        assertTrue(paths.contains("credentialSubject.family_name"));
+    }
+
+    @Test
+    public void genericDisplayRendersNestedDataDriven() throws IOException {
+        // A type without a curated processor renders exactly the fields present in the entry, recursing into objects.
+        AuthorizationDetailsJSONRepresentation entry = parse(
+                "{ \"type\": \"payment_initiation\", \"instructedAmount\": { \"currency\": \"EUR\", \"amount\": \"123.50\" }, "
+                        + "\"creditorName\": \"Merchant A\" }");
+
+        AuthorizationDetailDisplay display = AuthorizationDetailDisplay.generic(entry);
+
+        assertEquals("payment_initiation", display.getType());
+        assertNull(display.getTitle());
+        // "type" is conveyed via the display type, not rendered as a field
+        assertTrue(display.getEntries().stream().noneMatch(e -> "type".equals(e.getLabel())));
+
+        AuthorizationDetailDisplay.Entry amount = display.getEntries().stream()
+                .filter(e -> "instructedAmount".equals(e.getLabel()))
+                .findFirst().orElseThrow();
+        assertNull(amount.getValue());
+        List<String> amountFields = amount.getFields().stream().map(AuthorizationDetailDisplay.Entry::getLabel).toList();
+        assertTrue(amountFields.contains("currency"));
+        assertTrue(amountFields.contains("amount"));
     }
 
 }
