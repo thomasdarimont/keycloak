@@ -71,7 +71,10 @@ public class Keycloak {
     }
 
     public static void main(String[] args) {
-        Keycloak.builder().start(args);
+        Keycloak.builder()
+                .setVersion(Version.VERSION)
+                .addDependency("org.keycloak", "keycloak-junit5", Version.VERSION)
+                .start(args);
     }
 
     public static class Builder {

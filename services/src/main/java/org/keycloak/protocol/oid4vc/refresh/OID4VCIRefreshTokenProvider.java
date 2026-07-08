@@ -21,6 +21,7 @@ import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.UserSessionModel;
 import org.keycloak.models.oid4vci.CredentialScopeModel;
+import org.keycloak.protocol.oid4vc.issuance.OID4VCAuthorizationDetailsParser;
 import org.keycloak.protocol.oid4vc.issuance.OID4VCAuthorizationDetailsProcessor;
 import org.keycloak.protocol.oid4vc.issuance.OID4VCAuthorizationDetailsProcessorFactory;
 import org.keycloak.protocol.oid4vc.model.OID4VCAuthorizationDetail;
@@ -59,8 +60,11 @@ public class OID4VCIRefreshTokenProvider extends AbstractRefreshTokenProvider im
 
     private static final Logger logger = Logger.getLogger(OID4VCIRefreshTokenProvider.class);
 
-    public OID4VCIRefreshTokenProvider(KeycloakSession session) {
+    private final OID4VCAuthorizationDetailsParser authorizationDetailsParser;
+
+    public OID4VCIRefreshTokenProvider(KeycloakSession session, OID4VCAuthorizationDetailsParser authorizationDetailsParser) {
         super(session);
+        this.authorizationDetailsParser = authorizationDetailsParser;
     }
 
     @Override
@@ -177,7 +181,7 @@ public class OID4VCIRefreshTokenProvider extends AbstractRefreshTokenProvider im
         List<AuthorizationDetailsJSONRepresentation> clearedDetails = new ArrayList<>(authzDetails.size());
         for (AuthorizationDetailsJSONRepresentation d : authzDetails) {
             if (OPENID_CREDENTIAL.equals(d.getType())) {
-                OID4VCAuthorizationDetail typed = d.asSubtype(OID4VCAuthorizationDetail.class);
+                OID4VCAuthorizationDetail typed = authorizationDetailsParser.asSubtype(d, OID4VCAuthorizationDetail.class);
                 typed.setCredentialsOfferId(null);
                 clearedDetails.add(typed);
             } else {
@@ -208,7 +212,7 @@ public class OID4VCIRefreshTokenProvider extends AbstractRefreshTokenProvider im
             if (!OPENID_CREDENTIAL.equals(detail.getType())) {
                 continue;
             }
-            OID4VCAuthorizationDetail oid4VCDetail = detail.asSubtype(OID4VCAuthorizationDetail.class);
+            OID4VCAuthorizationDetail oid4VCDetail = authorizationDetailsParser.asSubtype(detail, OID4VCAuthorizationDetail.class);
             String issuedCredentialId = oid4VCDetail.getIssuedCredentialId();
             if (issuedCredentialId == null) {
                 continue;

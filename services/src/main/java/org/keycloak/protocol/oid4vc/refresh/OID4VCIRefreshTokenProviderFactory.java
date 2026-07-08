@@ -4,6 +4,7 @@ import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.protocol.oid4vc.OID4VCEnvironmentProviderFactory;
+import org.keycloak.protocol.oid4vc.issuance.OID4VCAuthorizationDetailsParser;
 import org.keycloak.protocol.oidc.refresh.RefreshTokenProvider;
 import org.keycloak.protocol.oidc.refresh.RefreshTokenProviderFactory;
 
@@ -13,7 +14,7 @@ public class OID4VCIRefreshTokenProviderFactory implements RefreshTokenProviderF
 
     @Override
     public RefreshTokenProvider create(KeycloakSession session) {
-        return new OID4VCIRefreshTokenProvider(session);
+        return new OID4VCIRefreshTokenProvider(session, getAuthorizationDetailsParser());
     }
 
     @Override
@@ -24,6 +25,10 @@ public class OID4VCIRefreshTokenProviderFactory implements RefreshTokenProviderF
     @Override
     public void postInit(KeycloakSessionFactory factory) {
 
+    }
+
+    protected OID4VCAuthorizationDetailsParser getAuthorizationDetailsParser() {
+        return new OID4VCAuthorizationDetailsParser();
     }
 
     @Override
