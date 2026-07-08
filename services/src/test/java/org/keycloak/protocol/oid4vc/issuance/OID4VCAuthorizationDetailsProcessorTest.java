@@ -542,10 +542,10 @@ public class OID4VCAuthorizationDetailsProcessorTest {
 
         assertNotNull(display);
         assertEquals(OPENID_CREDENTIAL, display.getType());
-        assertEquals("oid4vciConsentTitle", display.getTitle());
         assertEquals(1, display.getEntries().size());
         AuthorizationDetailDisplay.Entry credential = display.getEntries().get(0);
-        assertEquals("oid4vciConsentCredentialConfigurationId", credential.getLabel());
+        // machine name; the theme resolves the label from "openid_credential_entry_credential_configuration_id"
+        assertEquals("credential_configuration_id", credential.getName());
         assertEquals("UniversityDegreeCredential", credential.getValue());
         assertTrue(credential.getFields().isEmpty());
     }
@@ -560,8 +560,8 @@ public class OID4VCAuthorizationDetailsProcessorTest {
 
         // The curated OID4VC display surfaces only the credential (+ claims), not RFC common fields like locations.
         assertEquals(1, display.getEntries().size());
-        assertEquals("oid4vciConsentCredentialConfigurationId", display.getEntries().get(0).getLabel());
-        assertTrue(display.getEntries().stream().noneMatch(e -> "locations".equals(e.getLabel())));
+        assertEquals("credential_configuration_id", display.getEntries().get(0).getName());
+        assertTrue(display.getEntries().stream().noneMatch(e -> "locations".equals(e.getName())));
     }
 
     @Test
@@ -569,7 +569,7 @@ public class OID4VCAuthorizationDetailsProcessorTest {
         AuthorizationDetailDisplay display = processor().toConsentDisplay(convertToResponseType(createValidAuthorizationDetailWithClaims()));
 
         AuthorizationDetailDisplay.Entry claims = display.getEntries().stream()
-                .filter(e -> "oid4vciConsentClaims".equals(e.getLabel()))
+                .filter(e -> "claims".equals(e.getName()))
                 .findFirst().orElse(null);
         assertNotNull(claims);
         assertNull(claims.getValue());
@@ -588,17 +588,25 @@ public class OID4VCAuthorizationDetailsProcessorTest {
         AuthorizationDetailDisplay display = AuthorizationDetailDisplay.generic(entry);
 
         assertEquals("payment_initiation", display.getType());
-        assertNull(display.getTitle());
         // "type" is conveyed via the display type, not rendered as a field
-        assertTrue(display.getEntries().stream().noneMatch(e -> "type".equals(e.getLabel())));
+        assertTrue(display.getEntries().stream().noneMatch(e -> "type".equals(e.getName())));
 
         AuthorizationDetailDisplay.Entry amount = display.getEntries().stream()
-                .filter(e -> "instructedAmount".equals(e.getLabel()))
+                .filter(e -> "instructedAmount".equals(e.getName()))
                 .findFirst().orElseThrow();
         assertNull(amount.getValue());
-        List<String> amountFields = amount.getFields().stream().map(AuthorizationDetailDisplay.Entry::getLabel).toList();
+        List<String> amountFields = amount.getFields().stream().map(AuthorizationDetailDisplay.Entry::getName).toList();
         assertTrue(amountFields.contains("currency"));
         assertTrue(amountFields.contains("amount"));
+    }
+
+    @Test
+    public void entrySupportsOptionalDescription() {
+        assertNull(new AuthorizationDetailDisplay.Entry("cost", "1200 EUR").getDescription());
+
+        AuthorizationDetailDisplay.Entry withDescription =
+                new AuthorizationDetailDisplay.Entry("cost", "1200 EUR", "Includes taxes and fees", null);
+        assertEquals("Includes taxes and fees", withDescription.getDescription());
     }
 
 }

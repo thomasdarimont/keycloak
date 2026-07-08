@@ -185,3 +185,32 @@ hr {
 #kc-form-webauthn {
     gap: 0.875rem;
 }
+/* authorization_details rendered underneath a scope on the consent (grant) screen */
+.kc-authorization-details {
+    margin-block: var(--pf-v5-global--spacer--md) var(--pf-v5-global--spacer--lg);
+}
+
+.kc-authorization-details-title {
+    display: block;
+    margin-block-end: var(--pf-v5-global--spacer--xs);
+    font-weight: var(--pf-v5-global--FontWeight--bold);
+}
+
+.kc-authorization-details-entries {
+    margin: 0;
+    padding-inline-start: var(--pf-v5-global--spacer--md);
+}
+
+.kc-authorization-details-entries li {
+    margin-block: var(--pf-v5-global--spacer--xs);
+}
+
+.kc-authorization-details-help {
+    margin-inline-start: var(--pf-v5-global--spacer--xs);
+    color: var(--pf-v5-global--Color--200);
+}
+
+.kc-authorization-details-description {
+    color: var(--pf-v5-global--Color--200);
+    font-size: var(--pf-v5-global--FontSize--sm);
+}

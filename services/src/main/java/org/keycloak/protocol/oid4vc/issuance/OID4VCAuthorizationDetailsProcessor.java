@@ -58,6 +58,7 @@ import org.keycloak.util.Strings;
 import org.jboss.logging.Logger;
 
 import static org.keycloak.OAuth2Constants.ISSUER_STATE;
+import static org.keycloak.OID4VCConstants.CREDENTIAL_CONFIGURATION_ID;
 import static org.keycloak.OID4VCConstants.OPENID_CREDENTIAL;
 import static org.keycloak.models.oid4vci.CredentialScopeModel.VC_CONFIGURATION_ID;
 import static org.keycloak.protocol.oid4vc.issuance.OID4VCIssuerEndpoint.CREDENTIALS_OFFER_ID_ATTR;
@@ -189,7 +190,7 @@ public class OID4VCAuthorizationDetailsProcessor implements AuthorizationDetails
 
         List<AuthorizationDetailDisplay.Entry> entries = new ArrayList<>();
         if (detail.getCredentialConfigurationId() != null) {
-            entries.add(new AuthorizationDetailDisplay.Entry("oid4vciConsentCredentialConfigurationId", detail.getCredentialConfigurationId()));
+            entries.add(new AuthorizationDetailDisplay.Entry(CREDENTIAL_CONFIGURATION_ID, detail.getCredentialConfigurationId()));
         }
 
         List<ClaimsDescription> claims = detail.getClaims();
@@ -202,14 +203,14 @@ public class OID4VCAuthorizationDetailsProcessor implements AuthorizationDetails
                     .map(p -> new AuthorizationDetailDisplay.Entry(null, p))
                     .collect(Collectors.toList());
             if (!claimEntries.isEmpty()) {
-                entries.add(new AuthorizationDetailDisplay.Entry("oid4vciConsentClaims", null, claimEntries));
+                entries.add(new AuthorizationDetailDisplay.Entry(OID4VCAuthorizationDetail.CLAIMS, null, claimEntries));
             }
         }
 
         if (entries.isEmpty()) {
             return null;
         }
-        return new AuthorizationDetailDisplay(detail.getType(), "oid4vciConsentTitle", entries);
+        return new AuthorizationDetailDisplay(detail.getType(), entries);
     }
 
     // Private ---------------------------------------------------------------------------------------------------------
