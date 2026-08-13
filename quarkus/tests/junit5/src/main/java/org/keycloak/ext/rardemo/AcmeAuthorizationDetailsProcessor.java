@@ -40,31 +40,36 @@ public class AcmeAuthorizationDetailsProcessor implements AuthorizationDetailsPr
 
     @Override
     public AuthorizationDetailsJSONRepresentation validateAuthorizationDetail(AuthorizationDetailsJSONRepresentation authzDetail) throws InvalidAuthorizationDetailsException {
+        // called when an authorization detail is submitted
         return authzDetail;
     }
 
     @Override
     public AuthorizationDetailsJSONRepresentation process(UserSessionModel userSession, ClientSessionContext clientSessionCtx, AuthorizationDetailsJSONRepresentation authorizationDetailsMember) throws InvalidAuthorizationDetailsException {
+        // called when an authorization detail is processed
         return authorizationDetailsMember;
     }
 
     @Override
     public List handleMissingAuthorizationDetails(UserSessionModel userSession, ClientSessionContext clientSessionCtx) throws InvalidAuthorizationDetailsException {
+        // here we can return a list of authorization details based on the user session and client session context if necessary
         return List.of();
     }
 
     @Override
     public AuthorizationDetailsJSONRepresentation processStoredAuthorizationDetails(UserSessionModel userSession, ClientSessionContext clientSessionCtx, AuthorizationDetailsJSONRepresentation storedAuthDetailsMember) throws InvalidAuthorizationDetailsException {
+        // called when an authorization detail is loaded from client session
         return storedAuthDetailsMember;
     }
 
     @Override
     public void afterAuthorizationDetailsProcessed(UserSessionModel userSession, ClientSessionContext clientSessionCtx, AuthorizationDetailsJSONRepresentation authorizationDetailsResponse) {
-
+        // allows for post processing after authorization detail is processed
     }
 
     @Override
     public AuthorizationDetailsJSONRepresentation narrowRepresentation(AuthorizationDetailsJSONRepresentation authzDetail) {
+        // here we could return a more specific subtype of AuthorizationDetailsJSONRepresentation
         return parser.parseToSubtype(authzDetail, AuthorizationDetailsJSONRepresentation.class);
     }
 
@@ -73,19 +78,9 @@ public class AcmeAuthorizationDetailsProcessor implements AuthorizationDetailsPr
 
     }
 
-    public static class Parser extends AbstractAuthorizationDetailsParser<AuthorizationDetailsJSONRepresentation> {
-
-        @Override
-        public AuthorizationDetailsJSONRepresentation asSubtype(AuthorizationDetailsJSONRepresentation authzDetail, Class<AuthorizationDetailsJSONRepresentation> clazz) {
-
-            if (authzDetail.getType().equals("acme_booking")) {
-                return JsonSerialization.mapper.convertValue(authzDetail, AcmeBookingConfirmationDetails.class);
-            }
-
-            return authzDetail;
-        }
-    }
-
+    /**
+     * Custom factory that can create acme authorization details processor
+     */
     public static class Factory implements AuthorizationDetailsProcessorFactory {
 
         @Override
@@ -93,9 +88,28 @@ public class AcmeAuthorizationDetailsProcessor implements AuthorizationDetailsPr
             return new AcmeAuthorizationDetailsProcessor(session, new Parser());
         }
 
+        // Set<String> getSupportedAuthorizationDetailTypes()
+
         @Override
         public String getId() {
             return "acme-rar";
+        }
+    }
+
+    /**
+     * Custom parser that can convert acme authorization details into subtype
+     */
+    public static class Parser extends AbstractAuthorizationDetailsParser<AuthorizationDetailsJSONRepresentation> {
+
+        @Override
+        public AuthorizationDetailsJSONRepresentation asSubtype(AuthorizationDetailsJSONRepresentation detail, Class<AuthorizationDetailsJSONRepresentation> clazz) {
+
+            if (detail.getType().equals("acme_booking")) {
+                // convert generic authorization_details into AcmeBookingConfirmationDetails
+                return JsonSerialization.mapper.convertValue(detail, AcmeBookingConfirmationDetails.class);
+            }
+
+            return detail;
         }
     }
 }
