@@ -29,6 +29,7 @@ import org.keycloak.models.UserModel;
 import org.keycloak.models.oid4vci.CredentialScopeModel;
 import org.keycloak.protocol.oid4vc.issuance.CredentialOfferException;
 import org.keycloak.protocol.oid4vc.issuance.OID4VCAuthorizationDetailsProcessor;
+import org.keycloak.protocol.oid4vc.issuance.OID4VCAuthorizationDetailsProcessorFactory;
 import org.keycloak.protocol.oid4vc.issuance.OID4VCIssuerWellKnownProvider;
 import org.keycloak.protocol.oid4vc.issuance.credentialoffer.preauth.PreAuthCodeHandler;
 import org.keycloak.protocol.oid4vc.model.AuthorizationCodeGrant;
@@ -38,6 +39,7 @@ import org.keycloak.protocol.oid4vc.model.OID4VCAuthorizationDetail;
 import org.keycloak.protocol.oid4vc.model.PreAuthCodeCtx;
 import org.keycloak.protocol.oid4vc.model.PreAuthorizedCodeGrant;
 import org.keycloak.protocol.oid4vc.utils.OID4VCUtil;
+import org.keycloak.protocol.oidc.rar.AuthorizationDetailsProcessor;
 import org.keycloak.util.Strings;
 
 import static org.keycloak.OID4VCConstants.OID4VCI_ENABLED_ATTRIBUTE_KEY;
@@ -113,6 +115,12 @@ class DefaultCredentialOfferProvider implements CredentialOfferProvider {
                 .setCredentialIssuer(OID4VCIssuerWellKnownProvider.getIssuer(session.getContext()))
                 .setCredentialConfigurationIds(credentialConfigurationIds);
 
+        // Resolve the OID4VCI processor via the session so that a customized processor (e.g. with a different parser) is honored
+        OID4VCAuthorizationDetailsProcessor authDetailsProcessor = (OID4VCAuthorizationDetailsProcessor) session.getProvider(AuthorizationDetailsProcessor.class, OID4VCAuthorizationDetailsProcessorFactory.PROVIDER_ID);
+        if (authDetailsProcessor == null) {
+            throw new CredentialOfferException(Errors.INVALID_CONFIG, "No authorization details processor for " + OID4VCAuthorizationDetailsProcessorFactory.PROVIDER_ID);
+        }
+
         // Create the CredentialOfferState
         //
         CredentialOfferState offerState = new CredentialOfferState(credOffer, targetClientId, targetUserId, expireAt, credOffersId -> {
@@ -126,8 +134,6 @@ class DefaultCredentialOfferProvider implements CredentialOfferProvider {
                 if (targetUser != null && !OID4VCUtil.hasVerifiableCredential(session, targetUser, credScope)) {
                     throw new CredentialOfferException(Errors.INVALID_REQUEST, "User '" + targetUser.getUsername() + "' does not have verifiable credential '" + credConfigId + "'.");
                 }
-
-                OID4VCAuthorizationDetailsProcessor authDetailsProcessor = new OID4VCAuthorizationDetailsProcessor(session);
                 authDetails.add(authDetailsProcessor.generateResponseAuthorizationDetails(credScope, credOffersId));
             }
             return authDetails;

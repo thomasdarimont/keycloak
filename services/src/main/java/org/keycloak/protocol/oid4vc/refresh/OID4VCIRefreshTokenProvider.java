@@ -28,6 +28,7 @@ import org.keycloak.models.SingleUseObjectProvider;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.UserSessionModel;
 import org.keycloak.models.oid4vci.CredentialScopeModel;
+import org.keycloak.protocol.oid4vc.issuance.OID4VCAuthorizationDetailsParser;
 import org.keycloak.protocol.oid4vc.model.OID4VCAuthorizationDetail;
 import org.keycloak.protocol.oid4vc.utils.CredentialScopeUtils;
 import org.keycloak.protocol.oid4vc.utils.OID4VCUtil;
@@ -71,8 +72,15 @@ public class OID4VCIRefreshTokenProvider extends AbstractRefreshTokenProvider im
     private String pendingRotationKey;
     private Map<String, String> pendingRotationRecord;
 
+    private final OID4VCAuthorizationDetailsParser authorizationDetailsParser;
+
     public OID4VCIRefreshTokenProvider(KeycloakSession session) {
+        this(session, new OID4VCAuthorizationDetailsParser());
+    }
+
+    public OID4VCIRefreshTokenProvider(KeycloakSession session, OID4VCAuthorizationDetailsParser authorizationDetailsParser) {
         super(session);
+        this.authorizationDetailsParser = authorizationDetailsParser;
     }
 
     @Override
@@ -192,7 +200,7 @@ public class OID4VCIRefreshTokenProvider extends AbstractRefreshTokenProvider im
         List<AuthorizationDetailsJSONRepresentation> clearedDetails = new ArrayList<>(authzDetails.size());
         for (AuthorizationDetailsJSONRepresentation d : authzDetails) {
             if (OPENID_CREDENTIAL.equals(d.getType())) {
-                OID4VCAuthorizationDetail typed = d.asSubtype(OID4VCAuthorizationDetail.class);
+                OID4VCAuthorizationDetail typed = authorizationDetailsParser.asSubtype(d, OID4VCAuthorizationDetail.class);
                 typed.setCredentialsOfferId(null);
                 clearedDetails.add(typed);
             } else {
@@ -250,7 +258,7 @@ public class OID4VCIRefreshTokenProvider extends AbstractRefreshTokenProvider im
             if (!OPENID_CREDENTIAL.equals(detail.getType())) {
                 continue;
             }
-            OID4VCAuthorizationDetail oid4VCDetail = detail.asSubtype(OID4VCAuthorizationDetail.class);
+            OID4VCAuthorizationDetail oid4VCDetail = authorizationDetailsParser.asSubtype(detail, OID4VCAuthorizationDetail.class);
             String issuedCredentialId = oid4VCDetail.getIssuedCredentialId();
             if (issuedCredentialId == null) {
                 continue;
@@ -414,7 +422,7 @@ public class OID4VCIRefreshTokenProvider extends AbstractRefreshTokenProvider im
     private OID4VCAuthorizationDetail getOid4vcAuthzDetail(List<AuthorizationDetailsJSONRepresentation> authzDetails) {
         List<OID4VCAuthorizationDetail> oid4vcAuthzDetails = authzDetails.stream()
                 .filter(authzDetail -> OPENID_CREDENTIAL.equals(authzDetail.getType()))
-                .map(authzDetail -> authzDetail.asSubtype(OID4VCAuthorizationDetail.class))
+                .map(authzDetail -> authorizationDetailsParser.asSubtype(authzDetail, OID4VCAuthorizationDetail.class))
                 .toList();
         // Aligned with other places in Keycloak codebase to support single VC
         if (oid4vcAuthzDetails.size() != 1) {

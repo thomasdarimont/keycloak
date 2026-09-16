@@ -36,12 +36,19 @@ public class OID4VCAuthorizationDetailsProcessorFactory implements Authorization
 
     @Override
     public OID4VCAuthorizationDetailsProcessor create(KeycloakSession session) {
-        return new OID4VCAuthorizationDetailsProcessor(session);
+        return new OID4VCAuthorizationDetailsProcessor(session, getAuthorizationDetailsParser());
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public void init(Config.Scope config) {
-        AuthorizationDetailsParser.registerParser(OPENID_CREDENTIAL, new OID4VCAuthorizationDetailsParser());
+        // Keycloak itself no longer relies on the global parser registry. The parser is still registered
+        // to keep the deprecated AuthorizationDetailsJSONRepresentation.asSubtype(Class) working for existing extensions.
+        AuthorizationDetailsParser.registerParser(OPENID_CREDENTIAL, getAuthorizationDetailsParser());
+    }
+
+    protected OID4VCAuthorizationDetailsParser getAuthorizationDetailsParser() {
+        return new OID4VCAuthorizationDetailsParser();
     }
 
     @Override
