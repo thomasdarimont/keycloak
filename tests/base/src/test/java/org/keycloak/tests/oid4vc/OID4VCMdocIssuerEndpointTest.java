@@ -32,6 +32,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.keycloak.OID4VCConstants.OPENID_CREDENTIAL;
+import static org.keycloak.tests.oid4vc.OID4VCAuthorizationDetailsUtil.oid4vciAuthorizationDetails;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -66,7 +67,7 @@ public class OID4VCMdocIssuerEndpointTest extends OID4VCMdocTestBase {
                 .send();
         assertEquals(200, tokenResponse.getStatusCode());
 
-        String credentialIdentifier = tokenResponse.getOID4VCAuthorizationDetails().get(0).getCredentialIdentifiers().get(0);
+        String credentialIdentifier = oid4vciAuthorizationDetails(tokenResponse).get(0).getCredentialIdentifiers().get(0);
         Oid4vcCredentialResponse credentialResponse = oauth.oid4vc().credentialRequest()
                 .credentialIdentifier(credentialIdentifier)
                 .proofs(wallet.generateJwtProof(ctx))
@@ -136,7 +137,7 @@ public class OID4VCMdocIssuerEndpointTest extends OID4VCMdocTestBase {
                 .send();
         assertEquals(200, tokenResponse.getStatusCode());
 
-        String credentialIdentifier = tokenResponse.getOID4VCAuthorizationDetails().get(0).getCredentialIdentifiers().get(0);
+        String credentialIdentifier = oid4vciAuthorizationDetails(tokenResponse).get(0).getCredentialIdentifiers().get(0);
         Oid4vcCredentialResponse credentialResponse = oauth.oid4vc().credentialRequest()
                 .credentialIdentifier(credentialIdentifier)
                 .bearerToken(tokenResponse.getAccessToken())
@@ -164,7 +165,7 @@ public class OID4VCMdocIssuerEndpointTest extends OID4VCMdocTestBase {
                 .send();
         assertEquals(200, tokenResponse.getStatusCode());
 
-        String credentialIdentifier = tokenResponse.getOID4VCAuthorizationDetails().get(0).getCredentialIdentifiers().get(0);
+        String credentialIdentifier = oid4vciAuthorizationDetails(tokenResponse).get(0).getCredentialIdentifiers().get(0);
         Oid4vcCredentialResponse credentialResponse = oauth.oid4vc().credentialRequest()
                 .credentialIdentifier(credentialIdentifier)
                 .bearerToken(tokenResponse.getAccessToken())
@@ -203,7 +204,7 @@ public class OID4VCMdocIssuerEndpointTest extends OID4VCMdocTestBase {
                 .send();
         assertEquals(200, tokenResponse.getStatusCode());
 
-        String credentialIdentifier = tokenResponse.getOID4VCAuthorizationDetails().get(0).getCredentialIdentifiers().get(0);
+        String credentialIdentifier = oid4vciAuthorizationDetails(tokenResponse).get(0).getCredentialIdentifiers().get(0);
         Oid4vcCredentialResponse credentialResponse = oauth.oid4vc().credentialRequest()
                 .credentialIdentifier(credentialIdentifier)
                 .proofs(wallet.generateJwtProof(ctx))

@@ -57,6 +57,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.keycloak.OID4VCConstants.CLAIM_NAME_SUBJECT_ID;
 import static org.keycloak.OID4VCConstants.OPENID_CREDENTIAL;
+import static org.keycloak.tests.oid4vc.OID4VCAuthorizationDetailsUtil.oid4vciAuthorizationDetails;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
@@ -94,7 +95,7 @@ public class OID4VCSdJwtIssuingEndpointTest extends OID4VCIssuerEndpointTest {
         String authCode = getAuthorizationCode(oauth, client, "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
         String token = tokenResponse.getAccessToken();
-        List<OID4VCAuthorizationDetail> authDetailsResponse = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(tokenResponse);
         String credentialIdentifier = authDetailsResponse.get(0).getCredentialIdentifiers().get(0);
         String cNonce = getCNonce();
 
@@ -129,7 +130,7 @@ public class OID4VCSdJwtIssuingEndpointTest extends OID4VCIssuerEndpointTest {
         String authCode = getAuthorizationCode(oauth, client, "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
         String token = tokenResponse.getAccessToken();
-        List<OID4VCAuthorizationDetail> authDetailsResponse = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(tokenResponse);
         String credentialIdentifier = authDetailsResponse.get(0).getCredentialIdentifiers().get(0);
 
         Proofs proof = new Proofs()
@@ -164,7 +165,7 @@ public class OID4VCSdJwtIssuingEndpointTest extends OID4VCIssuerEndpointTest {
         String authCode = getAuthorizationCode(oauth, client, "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
         String token = tokenResponse.getAccessToken();
-        List<OID4VCAuthorizationDetail> authDetailsResponse = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(tokenResponse);
         String credentialIdentifier = authDetailsResponse.get(0).getCredentialIdentifiers().get(0);
 
         Proofs proof = new Proofs()
@@ -196,7 +197,7 @@ public class OID4VCSdJwtIssuingEndpointTest extends OID4VCIssuerEndpointTest {
         String authCode = getAuthorizationCode(oauth, client, "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
         String token = tokenResponse.getAccessToken();
-        List<OID4VCAuthorizationDetail> authDetailsResponse = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(tokenResponse);
         String credentialIdentifier = authDetailsResponse.get(0).getCredentialIdentifiers().get(0);
 
         // Build a CNonce with null audience (missing 'aud') via server-side call
@@ -236,7 +237,7 @@ public class OID4VCSdJwtIssuingEndpointTest extends OID4VCIssuerEndpointTest {
         String authCode = getAuthorizationCode(oauth, client, "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
         String token = tokenResponse.getAccessToken();
-        List<OID4VCAuthorizationDetail> authDetailsResponse = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(tokenResponse);
         String credentialIdentifier = authDetailsResponse.get(0).getCredentialIdentifiers().get(0);
 
         // Build a CNonce with the credential endpoint as aud but no SOURCE_ENDPOINT metadata (illegal source)
@@ -275,7 +276,7 @@ public class OID4VCSdJwtIssuingEndpointTest extends OID4VCIssuerEndpointTest {
         String authCode = getAuthorizationCode(oauth, client, "john", scopeName);
         AccessTokenResponse tokenResponse = getBearerToken(oauth, authCode, authDetail);
         String token = tokenResponse.getAccessToken();
-        List<OID4VCAuthorizationDetail> authDetailsResponse = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(tokenResponse);
         String credentialIdentifier = authDetailsResponse.get(0).getCredentialIdentifiers().get(0);
 
         // Build an already-expired CNonce by temporarily setting lifetime=-1 server-side
@@ -362,7 +363,7 @@ public class OID4VCSdJwtIssuingEndpointTest extends OID4VCIssuerEndpointTest {
         String theToken = accessTokenResponse.getAccessToken();
         assertNotNull(theToken, "Access token should be present");
 
-        List<OID4VCAuthorizationDetail> authDetailsResponse = accessTokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> authDetailsResponse = oid4vciAuthorizationDetails(accessTokenResponse);
         assertNotNull(authDetailsResponse, "authorization_details should be present in the response");
         assertFalse(authDetailsResponse.isEmpty(), "authorization_details should not be empty");
         String credentialIdentifier = authDetailsResponse.get(0).getCredentialIdentifiers().get(0);

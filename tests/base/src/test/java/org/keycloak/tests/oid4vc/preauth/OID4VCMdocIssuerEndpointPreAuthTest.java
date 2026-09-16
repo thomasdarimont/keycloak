@@ -35,6 +35,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.keycloak.tests.oid4vc.OID4VCAuthorizationDetailsUtil.oid4vciAuthorizationDetails;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -95,9 +97,9 @@ public class OID4VCMdocIssuerEndpointPreAuthTest extends OID4VCMdocTestBase {
                 .endpoint(openidConfig.getTokenEndpoint())
                 .send();
         assertEquals(200, accessTokenResponse.getStatusCode());
-        assertFalse(accessTokenResponse.getOID4VCAuthorizationDetails().isEmpty());
+        assertFalse(oid4vciAuthorizationDetails(accessTokenResponse).isEmpty());
 
-        String credentialIdentifier = accessTokenResponse.getOID4VCAuthorizationDetails().get(0).getCredentialIdentifiers().get(0);
+        String credentialIdentifier = oid4vciAuthorizationDetails(accessTokenResponse).get(0).getCredentialIdentifiers().get(0);
         OID4VCTestContext ctx = new OID4VCTestContext(client, mdocScope);
         CredentialResponse credentialResponse = oauth.oid4vc()
                 .credentialRequest()

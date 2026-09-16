@@ -38,6 +38,7 @@ import org.keycloak.testsuite.util.oauth.oid4vc.Oid4vcCredentialResponse;
 import org.junit.jupiter.api.Test;
 
 import static org.keycloak.OID4VCConstants.OPENID_CREDENTIAL;
+import static org.keycloak.tests.oid4vc.OID4VCAuthorizationDetailsUtil.oid4vciAuthorizationDetails;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -85,7 +86,7 @@ public class OID4VCMdocMapperTest extends OID4VCMdocTestBase {
                 .send();
         assertEquals(200, tokenResponse.getStatusCode());
 
-        String credentialIdentifier = tokenResponse.getOID4VCAuthorizationDetails().get(0).getCredentialIdentifiers().get(0);
+        String credentialIdentifier = oid4vciAuthorizationDetails(tokenResponse).get(0).getCredentialIdentifiers().get(0);
         Oid4vcCredentialResponse credentialResponse = oauth.oid4vc().credentialRequest()
                 .credentialIdentifier(credentialIdentifier)
                 .proofs(wallet.generateJwtProof(ctx))
@@ -164,7 +165,7 @@ public class OID4VCMdocMapperTest extends OID4VCMdocTestBase {
                 .send();
         assertEquals(200, tokenResponse.getStatusCode());
 
-        String credentialIdentifier = tokenResponse.getOID4VCAuthorizationDetails().get(0).getCredentialIdentifiers().get(0);
+        String credentialIdentifier = oid4vciAuthorizationDetails(tokenResponse).get(0).getCredentialIdentifiers().get(0);
         Oid4vcCredentialResponse credentialResponse = oauth.oid4vc().credentialRequest()
                 .credentialIdentifier(credentialIdentifier)
                 .proofs(wallet.generateJwtProof(ctx))
@@ -224,7 +225,7 @@ public class OID4VCMdocMapperTest extends OID4VCMdocTestBase {
                 .send();
         assertEquals(200, tokenResponse.getStatusCode());
 
-        String credentialIdentifier = tokenResponse.getOID4VCAuthorizationDetails().get(0).getCredentialIdentifiers().get(0);
+        String credentialIdentifier = oid4vciAuthorizationDetails(tokenResponse).get(0).getCredentialIdentifiers().get(0);
         Oid4vcCredentialResponse credentialResponse = oauth.oid4vc().credentialRequest()
                 .credentialIdentifier(credentialIdentifier)
                 .proofs(wallet.generateJwtProof(ctx))

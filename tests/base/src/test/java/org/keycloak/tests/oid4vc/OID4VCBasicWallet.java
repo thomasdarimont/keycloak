@@ -87,6 +87,7 @@ import static org.keycloak.OAuth2Constants.DPOP_JWT_HEADER_TYPE;
 import static org.keycloak.authentication.authenticators.client.AttestationBasedClientAuthenticator.OAUTH_CLIENT_ATTESTATION_POP_JWT_TYPE;
 import static org.keycloak.constants.OID4VCIConstants.CREDENTIAL_OFFER_CREATE;
 import static org.keycloak.tests.oid4vc.OID4VCAuthorizationDetailsUtil.getAuthorizationDetailsFromAccessToken;
+import static org.keycloak.tests.oid4vc.OID4VCAuthorizationDetailsUtil.oid4vciAuthorizationDetails;
 import static org.keycloak.tests.oid4vc.OID4VCIssuerTestBase.TEST_PASSWORD;
 import static org.keycloak.tests.oid4vc.OID4VCIssuerTestBase.VCTestRealmConfig.TEST_REALM_NAME;
 import static org.keycloak.tests.oid4vc.OID4VCProofTestUtils.createRsaKeyPair;
@@ -674,7 +675,7 @@ public class OID4VCBasicWallet {
 
         // Extract authorization_details from AccessTokenResponse
         //
-        List<OID4VCAuthorizationDetail> tokenAuthDetails = tokenResponse.getOID4VCAuthorizationDetails();
+        List<OID4VCAuthorizationDetail> tokenAuthDetails = oid4vciAuthorizationDetails(tokenResponse);
         assertTrue(tokenAuthDetails != null && !tokenAuthDetails.isEmpty(), "No authorization_details in AccessTokenResponse");
 
         // Extract authorization_details from AccessToken (JWT)
