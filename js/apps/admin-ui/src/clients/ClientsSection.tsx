@@ -33,6 +33,7 @@ import helpUrls from "../help-urls";
 import { emptyFormatter, exportClient } from "../util";
 import { convertClientToUrl } from "../utils/client-url";
 import { translationFormatter } from "../utils/translationFormatter";
+import { ClientAccessPolicies } from "./access-policies/ClientAccessPolicies";
 import { InitialAccessTokenList } from "./initial-access/InitialAccessTokenList";
 import { ClientRegistration } from "./registration/ClientRegistration";
 import { toAddClient } from "./routes/AddClient";
@@ -165,6 +166,7 @@ export default function ClientsSection() {
   const listTab = useTab("list");
   const initialAccessTokenTab = useTab("initial-access-token");
   const clientRegistrationTab = useTab("client-registration");
+  const accessPoliciesTab = useTab("access-policies");
 
   const [toggleDeleteDialog, DeleteConfirm] = useConfirmDialog({
     titleKey: t("clientDelete", { clientId: selectedClient?.clientId }),
@@ -289,6 +291,13 @@ export default function ClientsSection() {
             {...clientRegistrationTab}
           >
             <ClientRegistration />
+          </Tab>
+          <Tab
+            data-testid="accessPolicies"
+            title={<TabTitleText>{t("clientAccessPolicies")}</TabTitleText>}
+            {...accessPoliciesTab}
+          >
+            <ClientAccessPolicies />
           </Tab>
         </RoutableTabs>
       </PageSection>

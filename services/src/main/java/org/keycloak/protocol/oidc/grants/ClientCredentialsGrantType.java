@@ -24,6 +24,10 @@ import jakarta.ws.rs.core.Response;
 
 import org.keycloak.OAuthErrorException;
 import org.keycloak.authentication.AuthenticationProcessor;
+import org.keycloak.authentication.postauth.PostAuthenticationActions;
+import org.keycloak.authentication.postauth.PostAuthenticationContext;
+import org.keycloak.authentication.postauth.PostAuthenticationResult;
+import org.keycloak.authentication.postauth.PostAuthenticationTrigger;
 import org.keycloak.common.constants.ServiceAccountConstants;
 import org.keycloak.events.Details;
 import org.keycloak.events.Errors;
@@ -112,6 +116,14 @@ public class ClientCredentialsGrantType extends OAuth2GrantTypeBase {
         authSession.setClientNote(OIDCLoginProtocol.ISSUER, Urls.realmIssuer(session.getContext().getUri().getBaseUri(), realm.getName()));
         authSession.setClientNote(OIDCLoginProtocol.SCOPE_PARAM, scope);
         setAuthorizationDetailsNoteIfIncluded(authSession);
+
+        PostAuthenticationResult postAuth = PostAuthenticationActions.run(
+                PostAuthenticationContext.builder(session, PostAuthenticationTrigger.CLIENT_CREDENTIALS).authSession(authSession).build());
+        if (postAuth.isDenied()) {
+            event.detail(Details.REASON, postAuth.getReason());
+            event.error(Errors.ACCESS_DENIED);
+            throw new CorsErrorResponseException(cors, OAuthErrorException.UNAUTHORIZED_CLIENT, "Access denied", Response.Status.FORBIDDEN);
+        }
 
         // persisting of userSession by default
         UserSessionModel.SessionPersistenceState sessionPersistenceState = UserSessionModel.SessionPersistenceState.PERSISTENT;

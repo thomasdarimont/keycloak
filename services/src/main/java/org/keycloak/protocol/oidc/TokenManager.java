@@ -60,6 +60,10 @@ import org.keycloak.common.util.SecretGenerator;
 import org.keycloak.common.util.Time;
 import org.keycloak.crypto.HashProvider;
 import org.keycloak.crypto.SignatureProvider;
+import org.keycloak.authentication.postauth.PostAuthenticationActions;
+import org.keycloak.authentication.postauth.PostAuthenticationContext;
+import org.keycloak.authentication.postauth.PostAuthenticationResult;
+import org.keycloak.authentication.postauth.PostAuthenticationTrigger;
 import org.keycloak.events.Details;
 import org.keycloak.events.Errors;
 import org.keycloak.events.EventBuilder;
@@ -258,6 +262,21 @@ public class TokenManager {
 
         if (!client.getClientId().equals(oldToken.getIssuedFor())) {
             throw new OAuthErrorException(OAuthErrorException.INVALID_GRANT, "Unmatching clients", "Unmatching clients");
+        }
+
+        PostAuthenticationResult postAuth = PostAuthenticationActions.run(
+                PostAuthenticationContext.builder(session, PostAuthenticationTrigger.TOKEN_REFRESH)
+                        .realm(realm).client(client).userSession(userSession).clientSession(clientSession).build());
+        if (postAuth.isDenied()) {
+            logger.debugf("Refresh for client '%s' denied for user '%s' by post-authentication action '%s': %s",
+                    client.getClientId(), user.getUsername(), postAuth.getActionName(), postAuth.getReason());
+            UserSessionModel currentSession = userSession;
+            // Removal must persist even when the error response rolls back the main tx.
+            KeycloakModelUtils.enlistAfterRollback(session, ctx -> {
+                UserSessionModel us = ctx.findUserSession(currentSession);
+                if (us != null) us.removeAuthenticatedClientSessions(Collections.singletonList(client.getId()));
+            });
+            throw new OAuthErrorException(OAuthErrorException.INVALID_GRANT, "Access denied", "Access to the client is no longer granted");
         }
 
         if (userSession.isOffline() && !UserSessionUtil.isOfflineAccessGranted(session, clientSession)) {

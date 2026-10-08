@@ -50,6 +50,7 @@ import useToggle from "../utils/useToggle";
 import { AdvancedTab } from "./AdvancedTab";
 import { ClientSessions } from "./ClientSessions";
 import { ClientSettings } from "./ClientSettings";
+import { ClientAccessPolicyTab } from "./access-policies/ClientAccessPolicyTab";
 import { SsfTab } from "./ssf/SsfTab";
 import { AuthorizationEvaluate } from "./authorization/AuthorizationEvaluate";
 import { AuthorizationExport } from "./authorization/AuthorizationExport";
@@ -276,6 +277,7 @@ export default function ClientDetails() {
   const sessionsTab = useRoutableTab(tab("sessions"));
   const permissionsTab = useRoutableTab(tab("permissions"));
   const advancedTab = useRoutableTab(tab("advanced"));
+  const accessPolicyTab = useRoutableTab(tab("accessPolicy"));
   const ssfTab = useRoutableTab(tab("ssf"));
   const eventsTab = useRoutableTab(tab("events"));
 
@@ -728,6 +730,16 @@ export default function ClientDetails() {
             >
               <AdvancedTab save={save} client={client} />
             </Tab>
+            {!client.bearerOnly && (
+              <Tab
+                id="accessPolicy"
+                data-testid="accessPolicyTab"
+                title={<TabTitleText>{t("clientAccessPolicy")}</TabTitleText>}
+                {...accessPolicyTab}
+              >
+                <ClientAccessPolicyTab save={save} client={client} />
+              </Tab>
+            )}
             {client.protocol === "openid-connect" &&
               !client.publicClient &&
               showSsfTab && (

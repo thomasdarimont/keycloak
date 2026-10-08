@@ -3,7 +3,11 @@ import type { Path } from "react-router-dom";
 import { generateEncodedPath } from "../../utils/generateEncodedPath";
 import type { AppRouteObject } from "../../routes";
 
-export type AuthenticationTab = "flows" | "required-actions" | "policies";
+export type AuthenticationTab =
+  | "flows"
+  | "required-actions"
+  | "post-authentication-actions"
+  | "policies";
 
 export type AuthenticationParams = { realm: string; tab?: AuthenticationTab };
 

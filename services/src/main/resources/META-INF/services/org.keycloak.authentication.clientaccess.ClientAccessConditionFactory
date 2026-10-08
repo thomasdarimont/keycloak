@@ -1,0 +1,3 @@
+org.keycloak.authentication.clientaccess.conditions.RequireRoleConditionFactory
+org.keycloak.authentication.clientaccess.conditions.RequireGroupConditionFactory
+org.keycloak.authentication.clientaccess.conditions.RequireAttributeConditionFactory

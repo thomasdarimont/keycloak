@@ -5,6 +5,14 @@ import {
   EditRegistrationProviderRoute,
 } from "./routes/AddRegistrationProvider";
 import { AuthorizationRoute } from "./routes/AuthenticationTab";
+import {
+  ClientAccessConditionRoute,
+  NewClientAccessConditionRoute,
+} from "./routes/ClientAccessCondition";
+import {
+  ClientAccessPolicyRoute,
+  NewClientAccessPolicyRoute,
+} from "./routes/ClientAccessPolicy";
 import { ClientRoute } from "./routes/Client";
 import { ClientRegistrationRoute } from "./routes/ClientRegistration";
 import { ClientRoleRoute } from "./routes/ClientRole";
@@ -39,6 +47,10 @@ import {
 
 const routes: AppRouteObject[] = [
   ClientRegistrationRoute,
+  NewClientAccessPolicyRoute,
+  ClientAccessPolicyRoute,
+  NewClientAccessConditionRoute,
+  ClientAccessConditionRoute,
   AddRegistrationProviderRoute,
   EditRegistrationProviderRoute,
   AddClientRoute,

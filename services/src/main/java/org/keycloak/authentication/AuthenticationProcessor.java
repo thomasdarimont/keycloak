@@ -1241,6 +1241,11 @@ public class AuthenticationProcessor {
         // attachSession(); // Session will be attached after requiredActions + consents are finished.
         AuthenticationManager.setClientScopesInSession(session, authenticationSession);
 
+        Response denied = AuthenticationManager.runPostAuthenticationActions(session, authenticationSession, userSession, event);
+        if (denied != null) {
+            return denied;
+        }
+
         String nextRequiredAction = nextRequiredAction();
         if (nextRequiredAction != null) {
             Response response = AuthenticationManager.redirectToRequiredActions(session, realm, authenticationSession, uriInfo, nextRequiredAction);

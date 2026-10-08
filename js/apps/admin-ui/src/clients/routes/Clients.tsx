@@ -6,7 +6,8 @@ import type { AppRouteObject } from "../../routes";
 export type ClientsTab =
   | "list"
   | "initial-access-token"
-  | "client-registration";
+  | "client-registration"
+  | "access-policies";
 
 export type ClientsParams = {
   realm: string;

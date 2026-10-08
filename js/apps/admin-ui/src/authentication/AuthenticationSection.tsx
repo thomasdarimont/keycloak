@@ -33,6 +33,7 @@ import useLocaleSort, { mapByKey } from "../utils/useLocaleSort";
 import useToggle from "../utils/useToggle";
 import { BindFlowDialog } from "./BindFlowDialog";
 import { DuplicateFlowModal } from "./DuplicateFlowModal";
+import { PostAuthenticationActions } from "./PostAuthenticationActions";
 import { RequiredActions } from "./RequiredActions";
 import { UsedBy } from "./components/UsedBy";
 import { AuthenticationType } from "./constants";
@@ -106,6 +107,7 @@ export default function AuthenticationSection() {
 
   const flowsTab = useTab("flows");
   const requiredActionsTab = useTab("required-actions");
+  const postAuthenticationActionsTab = useTab("post-authentication-actions");
   const policiesTab = useTab("policies");
 
   const [toggleDeleteDialog, DeleteConfirm] = useConfirmDialog({
@@ -250,6 +252,15 @@ export default function AuthenticationSection() {
             {...requiredActionsTab}
           >
             <RequiredActions />
+          </Tab>
+          <Tab
+            data-testid="postAuthenticationActions"
+            title={
+              <TabTitleText>{t("postAuthenticationActions")}</TabTitleText>
+            }
+            {...postAuthenticationActionsTab}
+          >
+            <PostAuthenticationActions />
           </Tab>
           <Tab
             data-testid="policies"

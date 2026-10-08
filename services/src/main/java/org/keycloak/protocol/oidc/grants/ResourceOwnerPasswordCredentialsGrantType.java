@@ -26,6 +26,10 @@ import jakarta.ws.rs.core.Response;
 import org.keycloak.OAuth2Constants;
 import org.keycloak.OAuthErrorException;
 import org.keycloak.authentication.AuthenticationProcessor;
+import org.keycloak.authentication.postauth.PostAuthenticationActions;
+import org.keycloak.authentication.postauth.PostAuthenticationContext;
+import org.keycloak.authentication.postauth.PostAuthenticationResult;
+import org.keycloak.authentication.postauth.PostAuthenticationTrigger;
 import org.keycloak.events.Details;
 import org.keycloak.events.Errors;
 import org.keycloak.events.EventType;
@@ -137,6 +141,20 @@ public class ResourceOwnerPasswordCredentialsGrantType extends OAuth2GrantTypeBa
             event.error(Errors.RESOLVE_REQUIRED_ACTIONS);
             throw new CorsErrorResponseException(cors, OAuthErrorException.INVALID_GRANT, errorMessage, Response.Status.BAD_REQUEST);
 
+        }
+
+        PostAuthenticationResult postAuth = PostAuthenticationActions.run(
+                PostAuthenticationContext.builder(session, PostAuthenticationTrigger.DIRECT_GRANT).authSession(authSession).build());
+        if (postAuth.isDenied()) {
+            KeycloakModelUtils.enlistAfterRollback(session, ctx -> {
+                RootAuthenticationSessionModel root = ctx.findRootAuthSession(authSession);
+                if (root != null) {
+                    ctx.session().authenticationSessions().removeRootAuthenticationSession(ctx.realm(), root);
+                }
+            });
+            event.detail(Details.REASON, postAuth.getReason());
+            event.error(Errors.ACCESS_DENIED);
+            throw new CorsErrorResponseException(cors, OAuthErrorException.INVALID_GRANT, "Access denied", Response.Status.BAD_REQUEST);
         }
 
         AuthenticationManager.setClientScopesInSession(session, authSession);

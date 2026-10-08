@@ -16,7 +16,8 @@ export type ClientTab =
   | "permissions"
   | "sessions"
   | "events"
-  | "ssf";
+  | "ssf"
+  | "accessPolicy";
 
 export type ClientParams = {
   realm: string;

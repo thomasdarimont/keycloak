@@ -390,6 +390,11 @@ public class RealmAdminResource {
         return new ClientRegistrationPolicyResource(session, auth, adminEvent);
     }
 
+    @Path("client-access-policies")
+    public ClientAccessPoliciesResource getClientAccessPolicies() {
+        return new ClientAccessPoliciesResource(session, auth);
+    }
+
     /**
      * Base path for managing components under this realm.
      *

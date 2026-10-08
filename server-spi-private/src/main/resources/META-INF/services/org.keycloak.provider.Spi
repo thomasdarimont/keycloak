@@ -117,3 +117,6 @@ org.keycloak.protocol.oidc.scope.ParameterizedScopeTypeSpi
 org.keycloak.cache.AlternativeLookupSPI
 org.keycloak.cache.LocalCacheSPI
 org.keycloak.models.RevokedTokenSpi
+org.keycloak.authentication.postauth.PostAuthenticationActionSpi
+org.keycloak.authentication.clientaccess.ClientAccessPolicySpi
+org.keycloak.authentication.clientaccess.ClientAccessConditionSpi

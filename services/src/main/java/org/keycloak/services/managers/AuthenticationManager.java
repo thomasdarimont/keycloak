@@ -50,6 +50,10 @@ import org.keycloak.authentication.AuthenticationProcessor;
 import org.keycloak.authentication.Authenticator;
 import org.keycloak.authentication.AuthenticatorFactory;
 import org.keycloak.authentication.AuthenticatorUtil;
+import org.keycloak.authentication.postauth.PostAuthenticationActions;
+import org.keycloak.authentication.postauth.PostAuthenticationContext;
+import org.keycloak.authentication.postauth.PostAuthenticationResult;
+import org.keycloak.authentication.postauth.PostAuthenticationTrigger;
 import org.keycloak.authentication.InitiatedActionSupport;
 import org.keycloak.authentication.RequiredActionContext;
 import org.keycloak.authentication.RequiredActionContextResult;
@@ -165,6 +169,7 @@ public class AuthenticationManager {
 
     // clientSession note with flag that clientSession was authenticated through SSO cookie
     public static final String SSO_AUTH = "SSO_AUTH";
+    public static final String POST_AUTH_ACTIONS_EXECUTED = "POST_AUTH_ACTIONS_EXECUTED";
 
     // authSession note with flag that is true if user is forced to re-authenticate by client (EG. in case of OIDC client by sending "prompt=login")
     public static final String FORCED_REAUTHENTICATION = "FORCED_REAUTHENTICATION";
@@ -1053,6 +1058,46 @@ public class AuthenticationManager {
     }
 
 
+    /**
+     * Runs the realm's post-authentication actions once per authentication session. Called from the authentication
+     * processor right after the flow succeeded (before required actions) and again from the final
+     * {@link #finishedRequiredActions} funnel for paths that bypass the processor, such as identity brokering.
+     * The marker note makes the second call a no-op. At this point no user session or client session has been
+     * created for this login; {@code userSession} is only non-null for SSO re-authentication via the cookie.
+     *
+     * @return an error response if an action denied access, {@code null} otherwise
+     */
+    public static Response runPostAuthenticationActions(KeycloakSession session, AuthenticationSessionModel authSession,
+                                                        UserSessionModel userSession, EventBuilder event) {
+        if (authSession.getAuthNote(POST_AUTH_ACTIONS_EXECUTED) != null) {
+            return null;
+        }
+        authSession.setAuthNote(POST_AUTH_ACTIONS_EXECUTED, "true");
+
+        PostAuthenticationTrigger trigger;
+        if (PostAuthenticationContext.isBrokeredLogin(authSession)) {
+            trigger = PostAuthenticationTrigger.BROKER_LOGIN;
+        } else if (AuthenticatorUtil.isSSOAuthentication(authSession)) {
+            trigger = PostAuthenticationTrigger.BROWSER_SSO;
+        } else {
+            trigger = PostAuthenticationTrigger.BROWSER_LOGIN;
+        }
+        PostAuthenticationContext context = PostAuthenticationContext.builder(session, trigger)
+                .authSession(authSession)
+                .userSession(userSession)
+                .build();
+        PostAuthenticationResult result = PostAuthenticationActions.run(context);
+        if (!result.isDenied()) {
+            return null;
+        }
+
+        logger.debugf("Access to client '%s' denied for user '%s' by post-authentication action '%s': %s",
+                context.getClient().getClientId(), context.getUser().getUsername(), result.getActionName(), result.getReason());
+        event.detail(Details.REASON, result.getReason());
+        event.error(Errors.ACCESS_DENIED);
+        return ErrorPage.error(session, authSession, Response.Status.FORBIDDEN, Messages.NO_ACCESS);
+    }
+
     public static Response redirectToRequiredActions(KeycloakSession session, RealmModel realm, AuthenticationSessionModel authSession, UriInfo uriInfo, String requiredAction) {
         // redirect to non-action url so browser refresh button works without reposting past data
         ClientSessionCode<AuthenticationSessionModel> accessCode = new ClientSessionCode<>(session, realm, authSession);
@@ -1089,6 +1134,9 @@ public class AuthenticationManager {
 
     public static Response finishedRequiredActions(KeycloakSession session, AuthenticationSessionModel authSession, UserSessionModel userSession,
                                                    ClientConnection clientConnection, HttpRequest request, UriInfo uriInfo, EventBuilder event) {
+        Response denied = runPostAuthenticationActions(session, authSession, userSession, event);
+        if (denied != null) return denied;
+
         String actionTokenKeyToInvalidate = authSession.getAuthNote(INVALIDATE_ACTION_TOKEN);
         if (actionTokenKeyToInvalidate != null) {
             SingleUseObjectKeyModel actionTokenKey = DefaultActionTokenKey.from(actionTokenKeyToInvalidate);
