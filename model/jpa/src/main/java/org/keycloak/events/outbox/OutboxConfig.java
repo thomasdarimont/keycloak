@@ -39,6 +39,15 @@ import java.time.Duration;
  * legitimate backoff aren't prematurely promoted, and shorter than
  * {@code deadLetterRetention} so promoted rows retain a meaningful
  * forensic window before the dead-letter purge deletes them.
+ *
+ * <p>{@code claimLease} is how long a tick may hold a claimed row
+ * before other ticks treat it as abandoned and re-claim it; it must
+ * cover the tick budget plus the slowest single delivery. A
+ * delivery that outlives its lease is still recorded if no other
+ * tick re-claimed the row in the meantime, but may be duplicated
+ * otherwise (at-least-once). {@code tickBudget} bounds how long one
+ * tick keeps delivering; claimed rows it does not get to are handed
+ * back for the next tick. {@code null} means unbounded.
  */
 public record OutboxConfig(
         String entryKind,
@@ -46,9 +55,33 @@ public record OutboxConfig(
         OutboxBackoff backoff,
         Duration deadLetterRetention,
         Duration deliveredRetention,
-        Duration pendingMaxAge) {
+        Duration pendingMaxAge,
+        Duration claimLease,
+        Duration tickBudget) {
+
+    public static final Duration DEFAULT_CLAIM_LEASE = Duration.ofMinutes(5);
+
+    /** Default lease, unbounded tick. */
+    public OutboxConfig(String entryKind,
+                        int batchSize,
+                        OutboxBackoff backoff,
+                        Duration deadLetterRetention,
+                        Duration deliveredRetention,
+                        Duration pendingMaxAge) {
+        this(entryKind, batchSize, backoff, deadLetterRetention, deliveredRetention, pendingMaxAge,
+                DEFAULT_CLAIM_LEASE, null);
+    }
 
     public OutboxConfig {
+        if (claimLease == null || claimLease.isZero() || claimLease.isNegative()) {
+            throw new IllegalArgumentException("claimLease must be positive, got " + claimLease);
+        }
+        if (tickBudget != null && (tickBudget.isZero() || tickBudget.isNegative())) {
+            throw new IllegalArgumentException("tickBudget must be positive or null, got " + tickBudget);
+        }
+        if (tickBudget != null && tickBudget.compareTo(claimLease) >= 0) {
+            throw new IllegalArgumentException("tickBudget " + tickBudget + " must be shorter than claimLease " + claimLease);
+        }
         if (entryKind == null || entryKind.isBlank()) {
             throw new IllegalArgumentException("entryKind must not be blank");
         }

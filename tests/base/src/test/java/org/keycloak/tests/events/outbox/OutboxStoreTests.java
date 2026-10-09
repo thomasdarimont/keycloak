@@ -382,6 +382,108 @@ public class OutboxStoreTests {
         });
     }
 
+    @Test
+    public void claimDueForDrain_stampsTokenAndLeaseSoRowsAreNoLongerDue() {
+        final String realmId = testRealmId;
+        runOnServer.run(session -> {
+            Instant now = Instant.now();
+            OutboxEntryEntity due = persistRaw(session, TEST_KIND, realmId, "owner-c", null,
+                    "corr-due", OutboxEntryStatus.PENDING, 0, now.minusSeconds(1), now);
+            persistRaw(session, TEST_KIND, realmId, "owner-c", null,
+                    "corr-future", OutboxEntryStatus.PENDING, 0, now.plusSeconds(3600), now);
+            em(session).flush();
+            em(session).clear();
+
+            OutboxStore store = new OutboxStore(session);
+            List<OutboxEntryEntity> claimed = store.claimDueForDrain(TEST_KIND, 10, "tick-a", Duration.ofMinutes(5));
+            em(session).flush();
+            em(session).clear();
+
+            Assertions.assertEquals(1, claimed.size());
+            Assertions.assertEquals(due.getId(), claimed.get(0).getId());
+
+            OutboxEntryEntity after = findById(session, due.getId());
+            Assertions.assertEquals("tick-a", after.getClaimToken());
+            Assertions.assertEquals(OutboxEntryStatus.PENDING, after.getStatus(), "a claim is not a transition");
+            Assertions.assertEquals(0, after.getAttempts());
+            Assertions.assertTrue(after.getNextAttemptAt().isAfter(now.plus(Duration.ofMinutes(4))),
+                    "the lease pushes next_attempt_at out");
+
+            Assertions.assertTrue(store.claimDueForDrain(TEST_KIND, 10, "tick-b", Duration.ofMinutes(5)).isEmpty(),
+                    "a leased row is not due for another tick");
+
+            Assertions.assertNotNull(store.findClaimed(due.getId(), "tick-a"));
+            Assertions.assertNull(store.findClaimed(due.getId(), "tick-b"), "token mismatch");
+            Assertions.assertNull(store.findClaimed("no-such-id", "tick-a"));
+        });
+    }
+
+    @Test
+    public void releaseClaims_handsBackOnlyRowsStillHoldingTheToken() {
+        final String realmId = testRealmId;
+        runOnServer.run(session -> {
+            Instant now = Instant.now();
+            OutboxEntryEntity a = persistRaw(session, TEST_KIND, realmId, "owner-r", null,
+                    "corr-a", OutboxEntryStatus.PENDING, 0, now.minusSeconds(1), now);
+            OutboxEntryEntity b = persistRaw(session, TEST_KIND, realmId, "owner-r", null,
+                    "corr-b", OutboxEntryStatus.PENDING, 0, now.minusSeconds(1), now);
+            em(session).flush();
+            em(session).clear();
+
+            OutboxStore store = new OutboxStore(session);
+            store.claimDueForDrain(TEST_KIND, 10, "tick-a", Duration.ofMinutes(5));
+            em(session).flush();
+            em(session).clear();
+
+            // b is taken over by another tick in the meantime.
+            OutboxEntryEntity bNow = findById(session, b.getId());
+            bNow.setClaimToken("tick-b");
+            em(session).flush();
+            em(session).clear();
+
+            int released = store.releaseClaims(List.of(a.getId(), b.getId()), "tick-a");
+            em(session).flush();
+            em(session).clear();
+
+            Assertions.assertEquals(1, released);
+            OutboxEntryEntity aAfter = findById(session, a.getId());
+            Assertions.assertNull(aAfter.getClaimToken());
+            Assertions.assertFalse(aAfter.getNextAttemptAt().isAfter(Instant.now()), "released rows are due now");
+            Assertions.assertEquals("tick-b", findById(session, b.getId()).getClaimToken());
+
+            Assertions.assertEquals(0, store.releaseClaims(List.of(), "tick-a"));
+        });
+    }
+
+    @Test
+    public void transitions_clearTheClaimToken() {
+        final String realmId = testRealmId;
+        runOnServer.run(session -> {
+            Instant now = Instant.now();
+            String[] ids = new String[4];
+            for (int i = 0; i < ids.length; i++) {
+                OutboxEntryEntity row = persistRaw(session, TEST_KIND, realmId, "owner-t", null,
+                        "corr-" + i, OutboxEntryStatus.PENDING, 0, now.minusSeconds(1), now);
+                row.setClaimToken("tick-a");
+                ids[i] = row.getId();
+            }
+            em(session).flush();
+            em(session).clear();
+
+            OutboxStore store = new OutboxStore(session);
+            store.markDelivered(findById(session, ids[0]));
+            store.recordFailure(findById(session, ids[1]), now.plusSeconds(60), "fail");
+            store.deferUntil(findById(session, ids[2]), now.plusSeconds(60), "defer");
+            store.markDeadLetter(findById(session, ids[3]), "dead");
+            em(session).flush();
+            em(session).clear();
+
+            for (String id : ids) {
+                Assertions.assertNull(findById(session, id).getClaimToken(), "transition must clear the token: " + id);
+            }
+        });
+    }
+
     // -- Row transitions -------------------------------------------------
 
     @Test

@@ -251,6 +251,15 @@ import org.hibernate.annotations.Nationalized;
                         + "  WHERE e.entryKind = :entryKind"
                         + "    AND e.ownerId = :ownerId"
                         + "    AND e.status = :fromStatus"),
+        // Drainer lease: hands back rows a tick claimed but could not
+        // process within its budget. Conditional on the token so a
+        // row re-claimed by another tick in the meantime is left alone.
+        @NamedQuery(
+                name = "OutboxEntryEntity.releaseClaims",
+                query = "UPDATE OutboxEntryEntity e"
+                        + "    SET e.claimToken = NULL, e.nextAttemptAt = :now"
+                        + "  WHERE e.id IN :ids"
+                        + "    AND e.claimToken = :token"),
         @NamedQuery(
                 name = "OutboxEntryEntity.countByEntryKindOwnerStatus",
                 query = "SELECT COUNT(e) FROM OutboxEntryEntity e"
@@ -361,6 +370,16 @@ public class OutboxEntryEntity {
 
     @Column(name = "DELIVERED_AT")
     protected Instant deliveredAt;
+
+    /**
+     * Token of the drainer tick that currently holds this row for
+     * delivery, {@code null} when the row is not in flight. Set
+     * together with a {@code nextAttemptAt} lease by
+     * {@code OutboxStore#claimDueForDrain}; the transition recorded
+     * after delivery is conditional on it.
+     */
+    @Column(name = "CLAIM_TOKEN", length = 36)
+    protected String claimToken;
 
     public String getId() {
         return id;
@@ -480,6 +499,14 @@ public class OutboxEntryEntity {
 
     public void setDeliveredAt(Instant deliveredAt) {
         this.deliveredAt = deliveredAt;
+    }
+
+    public String getClaimToken() {
+        return claimToken;
+    }
+
+    public void setClaimToken(String claimToken) {
+        this.claimToken = claimToken;
     }
 
     @Override

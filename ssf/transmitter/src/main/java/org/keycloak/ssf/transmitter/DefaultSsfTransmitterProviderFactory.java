@@ -73,6 +73,10 @@ public class DefaultSsfTransmitterProviderFactory implements SsfTransmitterProvi
 
     public static final String CONFIG_OUTBOX_PENDING_MAX_AGE = "outbox-pending-max-age";
 
+    public static final String CONFIG_OUTBOX_DRAINER_CLAIM_LEASE = "outbox-drainer-claim-lease";
+
+    public static final String CONFIG_OUTBOX_DRAINER_TICK_BUDGET = "outbox-drainer-tick-budget";
+
     public static final long DEFAULT_OUTBOX_DRAINER_INTERVAL_MILLIS = Duration.ofSeconds(30).toMillis();
 
     public static final int DEFAULT_OUTBOX_DRAINER_BATCH_SIZE = 50;
@@ -109,6 +113,25 @@ public class DefaultSsfTransmitterProviderFactory implements SsfTransmitterProvi
     public static final long DEFAULT_OUTBOX_PENDING_MAX_AGE_MILLIS = Duration.ofDays(2).toMillis();
 
     /**
+     * Default lease a drainer tick holds on the rows it claimed — the
+     * generic {@link OutboxConfig#DEFAULT_CLAIM_LEASE} (5 minutes).
+     * Must cover the tick budget plus the slowest single push (HTTP
+     * connect + read timeout), otherwise a sibling tick re-claims a
+     * row that is still being delivered and the receiver sees it
+     * twice.
+     */
+    public static final long DEFAULT_OUTBOX_DRAINER_CLAIM_LEASE_MILLIS = OutboxConfig.DEFAULT_CLAIM_LEASE.toMillis();
+
+    /**
+     * Default per-tick time budget — {@code 0}, i.e. unbounded: a tick
+     * delivers every row it claimed. Set to bound a tick (for example
+     * to the drainer interval) so the housekeeping steps and the next
+     * tick are not delayed by a slow receiver; claimed rows the budget
+     * does not reach are handed back for the next tick.
+     */
+    public static final long DEFAULT_OUTBOX_DRAINER_TICK_BUDGET_MILLIS = 0;
+
+    /**
      * Aliases (or full URIs) of the events the transmitter advertises as
      * "default supported events" for a receiver client that does not set
      * its own {@code ssf.supportedEvents} attribute. Sourced from the
@@ -135,6 +158,10 @@ public class DefaultSsfTransmitterProviderFactory implements SsfTransmitterProvi
     protected long outboxDeliveredRetentionMillis = DEFAULT_OUTBOX_DELIVERED_RETENTION_MILLIS;
 
     protected long outboxPendingMaxAgeMillis = DEFAULT_OUTBOX_PENDING_MAX_AGE_MILLIS;
+
+    protected long outboxDrainerClaimLeaseMillis = DEFAULT_OUTBOX_DRAINER_CLAIM_LEASE_MILLIS;
+
+    protected long outboxDrainerTickBudgetMillis = DEFAULT_OUTBOX_DRAINER_TICK_BUDGET_MILLIS;
 
     /**
      * Shared metrics binder — constructed once at factory init time and
@@ -284,6 +311,14 @@ public class DefaultSsfTransmitterProviderFactory implements SsfTransmitterProvi
         String pendingMaxAgeStr = config.get(CONFIG_OUTBOX_PENDING_MAX_AGE);
         if (pendingMaxAgeStr != null) {
             this.outboxPendingMaxAgeMillis = SsfUtil.parseDurationMillis(pendingMaxAgeStr, DEFAULT_OUTBOX_PENDING_MAX_AGE_MILLIS);
+        }
+        String claimLeaseStr = config.get(CONFIG_OUTBOX_DRAINER_CLAIM_LEASE);
+        if (claimLeaseStr != null) {
+            this.outboxDrainerClaimLeaseMillis = SsfUtil.parseDurationMillis(claimLeaseStr, DEFAULT_OUTBOX_DRAINER_CLAIM_LEASE_MILLIS);
+        }
+        String tickBudgetStr = config.get(CONFIG_OUTBOX_DRAINER_TICK_BUDGET);
+        if (tickBudgetStr != null) {
+            this.outboxDrainerTickBudgetMillis = SsfUtil.parseDurationMillis(tickBudgetStr, DEFAULT_OUTBOX_DRAINER_TICK_BUDGET_MILLIS);
         }
 
         // Metrics binder lifecycle. Two gates combine:
@@ -455,6 +490,18 @@ public class DefaultSsfTransmitterProviderFactory implements SsfTransmitterProvi
                 .defaultValue(DEFAULT_OUTBOX_PENDING_MAX_AGE_MILLIS + "ms")
                 .add()
                 .property()
+                .name(CONFIG_OUTBOX_DRAINER_CLAIM_LEASE)
+                .type("string")
+                .helpText("How long a drainer tick holds the outbox rows it claimed. Other ticks (on any node) treat a claimed row as abandoned once the lease expires and deliver it again, so the lease must cover outbox-drainer-tick-budget plus the slowest single push (HTTP connect + read timeout). Accepts suffixes ms, s, m, h (default 5m equivalent).")
+                .defaultValue(DEFAULT_OUTBOX_DRAINER_CLAIM_LEASE_MILLIS + "ms")
+                .add()
+                .property()
+                .name(CONFIG_OUTBOX_DRAINER_TICK_BUDGET)
+                .type("string")
+                .helpText("Time budget for one drainer tick. Once exceeded the tick stops delivering, hands the remaining claimed rows back for the next tick and runs its housekeeping; at least one row is always delivered per tick. Must be shorter than outbox-drainer-claim-lease. Accepts suffixes ms, s, m, h. Set to 0 (default) for no budget — a tick delivers every row it claimed.")
+                .defaultValue(DEFAULT_OUTBOX_DRAINER_TICK_BUDGET_MILLIS + "ms")
+                .add()
+                .property()
                 .name(SsfTransmitterConfig.CONFIG_SUBJECT_MANAGEMENT_ENABLED)
                 .type("boolean")
                 .helpText("Whether the /subjects:add and /subjects:remove endpoints are exposed. When false, the endpoints are not registered and the transmitter metadata omits them. Subject subscriptions can still be managed via admin-curated ssf.notify.<clientId> attributes.")
@@ -531,12 +578,14 @@ public class DefaultSsfTransmitterProviderFactory implements SsfTransmitterProvi
             ScheduledTaskRunner runner = createDrainerScheduledTaskRunner(factory, task);
             timer.schedule(runner, outboxDrainerIntervalMillis, outboxDrainerIntervalMillis,
                     task.getTaskName());
-            log.infof("SSF push outbox drainer scheduled: task=%s, entryKind=%s, interval=%dms, batchSize=%d, maxAttempts=%d, deadLetterRetention=%s, deliveredRetention=%s, pendingMaxAge=%s",
+            log.infof("SSF push outbox drainer scheduled: task=%s, entryKind=%s, interval=%dms, batchSize=%d, maxAttempts=%d, deadLetterRetention=%s, deliveredRetention=%s, pendingMaxAge=%s, claimLease=%dms, tickBudget=%s",
                     task.getTaskName(), SsfOutboxKinds.PUSH, outboxDrainerIntervalMillis,
                     outboxDrainerBatchSize, outboxDrainerMaxAttempts,
                     outboxDeadLetterRetentionMillis > 0 ? outboxDeadLetterRetentionMillis + "ms" : "disabled",
                     outboxDeliveredRetentionMillis > 0 ? outboxDeliveredRetentionMillis + "ms" : "disabled",
-                    outboxPendingMaxAgeMillis > 0 ? outboxPendingMaxAgeMillis + "ms" : "disabled");
+                    outboxPendingMaxAgeMillis > 0 ? outboxPendingMaxAgeMillis + "ms" : "disabled",
+                    outboxDrainerClaimLeaseMillis,
+                    outboxDrainerTickBudgetMillis > 0 ? outboxDrainerTickBudgetMillis + "ms" : "unbounded");
         }
     }
 
@@ -578,14 +627,25 @@ public class DefaultSsfTransmitterProviderFactory implements SsfTransmitterProvi
         Duration pendingMaxAge = outboxPendingMaxAgeMillis > 0
                 ? Duration.ofMillis(outboxPendingMaxAgeMillis)
                 : null;
+        Duration claimLease = outboxDrainerClaimLeaseMillis > 0
+                ? Duration.ofMillis(outboxDrainerClaimLeaseMillis)
+                : OutboxConfig.DEFAULT_CLAIM_LEASE;
+        Duration tickBudget = outboxDrainerTickBudgetMillis > 0
+                ? Duration.ofMillis(outboxDrainerTickBudgetMillis)
+                : null;
 
+        // OutboxConfig rejects a budget that is not shorter than the
+        // lease — a misconfiguration surfaces at startup rather than
+        // as duplicate pushes later.
         return new OutboxConfig(
                 SsfOutboxKinds.PUSH,
                 outboxDrainerBatchSize,
                 backoff,
                 deadLetterRetention,
                 deliveredRetention,
-                pendingMaxAge);
+                pendingMaxAge,
+                claimLease,
+                tickBudget);
     }
 
 

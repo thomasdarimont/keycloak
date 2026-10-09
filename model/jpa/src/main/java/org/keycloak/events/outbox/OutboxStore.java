@@ -16,6 +16,7 @@
  */
 package org.keycloak.events.outbox;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.EnumMap;
@@ -296,13 +297,88 @@ public class OutboxStore {
         return query.getResultList();
     }
 
+    // -- Drainer lease -----------------------------------------------------
+
+    /**
+     * Claims up to {@code limit} due PENDING rows for the calling tick:
+     * locks them like {@link #lockDueForDrain}, stamps {@code token}
+     * and pushes {@code next_attempt_at} out by {@code lease} so no
+     * other tick sees them as due until the lease expires. Meant to
+     * run in a short transaction of its own; delivery then happens
+     * without any row lock and each outcome is recorded via
+     * {@link #findClaimed} in a transaction per row.
+     *
+     * <p>Rows whose lease has expired are due again and get
+     * re-claimed with a new token, which makes the late tick's
+     * {@link #findClaimed} miss — that is the intended takeover.
+     */
+    public List<OutboxEntryEntity> claimDueForDrain(String entryKind, int limit, String token, Duration lease) {
+        Objects.requireNonNull(token, "token");
+        Objects.requireNonNull(lease, "lease");
+        List<OutboxEntryEntity> rows = lockDueForDrain(entryKind, limit);
+        if (rows.isEmpty()) {
+            return rows;
+        }
+        Instant leaseUntil = Instant.now().plus(lease);
+        for (OutboxEntryEntity row : rows) {
+            row.setClaimToken(token);
+            row.setNextAttemptAt(leaseUntil);
+        }
+        getEntityManager().flush();
+        log.debugf("Outbox claimed %d row(s) for entryKind=%s token=%s leaseUntil=%s", rows.size(), entryKind, token, leaseUntil);
+        return rows;
+    }
+
+    /**
+     * Loads and write-locks a claimed row for recording its transition.
+     * Returns {@code null} when the row is gone or no longer carries
+     * {@code token} — another tick took it over or an admin re-armed
+     * it — in which case the caller must not record anything.
+     */
+    public OutboxEntryEntity findClaimed(String id, String token) {
+        Objects.requireNonNull(id, "id");
+        Objects.requireNonNull(token, "token");
+        OutboxEntryEntity row = getEntityManager().find(OutboxEntryEntity.class, id, LockModeType.PESSIMISTIC_WRITE);
+        if (row == null || !token.equals(row.getClaimToken())) {
+            return null;
+        }
+        return row;
+    }
+
+    /**
+     * Hands claimed rows back unprocessed (tick budget exhausted):
+     * clears the token and makes them due now. Conditional on
+     * {@code token}, so rows re-claimed in the meantime are untouched.
+     *
+     * @return the number of rows released.
+     */
+    public int releaseClaims(Collection<String> ids, String token) {
+        Objects.requireNonNull(token, "token");
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+        int released = getEntityManager()
+                .createNamedQuery("OutboxEntryEntity.releaseClaims")
+                .setParameter("ids", ids)
+                .setParameter("token", token)
+                .setParameter("now", Instant.now())
+                .executeUpdate();
+        if (released > 0) {
+            log.debugf("Outbox released %d claimed row(s) for token=%s", released, token);
+        }
+        return released;
+    }
+
     // -- Row transitions ---------------------------------------------------
+    // Every transition clears the claim token: the row is no longer
+    // in flight once its outcome is recorded.
 
     public void markDelivered(OutboxEntryEntity entity) {
         entity.setAttempts(entity.getAttempts() + 1);
         entity.setStatus(OutboxEntryStatus.DELIVERED);
         entity.setDeliveredAt(Instant.now());
         entity.setLastError(null);
+        entity.setClaimToken(null);
         getEntityManager().merge(entity);
     }
 
@@ -310,6 +386,7 @@ public class OutboxStore {
         entity.setAttempts(entity.getAttempts() + 1);
         entity.setNextAttemptAt(nextAttemptAt);
         entity.setLastError(truncateError(lastError));
+        entity.setClaimToken(null);
         getEntityManager().merge(entity);
     }
 
@@ -327,6 +404,7 @@ public class OutboxStore {
         Instant now = Instant.now();
         entity.setNextAttemptAt(notBefore.isBefore(now) ? now : notBefore);
         entity.setLastError(truncateError(reason));
+        entity.setClaimToken(null);
         getEntityManager().merge(entity);
     }
 
@@ -334,6 +412,7 @@ public class OutboxStore {
         entity.setAttempts(entity.getAttempts() + 1);
         entity.setStatus(OutboxEntryStatus.DEAD_LETTER);
         entity.setLastError(truncateError(lastError));
+        entity.setClaimToken(null);
         getEntityManager().merge(entity);
     }
 

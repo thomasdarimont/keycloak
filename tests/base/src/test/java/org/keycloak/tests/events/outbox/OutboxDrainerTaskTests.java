@@ -23,6 +23,7 @@ import org.keycloak.events.outbox.OutboxStore;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.jpa.entities.OutboxEntryEntity;
 import org.keycloak.models.jpa.entities.OutboxEntryStatus;
+import org.keycloak.models.utils.KeycloakModelUtils;
 import org.keycloak.testframework.annotations.KeycloakIntegrationTest;
 import org.keycloak.testframework.remote.runonserver.InjectRunOnServer;
 import org.keycloak.testframework.remote.runonserver.RunOnServerClient;
@@ -34,10 +35,12 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Integration tests for {@link OutboxDrainerTask}: one tick is run
- * directly against persisted rows with a scripted
+ * directly against committed rows with a scripted
  * {@link OutboxDeliveryHandler} that doubles as
  * {@link OutboxDrainerListener}, and the resulting row states and
- * listener callbacks are checked. Uses the synthetic
+ * listener callbacks are checked. Rows are persisted in a separate
+ * server call because the drainer opens its own transactions, which
+ * cannot see uncommitted rows of the calling one. Uses the synthetic
  * {@code "test-kind"} like {@link OutboxStoreTests}.
  */
 @KeycloakIntegrationTest(config = OutboxDrainerTaskTests.OutboxDrainerServerConfig.class)
@@ -60,7 +63,7 @@ public class OutboxDrainerTaskTests {
     @SuppressWarnings("unchecked")
     public void tick_transitionsRowsPerOutcomeAndNotifiesListener() {
         final String realmId = testRealmId;
-        Map<String, Object> result = runOnServer.fetch(session -> {
+        runOnServer.run(session -> {
             Instant due = Instant.now().minusSeconds(1);
             // correlationId doubles as the scripted outcome, see ScriptedHandler.
             persistRow(session, realmId, "deliver", 0, due);
@@ -71,25 +74,17 @@ public class OutboxDrainerTaskTests {
             persistRow(session, realmId, "orphan", 0, due);
             persistRow(session, realmId, "throw", 0, due);
             persistRow(session, realmId, "not-due", 0, Instant.now().plus(Duration.ofHours(1)));
-            em(session).flush();
-            em(session).clear();
+        });
 
+        Map<String, Object> result = runOnServer.fetch(session -> {
             ScriptedHandler handler = new ScriptedHandler();
             OutboxConfig config = new OutboxConfig(TEST_KIND, 50,
                     new OutboxBackoff(2, List.of(Duration.ofMinutes(5))), null, null, null);
             OutboxDrainerTask task = new OutboxDrainerTask(config, handler, OutboxStore::new);
             task.run(session);
-            em(session).flush();
-            em(session).clear();
 
-            Map<String, Object> out = new LinkedHashMap<>();
+            Map<String, Object> out = snapshot(session);
             out.put("taskName", task.getTaskName());
-            for (OutboxEntryEntity row : new OutboxStore(session).listByOwner(TEST_KIND, "owner-drain", null, 0, 50)) {
-                out.put("status." + row.getCorrelationId(), row.getStatus().name());
-                out.put("attempts." + row.getCorrelationId(), row.getAttempts());
-                out.put("lastError." + row.getCorrelationId(), row.getLastError());
-                out.put("dueLater." + row.getCorrelationId(), row.getNextAttemptAt().isAfter(Instant.now()));
-            }
             out.put("events", handler.events);
             out.put("summary", handler.summary);
             return out;
@@ -123,6 +118,10 @@ public class OutboxDrainerTaskTests {
         Assertions.assertEquals("PENDING", result.get("status.not-due"));
         Assertions.assertEquals(0, result.get("attempts.not-due"), "rows that are not due are not touched");
 
+        for (String corr : List.of("deliver", "retry", "retry-last", "defer", "dead", "orphan", "throw", "not-due")) {
+            Assertions.assertNull(result.get("claimToken." + corr), "no row stays claimed after the tick: " + corr);
+        }
+
         List<String> events = (List<String>) result.get("events");
         Assertions.assertEquals("tickStart:test-kind", events.get(0));
         Assertions.assertEquals("tickEnd", events.get(events.size() - 1));
@@ -137,31 +136,145 @@ public class OutboxDrainerTaskTests {
 
         Map<String, Object> summary = (Map<String, Object>) result.get("summary");
         Assertions.assertEquals(TEST_KIND, summary.get("entryKind"));
+        Assertions.assertEquals(7, summary.get("claimed"));
         Assertions.assertEquals(7, summary.get("processed"));
         Assertions.assertEquals(1, summary.get("delivered"));
         Assertions.assertEquals(2, summary.get("retried"));
         Assertions.assertEquals(1, summary.get("deferred"));
         Assertions.assertEquals(3, summary.get("deadLettered"));
+        Assertions.assertEquals(0, summary.get("released"));
+        Assertions.assertEquals(0, summary.get("claimLost"));
         Assertions.assertEquals(0, summary.get("stalePromoted"));
     }
 
     @Test
     public void tick_survivesAThrowingListener() {
         final String realmId = testRealmId;
-        String status = runOnServer.fetch(session -> {
-            OutboxEntryEntity row = persistRow(session, realmId, "deliver", 0, Instant.now().minusSeconds(1));
-            em(session).flush();
-            em(session).clear();
+        runOnServer.run(session -> persistRow(session, realmId, "deliver", 0, Instant.now().minusSeconds(1)));
 
-            OutboxDrainerListener broken = new BrokenListener();
+        String status = runOnServer.fetch(session -> {
             OutboxConfig config = new OutboxConfig(TEST_KIND, 50, new OutboxBackoff(), null, null, null);
-            new OutboxDrainerTask(config, new ScriptedHandler(), OutboxStore::new, broken).run(session);
-            em(session).flush();
-            em(session).clear();
-            return em(session).find(OutboxEntryEntity.class, row.getId()).getStatus().name();
+            new OutboxDrainerTask(config, new ScriptedHandler(), OutboxStore::new, new BrokenListener()).run(session);
+            return (String) snapshot(session).get("status.deliver");
         }, String.class);
 
         Assertions.assertEquals("DELIVERED", status, "a listener failure must not affect the row transition");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void tick_budgetReleasesUnprocessedClaimedRowsForTheNextTick() {
+        final String realmId = testRealmId;
+        runOnServer.run(session -> {
+            Instant base = Instant.now().minusSeconds(10);
+            // Arrival order = next_attempt_at order: slow-1 is delivered
+            // first, then the budget is gone.
+            persistRow(session, realmId, "slow-1", 0, base);
+            persistRow(session, realmId, "slow-2", 0, base.plusSeconds(1));
+            persistRow(session, realmId, "slow-3", 0, base.plusSeconds(2));
+        });
+
+        Map<String, Object> result = runOnServer.fetch(session -> {
+            ScriptedHandler handler = new ScriptedHandler();
+            OutboxConfig config = new OutboxConfig(TEST_KIND, 50, new OutboxBackoff(), null, null, null,
+                    Duration.ofMinutes(5), Duration.ofMillis(100));
+            new OutboxDrainerTask(config, handler, OutboxStore::new).run(session);
+
+            Map<String, Object> out = snapshot(session);
+            out.put("summary", handler.summary);
+            return out;
+        }, Map.class);
+
+        Map<String, Object> summary = (Map<String, Object>) result.get("summary");
+        Assertions.assertEquals(3, summary.get("claimed"));
+        Assertions.assertEquals(1, summary.get("processed"), "the budget is checked before each row, so one row is always processed");
+        Assertions.assertEquals(1, summary.get("delivered"));
+        Assertions.assertEquals(2, summary.get("released"));
+
+        Assertions.assertEquals("DELIVERED", result.get("status.slow-1"));
+        for (String corr : List.of("slow-2", "slow-3")) {
+            Assertions.assertEquals("PENDING", result.get("status." + corr));
+            Assertions.assertEquals(0, result.get("attempts." + corr), "released rows did not spend an attempt");
+            Assertions.assertNull(result.get("claimToken." + corr), "released rows carry no token");
+            Assertions.assertEquals(false, result.get("dueLater." + corr), "released rows are due now");
+        }
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void tick_leavesRowsLeasedByAnotherTickAlone() {
+        final String realmId = testRealmId;
+        runOnServer.run(session -> {
+            persistRow(session, realmId, "deliver", 0, Instant.now().minusSeconds(1));
+            em(session).flush();
+            // Simulate a sibling tick holding the row under a live lease.
+            List<OutboxEntryEntity> claimed = new OutboxStore(session)
+                    .claimDueForDrain(TEST_KIND, 10, "sibling-token", Duration.ofMinutes(5));
+            if (claimed.size() != 1) {
+                throw new AssertionError("expected to claim exactly one row, got " + claimed.size());
+            }
+        });
+
+        Map<String, Object> result = runOnServer.fetch(session -> {
+            ScriptedHandler handler = new ScriptedHandler();
+            OutboxConfig config = new OutboxConfig(TEST_KIND, 50, new OutboxBackoff(), null, null, null);
+            new OutboxDrainerTask(config, handler, OutboxStore::new).run(session);
+
+            Map<String, Object> out = snapshot(session);
+            out.put("summary", handler.summary);
+            return out;
+        }, Map.class);
+
+        Map<String, Object> summary = (Map<String, Object>) result.get("summary");
+        Assertions.assertEquals(0, summary.get("claimed"), "a row under a live lease is not due");
+        Assertions.assertEquals("PENDING", result.get("status.deliver"));
+        Assertions.assertEquals("sibling-token", result.get("claimToken.deliver"));
+        Assertions.assertEquals(0, result.get("attempts.deliver"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void tick_doesNotRecordAnOutcomeWhenTheClaimWasTakenOverDuringDelivery() {
+        final String realmId = testRealmId;
+        runOnServer.run(session -> persistRow(session, realmId, "takeover", 0, Instant.now().minusSeconds(1)));
+
+        Map<String, Object> result = runOnServer.fetch(session -> {
+            ScriptedHandler handler = new ScriptedHandler();
+            OutboxConfig config = new OutboxConfig(TEST_KIND, 50, new OutboxBackoff(), null, null, null);
+            new OutboxDrainerTask(config, handler, OutboxStore::new).run(session);
+
+            Map<String, Object> out = snapshot(session);
+            out.put("summary", handler.summary);
+            out.put("events", handler.events);
+            return out;
+        }, Map.class);
+
+        Map<String, Object> summary = (Map<String, Object>) result.get("summary");
+        Assertions.assertEquals(1, summary.get("processed"));
+        Assertions.assertEquals(1, summary.get("claimLost"));
+        Assertions.assertEquals(0, summary.get("delivered"), "the handler delivered, but the record was skipped");
+        Assertions.assertEquals("PENDING", result.get("status.takeover"));
+        Assertions.assertEquals(0, result.get("attempts.takeover"));
+        Assertions.assertEquals("other-tick", result.get("claimToken.takeover"), "the new holder's token survives");
+        Assertions.assertFalse(((List<String>) result.get("events")).contains("delivered:takeover"));
+    }
+
+    /**
+     * Reads every row of the test owner back through a fresh query
+     * (the drainer committed in its own transactions) into a flat,
+     * JSON-friendly map keyed by {@code <field>.<correlationId>}.
+     */
+    private static Map<String, Object> snapshot(KeycloakSession session) {
+        em(session).clear();
+        Map<String, Object> out = new LinkedHashMap<>();
+        for (OutboxEntryEntity row : new OutboxStore(session).listByOwner(TEST_KIND, "owner-drain", null, 0, 50)) {
+            out.put("status." + row.getCorrelationId(), row.getStatus().name());
+            out.put("attempts." + row.getCorrelationId(), row.getAttempts());
+            out.put("lastError." + row.getCorrelationId(), row.getLastError());
+            out.put("claimToken." + row.getCorrelationId(), row.getClaimToken());
+            out.put("dueLater." + row.getCorrelationId(), row.getNextAttemptAt().isAfter(Instant.now()));
+        }
+        return out;
     }
 
     // -- scripted collaborators (Serializable: they travel inside the lambda) --
@@ -189,6 +302,26 @@ public class OutboxDrainerTaskTests {
                 case "dead" -> OutboxDeliveryResult.deadLetter("scripted dead letter");
                 case "orphan" -> OutboxDeliveryResult.orphaned("scripted orphan");
                 case "throw" -> throw new IllegalStateException("scripted throw");
+                case "slow-1", "slow-2", "slow-3" -> {
+                    try {
+                        Thread.sleep(150);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                    yield OutboxDeliveryResult.delivered();
+                }
+                case "takeover" -> {
+                    // Another tick (or an admin re-arm) takes the row
+                    // over while we are delivering: committed in a
+                    // transaction of its own, like a sibling node would.
+                    String id = row.getId();
+                    KeycloakModelUtils.runJobInTransaction(session.getKeycloakSessionFactory(), s -> {
+                        OutboxEntryEntity current = s.getProvider(JpaConnectionProvider.class)
+                                .getEntityManager().find(OutboxEntryEntity.class, id);
+                        current.setClaimToken("other-tick");
+                    });
+                    yield OutboxDeliveryResult.delivered();
+                }
                 default -> throw new AssertionError("unexpected row " + row.getCorrelationId());
             };
         }
@@ -202,11 +335,14 @@ public class OutboxDrainerTaskTests {
         public void onTickEnd(KeycloakSession session, OutboxDrainerTickSummary s) {
             events.add("tickEnd");
             summary.put("entryKind", s.entryKind());
+            summary.put("claimed", s.claimed());
             summary.put("processed", s.processed());
             summary.put("delivered", s.delivered());
             summary.put("retried", s.retried());
             summary.put("deferred", s.deferred());
             summary.put("deadLettered", s.deadLettered());
+            summary.put("released", s.released());
+            summary.put("claimLost", s.claimLost());
             summary.put("stalePromoted", s.stalePromoted());
         }
 

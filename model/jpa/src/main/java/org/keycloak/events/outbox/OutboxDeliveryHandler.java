@@ -47,11 +47,13 @@ public interface OutboxDeliveryHandler {
     String entryKind();
 
     /**
-     * Attempts delivery for one outbox row. The drainer holds a
-     * pessimistic write lock on the row for the duration of the call;
-     * implementations should keep the call bounded (no indefinite
-     * blocking) and avoid touching unrelated database rows so the
-     * lock window stays tight.
+     * Attempts delivery for one outbox row. The drainer has claimed
+     * the row under a lease ({@link OutboxConfig#claimLease()}) and
+     * calls this in a transaction of its own without holding a lock
+     * on the row; the outcome is recorded afterwards in a separate
+     * transaction. Implementations must keep the call bounded well
+     * inside the lease (HTTP timeouts), otherwise another tick may
+     * re-claim the row and deliver it a second time.
      *
      * <p>Implementations may throw {@link RuntimeException}; the
      * drainer treats an uncaught exception as
