@@ -7,10 +7,10 @@ import java.util.function.BiFunction;
 
 import org.keycloak.events.outbox.OutboxDeliveryHandler;
 import org.keycloak.events.outbox.OutboxDeliveryResult;
+import org.keycloak.events.outbox.OutboxEntry;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
-import org.keycloak.models.jpa.entities.OutboxEntryEntity;
 import org.keycloak.ssf.event.token.SsfSecurityEventToken;
 import org.keycloak.ssf.transmitter.SsfTransmitterContext;
 import org.keycloak.ssf.transmitter.SsfTransmitterProvider;
@@ -24,7 +24,7 @@ import org.jboss.logging.Logger;
 /**
  * SSF push handler for the generic outbox. The drainer looks up this
  * handler by {@code entryKind = "ssf-push"} and invokes
- * {@link #deliver(KeycloakSession, OutboxEntryEntity)} for each due
+ * {@link #deliver(KeycloakSession, OutboxEntry)} for each due
  * row; this implementation resolves the realm/client/stream the row
  * targets and hands the encoded SET to {@link PushDeliveryService}.
  *
@@ -65,7 +65,7 @@ public class SsfPushDeliveryHandler implements OutboxDeliveryHandler {
     }
 
     @Override
-    public OutboxDeliveryResult deliver(KeycloakSession session, OutboxEntryEntity row) {
+    public OutboxDeliveryResult deliver(KeycloakSession session, OutboxEntry row) {
         Instant rowStart = Instant.now();
 
         RealmModel realm = session.realms().getRealm(row.getRealmId());
@@ -144,7 +144,7 @@ public class SsfPushDeliveryHandler implements OutboxDeliveryHandler {
      * stays the only way out — the drainer's own catch-all would
      * otherwise erase the {@link PushDeliveryOutcome} detail.
      */
-    protected PushDeliveryOutcome deliverEncoded(KeycloakSession session, StreamConfig stream, OutboxEntryEntity row) {
+    protected PushDeliveryOutcome deliverEncoded(KeycloakSession session, StreamConfig stream, OutboxEntry row) {
         PushDeliveryService push = pushDeliveryServiceFactory.apply(session, context);
         SsfSecurityEventToken stub = new SsfSecurityEventToken();
         stub.setJti(row.getCorrelationId());

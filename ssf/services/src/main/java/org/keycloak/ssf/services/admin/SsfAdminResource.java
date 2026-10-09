@@ -30,7 +30,7 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.jpa.entities.OutboxEntryEntity;
-import org.keycloak.models.jpa.entities.OutboxEntryStatus;
+import org.keycloak.events.outbox.OutboxEntryStatus;
 import org.keycloak.services.resources.KeycloakOpenAPI;
 import org.keycloak.services.resources.admin.AdminEventBuilder;
 import org.keycloak.services.resources.admin.fgap.AdminPermissionEvaluator;

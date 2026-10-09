@@ -19,10 +19,11 @@ import org.keycloak.events.outbox.OutboxDeliveryResult;
 import org.keycloak.events.outbox.OutboxDrainerListener;
 import org.keycloak.events.outbox.OutboxDrainerTask;
 import org.keycloak.events.outbox.OutboxDrainerTickSummary;
+import org.keycloak.events.outbox.OutboxEntry;
 import org.keycloak.events.outbox.OutboxStore;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.jpa.entities.OutboxEntryEntity;
-import org.keycloak.models.jpa.entities.OutboxEntryStatus;
+import org.keycloak.events.outbox.OutboxEntryStatus;
 import org.keycloak.models.utils.KeycloakModelUtils;
 import org.keycloak.testframework.annotations.KeycloakIntegrationTest;
 import org.keycloak.testframework.remote.runonserver.InjectRunOnServer;
@@ -359,7 +360,7 @@ public class OutboxDrainerTaskTests {
         }
 
         @Override
-        public OutboxDeliveryResult deliver(KeycloakSession session, OutboxEntryEntity row) {
+        public OutboxDeliveryResult deliver(KeycloakSession session, OutboxEntry row) {
             if (row.getCorrelationId().startsWith("deliver-")) {
                 return OutboxDeliveryResult.delivered();
             }
@@ -415,22 +416,22 @@ public class OutboxDrainerTaskTests {
         }
 
         @Override
-        public void onDelivered(KeycloakSession session, OutboxEntryEntity row) {
+        public void onDelivered(KeycloakSession session, OutboxEntry row) {
             events.add("delivered:" + row.getCorrelationId());
         }
 
         @Override
-        public void onRetryScheduled(KeycloakSession session, OutboxEntryEntity row, Instant nextAttemptAt, String reason) {
+        public void onRetryScheduled(KeycloakSession session, OutboxEntry row, Instant nextAttemptAt, String reason) {
             events.add("retry:" + row.getCorrelationId());
         }
 
         @Override
-        public void onDeferred(KeycloakSession session, OutboxEntryEntity row, Instant notBefore, String reason) {
+        public void onDeferred(KeycloakSession session, OutboxEntry row, Instant notBefore, String reason) {
             events.add("deferred:" + row.getCorrelationId());
         }
 
         @Override
-        public void onDeadLetter(KeycloakSession session, OutboxEntryEntity row, DeadLetterCause cause, String reason) {
+        public void onDeadLetter(KeycloakSession session, OutboxEntry row, DeadLetterCause cause, String reason) {
             events.add("deadLetter:" + row.getCorrelationId() + ":" + cause);
         }
     }
@@ -443,7 +444,7 @@ public class OutboxDrainerTaskTests {
         }
 
         @Override
-        public void onDelivered(KeycloakSession session, OutboxEntryEntity row) {
+        public void onDelivered(KeycloakSession session, OutboxEntry row) {
             throw new IllegalStateException("listener failure on delivered");
         }
     }

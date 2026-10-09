@@ -8,7 +8,7 @@ import org.keycloak.events.outbox.OutboxStore;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.jpa.entities.OutboxEntryEntity;
-import org.keycloak.models.jpa.entities.OutboxEntryStatus;
+import org.keycloak.events.outbox.OutboxEntryStatus;
 import org.keycloak.ssf.transmitter.metrics.SsfMetricsBinder;
 import org.keycloak.ssf.transmitter.outbox.SsfOutboxKinds;
 

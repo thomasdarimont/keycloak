@@ -10,8 +10,6 @@ import java.util.function.Function;
 
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
-import org.keycloak.models.jpa.entities.OutboxEntryEntity;
-import org.keycloak.models.jpa.entities.OutboxEntryStatus;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
@@ -124,22 +122,22 @@ public class OutboxMetricsListener implements OutboxDrainerListener {
     }
 
     @Override
-    public void onDelivered(KeycloakSession session, OutboxEntryEntity row) {
+    public void onDelivered(KeycloakSession session, OutboxEntry row) {
         transition(session, row, "delivered");
     }
 
     @Override
-    public void onRetryScheduled(KeycloakSession session, OutboxEntryEntity row, Instant nextAttemptAt, String reason) {
+    public void onRetryScheduled(KeycloakSession session, OutboxEntry row, Instant nextAttemptAt, String reason) {
         transition(session, row, "retry");
     }
 
     @Override
-    public void onDeferred(KeycloakSession session, OutboxEntryEntity row, Instant notBefore, String reason) {
+    public void onDeferred(KeycloakSession session, OutboxEntry row, Instant notBefore, String reason) {
         transition(session, row, "defer");
     }
 
     @Override
-    public void onDeadLetter(KeycloakSession session, OutboxEntryEntity row, DeadLetterCause cause, String reason) {
+    public void onDeadLetter(KeycloakSession session, OutboxEntry row, DeadLetterCause cause, String reason) {
         String realm = realmLabel(session, row.getRealmId());
         transition(realm, "dead_letter");
         register(() -> counter(METER_DEAD_LETTER, Tags.of(
@@ -186,7 +184,7 @@ public class OutboxMetricsListener implements OutboxDrainerListener {
 
     // -- internals ---------------------------------------------------------
 
-    protected void transition(KeycloakSession session, OutboxEntryEntity row, String outcome) {
+    protected void transition(KeycloakSession session, OutboxEntry row, String outcome) {
         transition(realmLabel(session, row.getRealmId()), outcome);
     }
 

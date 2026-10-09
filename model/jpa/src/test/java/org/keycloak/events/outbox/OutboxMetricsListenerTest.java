@@ -6,7 +6,6 @@ import java.util.Map;
 
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.jpa.entities.OutboxEntryEntity;
-import org.keycloak.models.jpa.entities.OutboxEntryStatus;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.Assert;
@@ -39,7 +38,7 @@ public class OutboxMetricsListenerTest {
         return new OutboxDrainerTickSummary(KIND, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, took);
     }
 
-    private static OutboxEntryEntity row(String realmId) {
+    private static OutboxEntry row(String realmId) {
         OutboxEntryEntity row = new OutboxEntryEntity();
         row.setEntryKind(KIND);
         row.setRealmId(realmId);

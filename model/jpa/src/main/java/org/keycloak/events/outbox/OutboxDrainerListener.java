@@ -3,7 +3,6 @@ package org.keycloak.events.outbox;
 import java.time.Instant;
 
 import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.jpa.entities.OutboxEntryEntity;
 
 /**
  * Observer hooks the {@link OutboxDrainerTask} invokes around a tick
@@ -47,7 +46,7 @@ public interface OutboxDrainerListener {
     default void onTickEnd(KeycloakSession session, OutboxDrainerTickSummary summary) {
     }
 
-    default void onDelivered(KeycloakSession session, OutboxEntryEntity row) {
+    default void onDelivered(KeycloakSession session, OutboxEntry row) {
     }
 
     /**
@@ -55,17 +54,17 @@ public interface OutboxDrainerListener {
      * backoff curve. {@code row.getAttempts()} already reflects the
      * failed attempt.
      */
-    default void onRetryScheduled(KeycloakSession session, OutboxEntryEntity row, Instant nextAttemptAt, String reason) {
+    default void onRetryScheduled(KeycloakSession session, OutboxEntry row, Instant nextAttemptAt, String reason) {
     }
 
     /** The row was rescheduled without counting an attempt. */
-    default void onDeferred(KeycloakSession session, OutboxEntryEntity row, Instant notBefore, String reason) {
+    default void onDeferred(KeycloakSession session, OutboxEntry row, Instant notBefore, String reason) {
     }
 
     /**
      * The row reached {@code DEAD_LETTER}. The row's status and
      * {@code last_error} are already updated when this is called.
      */
-    default void onDeadLetter(KeycloakSession session, OutboxEntryEntity row, DeadLetterCause cause, String reason) {
+    default void onDeadLetter(KeycloakSession session, OutboxEntry row, DeadLetterCause cause, String reason) {
     }
 }

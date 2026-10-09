@@ -17,12 +17,11 @@
 package org.keycloak.events.outbox;
 
 import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.jpa.entities.OutboxEntryEntity;
 
 /**
  * Per-kind plug-in that knows how to actually deliver an
- * {@link OutboxEntryEntity}'s payload to its destination. The drainer
- * is generic — for each due row it calls {@link #deliver(KeycloakSession, OutboxEntryEntity)}
+ * {@link OutboxEntry}'s payload to its destination. The drainer
+ * is generic — for each due row it calls {@link #deliver(KeycloakSession, OutboxEntry)}
  * and transitions the row based on the returned {@link OutboxDeliveryResult}.
  *
  * <p>One handler per registered {@code entryKind}; the drainer locates
@@ -73,5 +72,5 @@ public interface OutboxDeliveryHandler {
      * class) into that single string as fits the column
      * ({@code VARCHAR(2048)}).
      */
-    OutboxDeliveryResult deliver(KeycloakSession session, OutboxEntryEntity row);
+    OutboxDeliveryResult deliver(KeycloakSession session, OutboxEntry row);
 }

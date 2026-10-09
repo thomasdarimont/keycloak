@@ -3,12 +3,12 @@ package org.keycloak.ssf.transmitter.outbox;
 import java.util.List;
 import java.util.function.Function;
 
+import org.keycloak.events.outbox.OutboxEntry;
 import org.keycloak.events.outbox.OutboxMetricsListener;
 import org.keycloak.events.outbox.OutboxStore;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
-import org.keycloak.models.jpa.entities.OutboxEntryEntity;
 import org.keycloak.ssf.transmitter.metrics.SsfMetricsBinder;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -54,7 +54,7 @@ public class SsfOutboxMetricsListener extends OutboxMetricsListener {
     }
 
     @Override
-    public void onDeadLetter(KeycloakSession session, OutboxEntryEntity row, DeadLetterCause cause, String reason) {
+    public void onDeadLetter(KeycloakSession session, OutboxEntry row, DeadLetterCause cause, String reason) {
         super.onDeadLetter(session, row, cause, reason);
         metricsBinder.recordPushDeadLetter(realmLabel(session, row.getRealmId()), clientLabel(session, row));
     }
@@ -63,7 +63,7 @@ public class SsfOutboxMetricsListener extends OutboxMetricsListener {
      * The receiver's clientId, falling back to the raw owner id when
      * the realm or client no longer exists (orphaned rows).
      */
-    protected String clientLabel(KeycloakSession session, OutboxEntryEntity row) {
+    protected String clientLabel(KeycloakSession session, OutboxEntry row) {
         if (session != null) {
             RealmModel realm = session.realms().getRealm(row.getRealmId());
             if (realm != null) {

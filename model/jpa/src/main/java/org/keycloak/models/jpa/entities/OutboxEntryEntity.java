@@ -28,11 +28,16 @@ import jakarta.persistence.NamedQueries;
 import jakarta.persistence.NamedQuery;
 import jakarta.persistence.Table;
 
+import org.keycloak.events.outbox.OutboxEntry;
+import org.keycloak.events.outbox.OutboxEntryStatus;
+
 import org.hibernate.annotations.Nationalized;
 
 /**
  * Generic durable outbox row: a single message persisted for asynchronous,
- * at-least-once delivery by a feature-scoped drainer.
+ * at-least-once delivery by a feature-scoped drainer. Consumers see it
+ * through the read-only {@link OutboxEntry} view; mutation goes through
+ * {@code OutboxStore}.
  *
  * <p>Backed by the {@code OUTBOX_ENTRY} table created in
  * {@code META-INF/jpa-changelog-26.7.0.xml}. Multiple subsystems
@@ -338,7 +343,7 @@ import org.hibernate.annotations.Nationalized;
                         + "    AND e.ownerId = :ownerId"
                         + "    AND e.status IN :statuses")
 })
-public class OutboxEntryEntity {
+public class OutboxEntryEntity implements OutboxEntry {
 
     @Id
     @Column(name = "ID", length = 36)
