@@ -215,6 +215,42 @@ import org.hibernate.annotations.Nationalized;
                         + "   AND e.ownerId = :ownerId"
                         + "   AND e.correlationId IN :correlationIds"
                         + "   AND e.status = :status"),
+        // Paged owner listings for admin / replay tooling. Ordered by
+        // arrival, with the id as tie-breaker so paging is stable when
+        // many rows share a createdAt.
+        @NamedQuery(
+                name = "OutboxEntryEntity.findByOwner",
+                query = "SELECT e FROM OutboxEntryEntity e"
+                        + " WHERE e.entryKind = :entryKind"
+                        + "   AND e.ownerId = :ownerId"
+                        + " ORDER BY e.createdAt ASC, e.id ASC"),
+        @NamedQuery(
+                name = "OutboxEntryEntity.findByOwnerAndStatus",
+                query = "SELECT e FROM OutboxEntryEntity e"
+                        + " WHERE e.entryKind = :entryKind"
+                        + "   AND e.ownerId = :ownerId"
+                        + "   AND e.status = :status"
+                        + " ORDER BY e.createdAt ASC, e.id ASC"),
+        // Re-arm: DEAD_LETTER (admin retry) or DELIVERED (replay) back
+        // to PENDING with a fresh attempt budget. In-place rather than
+        // a new row because the (entryKind, ownerId, correlationId)
+        // unique constraint forbids re-enqueueing the same message.
+        @NamedQuery(
+                name = "OutboxEntryEntity.requeueByIds",
+                query = "UPDATE OutboxEntryEntity e"
+                        + "    SET e.status = :pending, e.attempts = 0, e.nextAttemptAt = :now,"
+                        + "        e.deliveredAt = NULL, e.lastError = NULL"
+                        + "  WHERE e.entryKind = :entryKind"
+                        + "    AND e.id IN :ids"
+                        + "    AND e.status IN :fromStatuses"),
+        @NamedQuery(
+                name = "OutboxEntryEntity.requeueForOwnerByStatus",
+                query = "UPDATE OutboxEntryEntity e"
+                        + "    SET e.status = :pending, e.attempts = 0, e.nextAttemptAt = :now,"
+                        + "        e.deliveredAt = NULL, e.lastError = NULL"
+                        + "  WHERE e.entryKind = :entryKind"
+                        + "    AND e.ownerId = :ownerId"
+                        + "    AND e.status = :fromStatus"),
         @NamedQuery(
                 name = "OutboxEntryEntity.countByEntryKindOwnerStatus",
                 query = "SELECT COUNT(e) FROM OutboxEntryEntity e"

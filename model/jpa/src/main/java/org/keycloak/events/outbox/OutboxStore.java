@@ -90,7 +90,29 @@ public class OutboxStore {
                                  String payload,
                                  String metadata) {
         return enqueueInStatus(OutboxEntryStatus.PENDING, entryKind, realmId, ownerId, containerId,
-                correlationId, entryType, payload, metadata);
+                correlationId, entryType, payload, metadata, null);
+    }
+
+    /**
+     * Like {@link #enqueuePending(String, String, String, String, String, String, String, String)}
+     * but the row is not due before {@code notBefore} — delayed
+     * delivery, or a message that must not go out before a related
+     * change has settled. {@code null} means "due now". Note that the
+     * kind's {@code pendingMaxAge} backstop still measures from
+     * {@code createdAt}, so {@code notBefore} must stay well inside
+     * that window.
+     */
+    public String enqueuePending(String entryKind,
+                                 String realmId,
+                                 String ownerId,
+                                 String containerId,
+                                 String correlationId,
+                                 String entryType,
+                                 String payload,
+                                 String metadata,
+                                 Instant notBefore) {
+        return enqueueInStatus(OutboxEntryStatus.PENDING, entryKind, realmId, ownerId, containerId,
+                correlationId, entryType, payload, metadata, notBefore);
     }
 
     /**
@@ -108,7 +130,7 @@ public class OutboxStore {
                               String payload,
                               String metadata) {
         return enqueueInStatus(OutboxEntryStatus.HELD, entryKind, realmId, ownerId, containerId,
-                correlationId, entryType, payload, metadata);
+                correlationId, entryType, payload, metadata, null);
     }
 
     protected String enqueueInStatus(OutboxEntryStatus status,
@@ -119,7 +141,8 @@ public class OutboxStore {
                                      String correlationId,
                                      String entryType,
                                      String payload,
-                                     String metadata) {
+                                     String metadata,
+                                     Instant notBefore) {
         Objects.requireNonNull(status, "status");
         Objects.requireNonNull(entryKind, "entryKind");
         Objects.requireNonNull(realmId, "realmId");
@@ -152,7 +175,9 @@ public class OutboxStore {
         //
         // next_attempt_at is meaningful only for PENDING rows the drainer
         // locks; HELD rows ignore it but the column is NOT NULL, so we
-        // set it to "now" as a harmless seed.
+        // seed it with "now" unless the caller asked for a later
+        // first attempt.
+        Instant nextAttemptAt = notBefore != null && notBefore.isAfter(now) ? notBefore : now;
         int inserted = getEntityManager()
                 .createNamedQuery("OutboxEntryEntity.insertIfAbsent")
                 .setParameter("id", id)
@@ -166,7 +191,7 @@ public class OutboxStore {
                 .setParameter("metadata", metadata)
                 .setParameter("status", status)
                 .setParameter("attempts", 0)
-                .setParameter("nextAttemptAt", now)
+                .setParameter("nextAttemptAt", nextAttemptAt)
                 .setParameter("createdAt", now)
                 .executeUpdate();
 
@@ -183,8 +208,8 @@ public class OutboxStore {
             return racingRow != null ? racingRow.getId() : id;
         }
 
-        log.debugf("Outbox enqueued. id=%s status=%s entryKind=%s realmId=%s ownerId=%s containerId=%s correlationId=%s entryType=%s",
-                id, status, entryKind, realmId, ownerId, containerId, correlationId, entryType);
+        log.debugf("Outbox enqueued. id=%s status=%s entryKind=%s realmId=%s ownerId=%s containerId=%s correlationId=%s entryType=%s nextAttemptAt=%s",
+                id, status, entryKind, realmId, ownerId, containerId, correlationId, entryType, nextAttemptAt);
         return id;
     }
 
@@ -207,6 +232,39 @@ public class OutboxStore {
         } catch (NoResultException e) {
             return null;
         }
+    }
+
+    /**
+     * Pages through an owner's rows in arrival order, optionally
+     * restricted to one status ({@code null} = every status). Backs
+     * admin listings and replay tooling; the result is a plain
+     * read, no locks are taken.
+     *
+     * @param first zero-based offset of the first row to return
+     * @param max   maximum number of rows to return, must be positive
+     */
+    public List<OutboxEntryEntity> listByOwner(String entryKind, String ownerId, OutboxEntryStatus status,
+                                               int first, int max) {
+        Objects.requireNonNull(entryKind, "entryKind");
+        Objects.requireNonNull(ownerId, "ownerId");
+        if (first < 0) {
+            throw new IllegalArgumentException("first must not be negative, got " + first);
+        }
+        if (max <= 0) {
+            throw new IllegalArgumentException("max must be positive, got " + max);
+        }
+        var query = status == null
+                ? getEntityManager()
+                        .createNamedQuery("OutboxEntryEntity.findByOwner", OutboxEntryEntity.class)
+                : getEntityManager()
+                        .createNamedQuery("OutboxEntryEntity.findByOwnerAndStatus", OutboxEntryEntity.class)
+                        .setParameter("status", status);
+        return query
+                .setParameter("entryKind", entryKind)
+                .setParameter("ownerId", ownerId)
+                .setFirstResult(first)
+                .setMaxResults(max)
+                .getResultList();
     }
 
     // -- Drainer reads -----------------------------------------------------
@@ -301,6 +359,65 @@ public class OutboxStore {
                 .setParameter("olderThan", cutoff)
                 .setParameter("reason", truncateError(reason))
                 .executeUpdate();
+    }
+
+    // -- Re-arm (admin retry / replay) -------------------------------------
+
+    /**
+     * Re-arms the given rows: {@link OutboxEntryStatus#TERMINAL
+     * terminal} rows (DEAD_LETTER for an admin retry, DELIVERED for a
+     * replay) go back to PENDING with {@code attempts = 0},
+     * {@code next_attempt_at = now} and a cleared {@code last_error} /
+     * {@code delivered_at}. Rows in any other status, of another kind,
+     * or with unknown ids are left alone, so the call is idempotent.
+     *
+     * <p>Done in place rather than by inserting a fresh row because
+     * the {@code (entryKind, ownerId, correlationId)} unique
+     * constraint forbids a second row for the same message.
+     *
+     * @return the number of rows that transitioned back to PENDING.
+     */
+    public int requeue(String entryKind, Collection<String> ids) {
+        Objects.requireNonNull(entryKind, "entryKind");
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+        int requeued = getEntityManager()
+                .createNamedQuery("OutboxEntryEntity.requeueByIds")
+                .setParameter("entryKind", entryKind)
+                .setParameter("ids", ids)
+                .setParameter("pending", OutboxEntryStatus.PENDING)
+                .setParameter("fromStatuses", OutboxEntryStatus.TERMINAL)
+                .setParameter("now", Instant.now())
+                .executeUpdate();
+        if (requeued > 0) {
+            log.debugf("Outbox requeued %d row(s) for entryKind=%s", requeued, entryKind);
+        }
+        return requeued;
+    }
+
+    /**
+     * Bulk variant of {@link #requeue}: re-arms every DEAD_LETTER row
+     * of the owner. The typical "receiver is healthy again, retry
+     * everything that failed" admin operation.
+     *
+     * @return the number of rows that transitioned back to PENDING.
+     */
+    public int requeueDeadLetterForOwner(String entryKind, String ownerId) {
+        Objects.requireNonNull(entryKind, "entryKind");
+        Objects.requireNonNull(ownerId, "ownerId");
+        int requeued = getEntityManager()
+                .createNamedQuery("OutboxEntryEntity.requeueForOwnerByStatus")
+                .setParameter("entryKind", entryKind)
+                .setParameter("ownerId", ownerId)
+                .setParameter("pending", OutboxEntryStatus.PENDING)
+                .setParameter("fromStatus", OutboxEntryStatus.DEAD_LETTER)
+                .setParameter("now", Instant.now())
+                .executeUpdate();
+        if (requeued > 0) {
+            log.debugf("Outbox requeued %d dead-letter row(s) for entryKind=%s ownerId=%s", requeued, entryKind, ownerId);
+        }
+        return requeued;
     }
 
     // -- Stats (admin endpoints) -------------------------------------------

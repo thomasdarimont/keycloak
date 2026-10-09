@@ -58,6 +58,10 @@ import org.jboss.logging.Logger;
  *   <li>Purge DELIVERED rows past {@link OutboxConfig#deliveredRetention()}.</li>
  *   <li>Purge DEAD_LETTER rows past {@link OutboxConfig#deadLetterRetention()}.</li>
  * </ul>
+ *
+ * <p>An optional {@link OutboxDrainerListener} observes the tick and
+ * every row transition (metrics, dead-letter alerting). Listener
+ * failures are logged and never affect the transition.
  */
 public class OutboxDrainerTask implements ScheduledTask {
 
@@ -68,13 +72,27 @@ public class OutboxDrainerTask implements ScheduledTask {
     protected final OutboxConfig config;
     protected final OutboxDeliveryHandler handler;
     protected final Function<KeycloakSession, OutboxStore> storeFactory;
+    protected final OutboxDrainerListener listener;
 
+    /**
+     * Uses the handler as {@link OutboxDrainerListener} if it
+     * implements that interface, otherwise no listener.
+     */
     public OutboxDrainerTask(OutboxConfig config,
                              OutboxDeliveryHandler handler,
                              Function<KeycloakSession, OutboxStore> storeFactory) {
+        this(config, handler, storeFactory,
+                handler instanceof OutboxDrainerListener l ? l : OutboxDrainerListener.NOOP);
+    }
+
+    public OutboxDrainerTask(OutboxConfig config,
+                             OutboxDeliveryHandler handler,
+                             Function<KeycloakSession, OutboxStore> storeFactory,
+                             OutboxDrainerListener listener) {
         this.config = Objects.requireNonNull(config, "config");
         this.handler = Objects.requireNonNull(handler, "handler");
         this.storeFactory = Objects.requireNonNull(storeFactory, "storeFactory");
+        this.listener = listener == null ? OutboxDrainerListener.NOOP : listener;
         if (!Objects.equals(config.entryKind(), handler.entryKind())) {
             throw new IllegalArgumentException(
                     "config.entryKind=" + config.entryKind()
@@ -98,92 +116,131 @@ public class OutboxDrainerTask implements ScheduledTask {
         // take an explicit session parameter still resolve correctly.
         KeycloakSession previous = KeycloakSessionUtil.getKeycloakSession();
         KeycloakSessionUtil.setKeycloakSession(session);
+        Instant tickStart = Instant.now();
+        TickCounters counters = new TickCounters();
+        notify(() -> listener.onTickStart(session, config.entryKind()));
         try {
             OutboxStore store = storeFactory.apply(session);
-            drain(session, store);
-            promoteStaleQueuedToDeadLetter(store);
-            purgeDeliveredOlderThanRetention(store);
-            purgeDeadLetterOlderThanRetention(store);
+            drain(session, store, counters);
+            counters.stalePromoted = promoteStaleQueuedToDeadLetter(store);
+            counters.purgedDelivered = purgeDeliveredOlderThanRetention(store);
+            counters.purgedDeadLetter = purgeDeadLetterOlderThanRetention(store);
         } finally {
             KeycloakSessionUtil.setKeycloakSession(previous);
+            OutboxDrainerTickSummary summary = counters.summary(config.entryKind(),
+                    Duration.between(tickStart, Instant.now()));
+            notify(() -> listener.onTickEnd(session, summary));
         }
     }
 
-    protected void drain(KeycloakSession session, OutboxStore store) {
+    protected void drain(KeycloakSession session, OutboxStore store, TickCounters counters) {
         List<OutboxEntryEntity> due = store.lockDueForDrain(config.entryKind(), config.batchSize());
         if (due.isEmpty()) {
             return;
         }
         log.debugf("Outbox drainer processing %d due row(s) for entryKind=%s", due.size(), config.entryKind());
         for (OutboxEntryEntity row : due) {
-            processOne(session, store, row);
+            processOne(session, store, row, counters);
         }
     }
 
-    protected void processOne(KeycloakSession session, OutboxStore store, OutboxEntryEntity row) {
-        OutboxDeliveryResult result;
-        try {
-            result = handler.deliver(session, row);
-            if (result == null) {
-                result = OutboxDeliveryResult.retry("delivery handler returned null result");
-            }
-        } catch (RuntimeException e) {
-            log.warnf(e, "Outbox delivery handler threw — treating as RETRY. id=%s entryKind=%s correlationId=%s",
-                    row.getId(), row.getEntryKind(), row.getCorrelationId());
-            String message = e.getMessage() == null
-                    ? e.getClass().getSimpleName()
-                    : e.getClass().getSimpleName() + ": " + e.getMessage();
-            result = OutboxDeliveryResult.retry(message);
-        }
+    protected void processOne(KeycloakSession session, OutboxStore store, OutboxEntryEntity row, TickCounters counters) {
+        counters.processed++;
+        OutboxDeliveryResult result = deliverSafely(session, row);
 
         switch (result.outcome()) {
             case DELIVERED -> {
                 store.markDelivered(row);
+                counters.delivered++;
                 log.debugf("Outbox delivered. id=%s entryKind=%s correlationId=%s attempts=%d",
                         row.getId(), row.getEntryKind(), row.getCorrelationId(), row.getAttempts());
+                notify(() -> listener.onDelivered(session, row));
             }
-            case RETRY -> handleRetry(store, row, result.errorMessage());
+            case RETRY -> handleRetry(session, store, row, result.errorMessage(), counters);
             case DEFER -> {
                 store.deferUntil(row, result.notBefore(), result.errorMessage());
+                counters.deferred++;
                 log.debugf("Outbox deferred without counting an attempt. id=%s entryKind=%s correlationId=%s notBefore=%s reason=%s",
                         row.getId(), row.getEntryKind(), row.getCorrelationId(), result.notBefore(), result.errorMessage());
+                notify(() -> listener.onDeferred(session, row, row.getNextAttemptAt(), result.errorMessage()));
             }
             case DEAD_LETTER -> {
                 String reason = result.errorMessage() != null ? result.errorMessage()
                         : "handler returned DEAD_LETTER (attempt " + (row.getAttempts() + 1) + ")";
-                store.markDeadLetter(row, reason);
+                deadLetter(session, store, row, OutboxDrainerListener.DeadLetterCause.HANDLER, reason, counters);
                 log.warnf("Outbox dead-lettered by handler. id=%s entryKind=%s correlationId=%s reason=%s",
                         row.getId(), row.getEntryKind(), row.getCorrelationId(), reason);
             }
             case ORPHANED -> {
                 String reason = result.errorMessage() != null ? result.errorMessage()
                         : "handler returned ORPHANED (destination no longer exists)";
-                store.markDeadLetter(row, reason);
+                deadLetter(session, store, row, OutboxDrainerListener.DeadLetterCause.ORPHANED, reason, counters);
                 log.warnf("Outbox dead-lettered as orphan. id=%s entryKind=%s correlationId=%s",
                         row.getId(), row.getEntryKind(), row.getCorrelationId());
             }
         }
     }
 
-    protected void handleRetry(OutboxStore store, OutboxEntryEntity row, String errorMessage) {
+    /**
+     * Invokes the handler, mapping a {@code null} result or an
+     * uncaught exception to {@link OutboxDeliveryResult#retry}.
+     */
+    protected OutboxDeliveryResult deliverSafely(KeycloakSession session, OutboxEntryEntity row) {
+        try {
+            OutboxDeliveryResult result = handler.deliver(session, row);
+            return result != null ? result : OutboxDeliveryResult.retry("delivery handler returned null result");
+        } catch (RuntimeException e) {
+            log.warnf(e, "Outbox delivery handler threw — treating as RETRY. id=%s entryKind=%s correlationId=%s",
+                    row.getId(), row.getEntryKind(), row.getCorrelationId());
+            String message = e.getMessage() == null
+                    ? e.getClass().getSimpleName()
+                    : e.getClass().getSimpleName() + ": " + e.getMessage();
+            return OutboxDeliveryResult.retry(message);
+        }
+    }
+
+    protected void handleRetry(KeycloakSession session, OutboxStore store, OutboxEntryEntity row,
+                               String errorMessage, TickCounters counters) {
         int nextAttempts = row.getAttempts() + 1;
         String reason = errorMessage != null ? errorMessage : "delivery failed";
         if (config.backoff().isExhausted(nextAttempts)) {
             log.warnf("Outbox dead-lettered after %d attempts. id=%s entryKind=%s correlationId=%s",
                     nextAttempts, row.getId(), row.getEntryKind(), row.getCorrelationId());
-            store.markDeadLetter(row, reason);
+            deadLetter(session, store, row, OutboxDrainerListener.DeadLetterCause.ATTEMPTS_EXHAUSTED, reason, counters);
             return;
         }
         Instant nextAttemptAt = config.backoff().computeNextAttemptAt(Instant.now(), nextAttempts);
         log.debugf("Outbox scheduling retry. id=%s attempts=%d nextAttemptAt=%s",
                 row.getId(), nextAttempts, nextAttemptAt);
         store.recordFailure(row, nextAttemptAt, reason);
+        counters.retried++;
+        notify(() -> listener.onRetryScheduled(session, row, nextAttemptAt, reason));
     }
 
-    protected void promoteStaleQueuedToDeadLetter(OutboxStore store) {
+    protected void deadLetter(KeycloakSession session, OutboxStore store, OutboxEntryEntity row,
+                              OutboxDrainerListener.DeadLetterCause cause, String reason, TickCounters counters) {
+        store.markDeadLetter(row, reason);
+        counters.deadLettered++;
+        notify(() -> listener.onDeadLetter(session, row, cause, reason));
+    }
+
+    /**
+     * Runs a listener callback, logging and swallowing any failure so
+     * an observer bug cannot change a row's transition or abort the
+     * tick.
+     */
+    protected void notify(Runnable callback) {
+        try {
+            callback.run();
+        } catch (RuntimeException e) {
+            log.warnf(e, "Outbox drainer listener threw for entryKind=%s — ignoring", config.entryKind());
+        }
+    }
+
+    protected int promoteStaleQueuedToDeadLetter(OutboxStore store) {
         Duration pendingMaxAge = config.pendingMaxAge();
         if (pendingMaxAge == null || pendingMaxAge.isZero() || pendingMaxAge.isNegative()) {
-            return;
+            return 0;
         }
         Instant cutoff = Instant.now().minus(pendingMaxAge);
         int promoted = store.promoteStaleQueuedToDeadLetter(config.entryKind(), cutoff,
@@ -192,21 +249,39 @@ public class OutboxDrainerTask implements ScheduledTask {
             log.infof("Outbox promoted %d stale queued row(s) to DEAD_LETTER (entryKind=%s, pendingMaxAge=%s)",
                     promoted, config.entryKind(), pendingMaxAge);
         }
+        return promoted;
     }
 
-    protected void purgeDeliveredOlderThanRetention(OutboxStore store) {
+    protected int purgeDeliveredOlderThanRetention(OutboxStore store) {
         Duration retention = config.deliveredRetention();
         if (retention == null || retention.isZero() || retention.isNegative()) {
-            return;
+            return 0;
         }
-        store.purgeDeliveredOlderThan(config.entryKind(), Instant.now().minus(retention));
+        return store.purgeDeliveredOlderThan(config.entryKind(), Instant.now().minus(retention));
     }
 
-    protected void purgeDeadLetterOlderThanRetention(OutboxStore store) {
+    protected int purgeDeadLetterOlderThanRetention(OutboxStore store) {
         Duration retention = config.deadLetterRetention();
         if (retention == null || retention.isZero() || retention.isNegative()) {
-            return;
+            return 0;
         }
-        store.purgeDeadLetterOlderThan(config.entryKind(), Instant.now().minus(retention));
+        return store.purgeDeadLetterOlderThan(config.entryKind(), Instant.now().minus(retention));
+    }
+
+    /** Mutable per-tick counters, folded into an {@link OutboxDrainerTickSummary} at tick end. */
+    protected static class TickCounters {
+        int processed;
+        int delivered;
+        int retried;
+        int deferred;
+        int deadLettered;
+        int stalePromoted;
+        int purgedDelivered;
+        int purgedDeadLetter;
+
+        OutboxDrainerTickSummary summary(String entryKind, Duration duration) {
+            return new OutboxDrainerTickSummary(entryKind, processed, delivered, retried, deferred,
+                    deadLettered, stalePromoted, purgedDelivered, purgedDeadLetter, duration);
+        }
     }
 }

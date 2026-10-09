@@ -80,4 +80,12 @@ public enum OutboxEntryStatus {
      * "purge queued" semantics without API changes.
      */
     public static final Set<OutboxEntryStatus> QUEUED = EnumSet.of(PENDING, HELD);
+
+    /**
+     * Statuses a row can be re-armed from via {@code OutboxStore#requeue}:
+     * {@link #DEAD_LETTER} (admin retry) and {@link #DELIVERED}
+     * (replay). {@link #HELD} rows have their own release path and
+     * {@link #PENDING} rows are already queued.
+     */
+    public static final Set<OutboxEntryStatus> TERMINAL = EnumSet.of(DELIVERED, DEAD_LETTER);
 }

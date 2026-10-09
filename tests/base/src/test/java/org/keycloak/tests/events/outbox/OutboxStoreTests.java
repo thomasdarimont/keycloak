@@ -164,6 +164,151 @@ public class OutboxStoreTests {
     }
 
     @Test
+    public void enqueuePending_withNotBefore_seedsNextAttemptAtAndIsNotDueYet() {
+        final String realmId = testRealmId;
+        runOnServer.run(session -> {
+            OutboxStore store = new OutboxStore(session);
+            Instant notBefore = Instant.now().plus(Duration.ofMinutes(10)).truncatedTo(ChronoUnit.MICROS);
+            String id = store.enqueuePending(TEST_KIND, realmId, "owner-nb", null,
+                    "corr-nb", "test.event", "payload", null, notBefore);
+            em(session).flush();
+            em(session).clear();
+
+            OutboxEntryEntity row = findById(session, id);
+            Assertions.assertEquals(OutboxEntryStatus.PENDING, row.getStatus());
+            Assertions.assertEquals(notBefore, row.getNextAttemptAt());
+            Assertions.assertTrue(row.getCreatedAt().isBefore(notBefore),
+                    "createdAt must still reflect the enqueue time, not notBefore");
+            Assertions.assertTrue(store.lockDueForDrain(TEST_KIND, 10).stream()
+                            .noneMatch(e -> e.getId().equals(id)),
+                    "a row with a future notBefore must not be due");
+
+            // A notBefore in the past is treated as "due now".
+            String dueId = store.enqueuePending(TEST_KIND, realmId, "owner-nb", null,
+                    "corr-nb-past", "test.event", "payload", null, Instant.now().minusSeconds(60));
+            em(session).flush();
+            em(session).clear();
+            OutboxEntryEntity due = findById(session, dueId);
+            Assertions.assertFalse(due.getNextAttemptAt().isBefore(due.getCreatedAt()),
+                    "a past notBefore must be clamped to the enqueue time");
+        });
+    }
+
+    @Test
+    public void listByOwner_pagesInArrivalOrderAndFiltersByStatus() {
+        final String realmId = testRealmId;
+        runOnServer.run(session -> {
+            Instant base = Instant.now().minusSeconds(100);
+            for (int i = 0; i < 5; i++) {
+                OutboxEntryStatus status = i % 2 == 0 ? OutboxEntryStatus.PENDING : OutboxEntryStatus.DELIVERED;
+                persistRaw(session, TEST_KIND, realmId, "owner-list", null,
+                        "corr-" + i, status, 0, base, base.plusSeconds(i));
+            }
+            persistRaw(session, TEST_KIND, realmId, "owner-other", null,
+                    "corr-other", OutboxEntryStatus.PENDING, 0, base, base);
+            persistRaw(session, OTHER_KIND, realmId, "owner-list", null,
+                    "corr-other-kind", OutboxEntryStatus.PENDING, 0, base, base);
+            em(session).flush();
+            em(session).clear();
+
+            OutboxStore store = new OutboxStore(session);
+
+            List<OutboxEntryEntity> all = store.listByOwner(TEST_KIND, "owner-list", null, 0, 10);
+            Assertions.assertEquals(List.of("corr-0", "corr-1", "corr-2", "corr-3", "corr-4"),
+                    all.stream().map(OutboxEntryEntity::getCorrelationId).toList(),
+                    "all statuses, arrival order, other owners / kinds excluded");
+
+            List<OutboxEntryEntity> page2 = store.listByOwner(TEST_KIND, "owner-list", null, 2, 2);
+            Assertions.assertEquals(List.of("corr-2", "corr-3"),
+                    page2.stream().map(OutboxEntryEntity::getCorrelationId).toList());
+
+            List<OutboxEntryEntity> pending = store.listByOwner(TEST_KIND, "owner-list", OutboxEntryStatus.PENDING, 0, 10);
+            Assertions.assertEquals(List.of("corr-0", "corr-2", "corr-4"),
+                    pending.stream().map(OutboxEntryEntity::getCorrelationId).toList());
+
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> store.listByOwner(TEST_KIND, "owner-list", null, 0, 0));
+        });
+    }
+
+    @Test
+    public void requeue_reArmsTerminalRowsOnlyAndResetsAttemptState() {
+        final String realmId = testRealmId;
+        runOnServer.run(session -> {
+            Instant past = Instant.now().minusSeconds(3600);
+            OutboxEntryEntity dead = persistRaw(session, TEST_KIND, realmId, "owner-rq", null,
+                    "corr-dead", OutboxEntryStatus.DEAD_LETTER, 8, past, past);
+            dead.setLastError("boom");
+            OutboxEntryEntity delivered = persistRaw(session, TEST_KIND, realmId, "owner-rq", null,
+                    "corr-delivered", OutboxEntryStatus.DELIVERED, 1, past, past);
+            delivered.setDeliveredAt(past);
+            OutboxEntryEntity pending = persistRaw(session, TEST_KIND, realmId, "owner-rq", null,
+                    "corr-pending", OutboxEntryStatus.PENDING, 3, past.plusSeconds(10), past);
+            OutboxEntryEntity held = persistRaw(session, TEST_KIND, realmId, "owner-rq", null,
+                    "corr-held", OutboxEntryStatus.HELD, 0, past, past);
+            OutboxEntryEntity otherKind = persistRaw(session, OTHER_KIND, realmId, "owner-rq", null,
+                    "corr-other-kind", OutboxEntryStatus.DEAD_LETTER, 8, past, past);
+            em(session).flush();
+            em(session).clear();
+
+            Instant before = Instant.now().truncatedTo(ChronoUnit.MICROS);
+            int requeued = new OutboxStore(session).requeue(TEST_KIND, List.of(
+                    dead.getId(), delivered.getId(), pending.getId(), held.getId(), otherKind.getId(), "no-such-id"));
+            em(session).flush();
+            em(session).clear();
+
+            Assertions.assertEquals(2, requeued, "only the DEAD_LETTER and DELIVERED rows of this kind are re-armed");
+
+            OutboxEntryEntity deadAfter = findById(session, dead.getId());
+            Assertions.assertEquals(OutboxEntryStatus.PENDING, deadAfter.getStatus());
+            Assertions.assertEquals(0, deadAfter.getAttempts());
+            Assertions.assertNull(deadAfter.getLastError());
+            Assertions.assertFalse(deadAfter.getNextAttemptAt().isBefore(before), "re-armed rows are due now");
+
+            OutboxEntryEntity deliveredAfter = findById(session, delivered.getId());
+            Assertions.assertEquals(OutboxEntryStatus.PENDING, deliveredAfter.getStatus());
+            Assertions.assertEquals(0, deliveredAfter.getAttempts());
+            Assertions.assertNull(deliveredAfter.getDeliveredAt());
+
+            OutboxEntryEntity pendingAfter = findById(session, pending.getId());
+            Assertions.assertEquals(3, pendingAfter.getAttempts(), "PENDING rows are untouched");
+            Assertions.assertEquals(OutboxEntryStatus.HELD, findById(session, held.getId()).getStatus());
+            Assertions.assertEquals(OutboxEntryStatus.DEAD_LETTER, findById(session, otherKind.getId()).getStatus());
+
+            Assertions.assertEquals(0, new OutboxStore(session).requeue(TEST_KIND, List.of()));
+        });
+    }
+
+    @Test
+    public void requeueDeadLetterForOwner_reArmsOnlyTheOwnersDeadLetters() {
+        final String realmId = testRealmId;
+        runOnServer.run(session -> {
+            Instant past = Instant.now().minusSeconds(3600);
+            OutboxEntryEntity dead1 = persistRaw(session, TEST_KIND, realmId, "owner-rqo", null,
+                    "corr-dead-1", OutboxEntryStatus.DEAD_LETTER, 8, past, past);
+            OutboxEntryEntity dead2 = persistRaw(session, TEST_KIND, realmId, "owner-rqo", null,
+                    "corr-dead-2", OutboxEntryStatus.DEAD_LETTER, 8, past, past);
+            OutboxEntryEntity delivered = persistRaw(session, TEST_KIND, realmId, "owner-rqo", null,
+                    "corr-delivered", OutboxEntryStatus.DELIVERED, 1, past, past);
+            OutboxEntryEntity otherOwner = persistRaw(session, TEST_KIND, realmId, "owner-else", null,
+                    "corr-dead-else", OutboxEntryStatus.DEAD_LETTER, 8, past, past);
+            em(session).flush();
+            em(session).clear();
+
+            int requeued = new OutboxStore(session).requeueDeadLetterForOwner(TEST_KIND, "owner-rqo");
+            em(session).flush();
+            em(session).clear();
+
+            Assertions.assertEquals(2, requeued);
+            Assertions.assertEquals(OutboxEntryStatus.PENDING, findById(session, dead1.getId()).getStatus());
+            Assertions.assertEquals(OutboxEntryStatus.PENDING, findById(session, dead2.getId()).getStatus());
+            Assertions.assertEquals(OutboxEntryStatus.DELIVERED, findById(session, delivered.getId()).getStatus(),
+                    "the bulk owner variant only touches DEAD_LETTER rows");
+            Assertions.assertEquals(OutboxEntryStatus.DEAD_LETTER, findById(session, otherOwner.getId()).getStatus());
+        });
+    }
+
+    @Test
     public void enqueueHeld_persistsRowInHeldStatus() {
         final String realmId = testRealmId;
         runOnServer.run(session -> {
