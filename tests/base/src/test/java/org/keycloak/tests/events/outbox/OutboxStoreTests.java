@@ -27,10 +27,10 @@ import jakarta.persistence.EntityManager;
 
 import org.keycloak.connections.jpa.JpaConnectionProvider;
 import org.keycloak.events.outbox.OutboxCleanupTask;
+import org.keycloak.events.outbox.OutboxEntryStatus;
 import org.keycloak.events.outbox.OutboxStore;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.jpa.entities.OutboxEntryEntity;
-import org.keycloak.events.outbox.OutboxEntryStatus;
 import org.keycloak.testframework.annotations.KeycloakIntegrationTest;
 import org.keycloak.testframework.remote.runonserver.InjectRunOnServer;
 import org.keycloak.testframework.remote.runonserver.RunOnServerClient;
