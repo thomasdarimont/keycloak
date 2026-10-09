@@ -18,6 +18,7 @@ package org.keycloak.events.outbox;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.LinkedHashSet;
@@ -287,14 +288,68 @@ public class OutboxStore {
                 .setParameter("now", Instant.now())
                 .setMaxResults(limit)
                 .setLockMode(LockModeType.PESSIMISTIC_WRITE);
-        // Skip rows another tick / node already holds — a sibling
-        // drainer will get them on its own pass without blocking us.
+        skipLocked(query, "outbox drain query");
+        return query.getResultList();
+    }
+
+    /**
+     * Per-owner twin of {@link #lockDueForDrain}: locks up to
+     * {@code limit} due PENDING rows of one owner, oldest first, with
+     * {@code FOR UPDATE SKIP LOCKED}.
+     */
+    public List<OutboxEntryEntity> lockDueForOwner(String entryKind, String ownerId, int limit) {
+        Objects.requireNonNull(entryKind, "entryKind");
+        Objects.requireNonNull(ownerId, "ownerId");
+        if (limit <= 0) {
+            throw new IllegalArgumentException("limit must be positive, got " + limit);
+        }
+        var query = getEntityManager()
+                .createNamedQuery("OutboxEntryEntity.findDueForOwner", OutboxEntryEntity.class)
+                .setParameter("entryKind", entryKind)
+                .setParameter("ownerId", ownerId)
+                .setParameter("status", OutboxEntryStatus.PENDING)
+                .setParameter("now", Instant.now())
+                .setMaxResults(limit)
+                .setLockMode(LockModeType.PESSIMISTIC_WRITE);
+        skipLocked(query, "owner drain query");
+        return query.getResultList();
+    }
+
+    /**
+     * Owners that have at least one due PENDING row, ordered by their
+     * oldest due row so the longest-waiting owner comes first. Plain
+     * read, no locks. Drives the owner-fair claim.
+     */
+    @SuppressWarnings("unchecked")
+    public List<String> findOwnersWithDueRows(String entryKind, int limit) {
+        Objects.requireNonNull(entryKind, "entryKind");
+        if (limit <= 0) {
+            throw new IllegalArgumentException("limit must be positive, got " + limit);
+        }
+        List<Object[]> rows = getEntityManager()
+                .createNamedQuery("OutboxEntryEntity.findOwnersWithDueRows")
+                .setParameter("entryKind", entryKind)
+                .setParameter("status", OutboxEntryStatus.PENDING)
+                .setParameter("now", Instant.now())
+                .setMaxResults(limit)
+                .getResultList();
+        List<String> owners = new ArrayList<>(rows.size());
+        for (Object[] row : rows) {
+            owners.add((String) row[0]);
+        }
+        return owners;
+    }
+
+    /**
+     * Skip rows another tick / node already holds — a sibling drainer
+     * will get them on its own pass without blocking us.
+     */
+    protected void skipLocked(jakarta.persistence.TypedQuery<OutboxEntryEntity> query, String what) {
         try {
             query.unwrap(SelectionQuery.class).setHibernateLockMode(LockMode.UPGRADE_SKIPLOCKED);
         } catch (RuntimeException e) {
-            log.debugf(e, "Could not set UPGRADE_SKIPLOCKED on outbox drain query — proceeding without skip-locked");
+            log.debugf(e, "Could not set UPGRADE_SKIPLOCKED on %s — proceeding without skip-locked", what);
         }
-        return query.getResultList();
     }
 
     // -- Drainer lease -----------------------------------------------------
@@ -313,9 +368,21 @@ public class OutboxStore {
      * {@link #findClaimed} miss — that is the intended takeover.
      */
     public List<OutboxEntryEntity> claimDueForDrain(String entryKind, int limit, String token, Duration lease) {
+        return claim(lockDueForDrain(entryKind, limit), token, lease);
+    }
+
+    /**
+     * Per-owner twin of {@link #claimDueForDrain}: claims up to
+     * {@code limit} due rows of one owner. Used by the owner-fair
+     * drain so no single owner fills a whole batch.
+     */
+    public List<OutboxEntryEntity> claimDueForOwner(String entryKind, String ownerId, int limit, String token, Duration lease) {
+        return claim(lockDueForOwner(entryKind, ownerId, limit), token, lease);
+    }
+
+    protected List<OutboxEntryEntity> claim(List<OutboxEntryEntity> rows, String token, Duration lease) {
         Objects.requireNonNull(token, "token");
         Objects.requireNonNull(lease, "lease");
-        List<OutboxEntryEntity> rows = lockDueForDrain(entryKind, limit);
         if (rows.isEmpty()) {
             return rows;
         }
@@ -325,7 +392,7 @@ public class OutboxStore {
             row.setNextAttemptAt(leaseUntil);
         }
         getEntityManager().flush();
-        log.debugf("Outbox claimed %d row(s) for entryKind=%s token=%s leaseUntil=%s", rows.size(), entryKind, token, leaseUntil);
+        log.debugf("Outbox claimed %d row(s) token=%s leaseUntil=%s", rows.size(), token, leaseUntil);
         return rows;
     }
 

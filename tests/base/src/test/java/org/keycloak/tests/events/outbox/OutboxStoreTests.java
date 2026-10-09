@@ -419,6 +419,55 @@ public class OutboxStoreTests {
     }
 
     @Test
+    public void findOwnersWithDueRows_ordersByOldestDueRowAndIgnoresNotDueAndOtherKinds() {
+        final String realmId = testRealmId;
+        runOnServer.run(session -> {
+            Instant now = Instant.now();
+            // owner-b has the oldest due row, owner-a a newer one plus
+            // an even older row that is NOT due; owner-c has nothing due.
+            persistRaw(session, TEST_KIND, realmId, "owner-a", null, "a1", OutboxEntryStatus.PENDING, 0, now.minusSeconds(10), now);
+            persistRaw(session, TEST_KIND, realmId, "owner-a", null, "a2", OutboxEntryStatus.PENDING, 0, now.plusSeconds(3600), now.minusSeconds(100));
+            persistRaw(session, TEST_KIND, realmId, "owner-b", null, "b1", OutboxEntryStatus.PENDING, 0, now.minusSeconds(60), now);
+            persistRaw(session, TEST_KIND, realmId, "owner-c", null, "c1", OutboxEntryStatus.HELD, 0, now.minusSeconds(90), now);
+            persistRaw(session, TEST_KIND, realmId, "owner-c", null, "c2", OutboxEntryStatus.DELIVERED, 1, now.minusSeconds(90), now);
+            persistRaw(session, OTHER_KIND, realmId, "owner-d", null, "d1", OutboxEntryStatus.PENDING, 0, now.minusSeconds(90), now);
+            em(session).flush();
+            em(session).clear();
+
+            OutboxStore store = new OutboxStore(session);
+            Assertions.assertEquals(List.of("owner-b", "owner-a"), store.findOwnersWithDueRows(TEST_KIND, 10));
+            Assertions.assertEquals(List.of("owner-b"), store.findOwnersWithDueRows(TEST_KIND, 1));
+        });
+    }
+
+    @Test
+    public void claimDueForOwner_claimsOnlyThatOwnersDueRowsOldestFirst() {
+        final String realmId = testRealmId;
+        runOnServer.run(session -> {
+            Instant now = Instant.now();
+            persistRaw(session, TEST_KIND, realmId, "owner-a", null, "a-new", OutboxEntryStatus.PENDING, 0, now.minusSeconds(1), now);
+            persistRaw(session, TEST_KIND, realmId, "owner-a", null, "a-old", OutboxEntryStatus.PENDING, 0, now.minusSeconds(50), now);
+            persistRaw(session, TEST_KIND, realmId, "owner-a", null, "a-future", OutboxEntryStatus.PENDING, 0, now.plusSeconds(3600), now);
+            persistRaw(session, TEST_KIND, realmId, "owner-b", null, "b-old", OutboxEntryStatus.PENDING, 0, now.minusSeconds(90), now);
+            em(session).flush();
+            em(session).clear();
+
+            OutboxStore store = new OutboxStore(session);
+            List<OutboxEntryEntity> first = store.claimDueForOwner(TEST_KIND, "owner-a", 1, "tick-a", Duration.ofMinutes(5));
+            Assertions.assertEquals(List.of("a-old"), first.stream().map(OutboxEntryEntity::getCorrelationId).toList());
+
+            List<OutboxEntryEntity> second = store.claimDueForOwner(TEST_KIND, "owner-a", 5, "tick-a", Duration.ofMinutes(5));
+            Assertions.assertEquals(List.of("a-new"), second.stream().map(OutboxEntryEntity::getCorrelationId).toList(),
+                    "already-claimed and not-yet-due rows are skipped");
+            em(session).flush();
+            em(session).clear();
+
+            Assertions.assertEquals(List.of("owner-b"), store.findOwnersWithDueRows(TEST_KIND, 10),
+                    "owner-a has nothing due left under its lease");
+        });
+    }
+
+    @Test
     public void releaseClaims_handsBackOnlyRowsStillHoldingTheToken() {
         final String realmId = testRealmId;
         runOnServer.run(session -> {

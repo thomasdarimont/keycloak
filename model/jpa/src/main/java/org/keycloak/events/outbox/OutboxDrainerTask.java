@@ -56,7 +56,11 @@ import org.jboss.logging.Logger;
  *       {@link OutboxConfig#batchSize()} due rows ({@code FOR UPDATE
  *       SKIP LOCKED}), stamps a per-tick token and pushes their
  *       {@code next_attempt_at} out by {@link OutboxConfig#claimLease()}.
- *       After commit no row lock is held.</li>
+ *       After commit no row lock is held. With
+ *       {@link OutboxConfig#perOwnerBatchSize()} set the rows are taken
+ *       owner by owner, oldest-waiting owner first and at most that
+ *       many per owner per round, so one destination cannot fill the
+ *       batch (see {@link #claimOwnerFair}).</li>
  *   <li><b>Deliver</b> — per row, in a transaction of its own, the
  *       handler is invoked. Slow destinations therefore block neither
  *       the other rows of the batch nor other ticks, and a transaction
@@ -156,7 +160,7 @@ public class OutboxDrainerTask implements ScheduledTask {
     protected void drain(KeycloakSessionFactory factory, Instant tickStart, TickCounters counters) {
         String token = UUID.randomUUID().toString();
         List<OutboxEntryEntity> claimed = KeycloakModelUtils.runJobInTransactionWithResult(factory,
-                s -> storeFactory.apply(s).claimDueForDrain(config.entryKind(), config.batchSize(), token, config.claimLease()));
+                s -> claimBatch(storeFactory.apply(s), token));
         counters.claimed = claimed.size();
         if (claimed.isEmpty()) {
             return;
@@ -174,6 +178,51 @@ public class OutboxDrainerTask implements ScheduledTask {
         if (next < claimed.size()) {
             releaseUnprocessed(factory, claimed.subList(next, claimed.size()), token, counters);
         }
+    }
+
+    protected List<OutboxEntryEntity> claimBatch(OutboxStore store, String token) {
+        if (config.perOwnerBatchSize() == null) {
+            return store.claimDueForDrain(config.entryKind(), config.batchSize(), token, config.claimLease());
+        }
+        return claimOwnerFair(store, token);
+    }
+
+    /**
+     * Owner-fair claim: visits the owners that have due rows, oldest
+     * waiting first, and takes at most {@code perOwnerBatchSize} rows
+     * from each per round. Rounds repeat over the owners that still
+     * had a full share until the batch is full or no owner has due
+     * rows left, so a batch with few active owners is still filled.
+     * The resulting list interleaves owners in round order, which also
+     * spreads a budget-limited tick's deliveries across owners.
+     */
+    protected List<OutboxEntryEntity> claimOwnerFair(OutboxStore store, String token) {
+        int batchSize = config.batchSize();
+        int perOwner = Math.min(config.perOwnerBatchSize(), batchSize);
+        List<String> owners = store.findOwnersWithDueRows(config.entryKind(), batchSize);
+        List<OutboxEntryEntity> claimed = new ArrayList<>(batchSize);
+        List<String> candidates = owners;
+        while (!candidates.isEmpty() && claimed.size() < batchSize) {
+            List<String> stillDue = new ArrayList<>(candidates.size());
+            for (String owner : candidates) {
+                int remaining = batchSize - claimed.size();
+                if (remaining <= 0) {
+                    break;
+                }
+                int limit = Math.min(perOwner, remaining);
+                List<OutboxEntryEntity> rows = store.claimDueForOwner(config.entryKind(), owner, limit, token, config.claimLease());
+                claimed.addAll(rows);
+                if (rows.size() == limit) {
+                    // Took a full share: the owner may have more.
+                    stillDue.add(owner);
+                }
+            }
+            candidates = stillDue;
+        }
+        if (!claimed.isEmpty()) {
+            log.debugf("Outbox owner-fair claim took %d row(s) across %d owner(s) for entryKind=%s", claimed.size(), owners.size(), config.entryKind());
+        }
+        return claimed;
     }
 
     /**

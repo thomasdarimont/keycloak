@@ -77,6 +77,8 @@ public class DefaultSsfTransmitterProviderFactory implements SsfTransmitterProvi
 
     public static final String CONFIG_OUTBOX_DRAINER_TICK_BUDGET = "outbox-drainer-tick-budget";
 
+    public static final String CONFIG_OUTBOX_DRAINER_PER_RECEIVER_BATCH_SIZE = "outbox-drainer-per-receiver-batch-size";
+
     public static final long DEFAULT_OUTBOX_DRAINER_INTERVAL_MILLIS = Duration.ofSeconds(30).toMillis();
 
     public static final int DEFAULT_OUTBOX_DRAINER_BATCH_SIZE = 50;
@@ -132,6 +134,14 @@ public class DefaultSsfTransmitterProviderFactory implements SsfTransmitterProvi
     public static final long DEFAULT_OUTBOX_DRAINER_TICK_BUDGET_MILLIS = 0;
 
     /**
+     * Default per-receiver share of a drainer batch — {@code 0}, i.e.
+     * off: a tick takes the oldest due rows regardless of receiver.
+     * Set to cap how many rows one receiver can occupy per round so a
+     * slow or flooding receiver cannot fill the whole batch.
+     */
+    public static final int DEFAULT_OUTBOX_DRAINER_PER_RECEIVER_BATCH_SIZE = 0;
+
+    /**
      * Aliases (or full URIs) of the events the transmitter advertises as
      * "default supported events" for a receiver client that does not set
      * its own {@code ssf.supportedEvents} attribute. Sourced from the
@@ -162,6 +172,8 @@ public class DefaultSsfTransmitterProviderFactory implements SsfTransmitterProvi
     protected long outboxDrainerClaimLeaseMillis = DEFAULT_OUTBOX_DRAINER_CLAIM_LEASE_MILLIS;
 
     protected long outboxDrainerTickBudgetMillis = DEFAULT_OUTBOX_DRAINER_TICK_BUDGET_MILLIS;
+
+    protected int outboxDrainerPerReceiverBatchSize = DEFAULT_OUTBOX_DRAINER_PER_RECEIVER_BATCH_SIZE;
 
     /**
      * Shared metrics binder — constructed once at factory init time and
@@ -320,6 +332,8 @@ public class DefaultSsfTransmitterProviderFactory implements SsfTransmitterProvi
         if (tickBudgetStr != null) {
             this.outboxDrainerTickBudgetMillis = SsfUtil.parseDurationMillis(tickBudgetStr, DEFAULT_OUTBOX_DRAINER_TICK_BUDGET_MILLIS);
         }
+        this.outboxDrainerPerReceiverBatchSize = config.getInt(CONFIG_OUTBOX_DRAINER_PER_RECEIVER_BATCH_SIZE,
+                DEFAULT_OUTBOX_DRAINER_PER_RECEIVER_BATCH_SIZE);
 
         // Metrics binder lifecycle. Two gates combine:
         //   1. SSF-level metrics-enabled SPI knob — lets an operator
@@ -502,6 +516,12 @@ public class DefaultSsfTransmitterProviderFactory implements SsfTransmitterProvi
                 .defaultValue(DEFAULT_OUTBOX_DRAINER_TICK_BUDGET_MILLIS + "ms")
                 .add()
                 .property()
+                .name(CONFIG_OUTBOX_DRAINER_PER_RECEIVER_BATCH_SIZE)
+                .type("int")
+                .helpText("Maximum number of outbox rows one receiver can occupy per round of a drainer batch. When set, a tick visits the receivers with due rows oldest-first and takes at most this many from each, going round again until outbox-drainer-batch-size is reached, so a slow or flooding receiver cannot delay every other receiver. Set to 0 (default) to take the oldest due rows regardless of receiver.")
+                .defaultValue(DEFAULT_OUTBOX_DRAINER_PER_RECEIVER_BATCH_SIZE)
+                .add()
+                .property()
                 .name(SsfTransmitterConfig.CONFIG_SUBJECT_MANAGEMENT_ENABLED)
                 .type("boolean")
                 .helpText("Whether the /subjects:add and /subjects:remove endpoints are exposed. When false, the endpoints are not registered and the transmitter metadata omits them. Subject subscriptions can still be managed via admin-curated ssf.notify.<clientId> attributes.")
@@ -578,14 +598,15 @@ public class DefaultSsfTransmitterProviderFactory implements SsfTransmitterProvi
             ScheduledTaskRunner runner = createDrainerScheduledTaskRunner(factory, task);
             timer.schedule(runner, outboxDrainerIntervalMillis, outboxDrainerIntervalMillis,
                     task.getTaskName());
-            log.infof("SSF push outbox drainer scheduled: task=%s, entryKind=%s, interval=%dms, batchSize=%d, maxAttempts=%d, deadLetterRetention=%s, deliveredRetention=%s, pendingMaxAge=%s, claimLease=%dms, tickBudget=%s",
+            log.infof("SSF push outbox drainer scheduled: task=%s, entryKind=%s, interval=%dms, batchSize=%d, maxAttempts=%d, deadLetterRetention=%s, deliveredRetention=%s, pendingMaxAge=%s, claimLease=%dms, tickBudget=%s, perReceiverBatchSize=%s",
                     task.getTaskName(), SsfOutboxKinds.PUSH, outboxDrainerIntervalMillis,
                     outboxDrainerBatchSize, outboxDrainerMaxAttempts,
                     outboxDeadLetterRetentionMillis > 0 ? outboxDeadLetterRetentionMillis + "ms" : "disabled",
                     outboxDeliveredRetentionMillis > 0 ? outboxDeliveredRetentionMillis + "ms" : "disabled",
                     outboxPendingMaxAgeMillis > 0 ? outboxPendingMaxAgeMillis + "ms" : "disabled",
                     outboxDrainerClaimLeaseMillis,
-                    outboxDrainerTickBudgetMillis > 0 ? outboxDrainerTickBudgetMillis + "ms" : "unbounded");
+                    outboxDrainerTickBudgetMillis > 0 ? outboxDrainerTickBudgetMillis + "ms" : "unbounded",
+                    outboxDrainerPerReceiverBatchSize > 0 ? String.valueOf(outboxDrainerPerReceiverBatchSize) : "off");
         }
     }
 
@@ -645,7 +666,8 @@ public class DefaultSsfTransmitterProviderFactory implements SsfTransmitterProvi
                 deliveredRetention,
                 pendingMaxAge,
                 claimLease,
-                tickBudget);
+                tickBudget,
+                outboxDrainerPerReceiverBatchSize > 0 ? outboxDrainerPerReceiverBatchSize : null);
     }
 
 

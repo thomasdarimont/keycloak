@@ -259,6 +259,71 @@ public class OutboxDrainerTaskTests {
         Assertions.assertFalse(((List<String>) result.get("events")).contains("delivered:takeover"));
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    public void tick_ownerFairClaimCapsEachOwnerPerRoundAndStillFillsTheBatch() {
+        final String realmId = testRealmId;
+        runOnServer.run(session -> {
+            Instant base = Instant.now().minusSeconds(100);
+            // owner-a flooded the queue first; owner-b has two newer rows.
+            for (int i = 0; i < 6; i++) {
+                persistRow(session, realmId, "owner-a", "deliver-" + i, 0, base.plusSeconds(i));
+            }
+            persistRow(session, realmId, "owner-b", "deliver-0", 0, base.plusSeconds(50));
+            persistRow(session, realmId, "owner-b", "deliver-1", 0, base.plusSeconds(51));
+        });
+
+        Map<String, Object> result = runOnServer.fetch(session -> {
+            ScriptedHandler handler = new ScriptedHandler();
+            // batch 5, at most 2 per owner per round:
+            //   round 1: a=2, b=2  round 2: a=1 (batch full)
+            OutboxConfig config = new OutboxConfig(TEST_KIND, 5, new OutboxBackoff(), null, null, null,
+                    Duration.ofMinutes(5), null, 2);
+            new OutboxDrainerTask(config, handler, OutboxStore::new).run(session);
+
+            em(session).clear();
+            OutboxStore store = new OutboxStore(session);
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("a.delivered", store.countForOwnerByStatus(TEST_KIND, "owner-a", OutboxEntryStatus.DELIVERED));
+            out.put("a.pending", store.countForOwnerByStatus(TEST_KIND, "owner-a", OutboxEntryStatus.PENDING));
+            out.put("b.delivered", store.countForOwnerByStatus(TEST_KIND, "owner-b", OutboxEntryStatus.DELIVERED));
+            out.put("b.pending", store.countForOwnerByStatus(TEST_KIND, "owner-b", OutboxEntryStatus.PENDING));
+            out.put("order", handler.events.stream().filter(e -> e.startsWith("delivered:")).toList());
+            out.put("summary", handler.summary);
+            return out;
+        }, Map.class);
+
+        Map<String, Object> summary = (Map<String, Object>) result.get("summary");
+        Assertions.assertEquals(5, summary.get("claimed"), "the batch is filled despite the per-owner cap");
+        Assertions.assertEquals(5, summary.get("delivered"));
+        Assertions.assertEquals(3, result.get("a.delivered"));
+        Assertions.assertEquals(3, result.get("a.pending"));
+        Assertions.assertEquals(2, result.get("b.delivered"), "owner-b gets its share although owner-a's rows are older");
+        Assertions.assertEquals(0, result.get("b.pending"));
+        Assertions.assertEquals(
+                List.of("delivered:deliver-0", "delivered:deliver-1", "delivered:deliver-0", "delivered:deliver-1", "delivered:deliver-2"),
+                result.get("order"),
+                "deliveries interleave owners round by round (a0 a1 b0 b1 a2)");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void tick_ownerFairClaimWithoutDueRowsClaimsNothing() {
+        final String realmId = testRealmId;
+        runOnServer.run(session -> persistRow(session, realmId, "deliver", 0, Instant.now().plus(Duration.ofHours(1))));
+
+        Map<String, Object> summary = runOnServer.fetch(session -> {
+            ScriptedHandler handler = new ScriptedHandler();
+            OutboxConfig config = new OutboxConfig(TEST_KIND, 5, new OutboxBackoff(), null, null, null,
+                    Duration.ofMinutes(5), null, 2);
+            new OutboxDrainerTask(config, handler, OutboxStore::new).run(session);
+            return handler.summary;
+        }, Map.class);
+
+        Assertions.assertEquals(0, summary.get("claimed"));
+        Assertions.assertEquals(0, summary.get("processed"));
+    }
+
     /**
      * Reads every row of the test owner back through a fresh query
      * (the drainer committed in its own transactions) into a flat,
@@ -295,6 +360,9 @@ public class OutboxDrainerTaskTests {
 
         @Override
         public OutboxDeliveryResult deliver(KeycloakSession session, OutboxEntryEntity row) {
+            if (row.getCorrelationId().startsWith("deliver-")) {
+                return OutboxDeliveryResult.delivered();
+            }
             return switch (row.getCorrelationId()) {
                 case "deliver" -> OutboxDeliveryResult.delivered();
                 case "retry", "retry-last" -> OutboxDeliveryResult.retry("scripted retry");
@@ -386,11 +454,16 @@ public class OutboxDrainerTaskTests {
 
     private static OutboxEntryEntity persistRow(KeycloakSession session, String realmId, String correlationId,
                                                 int attempts, Instant nextAttemptAt) {
+        return persistRow(session, realmId, "owner-drain", correlationId, attempts, nextAttemptAt);
+    }
+
+    private static OutboxEntryEntity persistRow(KeycloakSession session, String realmId, String ownerId,
+                                                String correlationId, int attempts, Instant nextAttemptAt) {
         OutboxEntryEntity e = new OutboxEntryEntity();
         e.setId(UUID.randomUUID().toString());
         e.setEntryKind(TEST_KIND);
         e.setRealmId(realmId);
-        e.setOwnerId("owner-drain");
+        e.setOwnerId(ownerId);
         e.setCorrelationId(correlationId);
         e.setEntryType("test.event");
         e.setPayload("encoded-" + correlationId);

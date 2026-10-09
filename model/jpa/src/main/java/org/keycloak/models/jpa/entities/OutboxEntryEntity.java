@@ -78,6 +78,25 @@ import org.hibernate.annotations.Nationalized;
                         + "   AND e.status = :status"
                         + "   AND e.nextAttemptAt <= :now"
                         + " ORDER BY e.nextAttemptAt ASC"),
+        // Owner-fair drain: which owners have due rows (oldest first),
+        // then the due rows of one owner. Both use IDX_OUTBOX_OWNER /
+        // IDX_OUTBOX_DRAIN.
+        @NamedQuery(
+                name = "OutboxEntryEntity.findOwnersWithDueRows",
+                query = "SELECT e.ownerId, MIN(e.nextAttemptAt) FROM OutboxEntryEntity e"
+                        + " WHERE e.entryKind = :entryKind"
+                        + "   AND e.status = :status"
+                        + "   AND e.nextAttemptAt <= :now"
+                        + " GROUP BY e.ownerId"
+                        + " ORDER BY MIN(e.nextAttemptAt) ASC, e.ownerId ASC"),
+        @NamedQuery(
+                name = "OutboxEntryEntity.findDueForOwner",
+                query = "SELECT e FROM OutboxEntryEntity e"
+                        + " WHERE e.entryKind = :entryKind"
+                        + "   AND e.ownerId = :ownerId"
+                        + "   AND e.status = :status"
+                        + "   AND e.nextAttemptAt <= :now"
+                        + " ORDER BY e.nextAttemptAt ASC"),
         @NamedQuery(
                 name = "OutboxEntryEntity.findByOwnerAndCorrelationId",
                 query = "SELECT e FROM OutboxEntryEntity e"

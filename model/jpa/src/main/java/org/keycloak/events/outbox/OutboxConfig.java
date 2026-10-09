@@ -48,6 +48,14 @@ import java.time.Duration;
  * otherwise (at-least-once). {@code tickBudget} bounds how long one
  * tick keeps delivering; claimed rows it does not get to are handed
  * back for the next tick. {@code null} means unbounded.
+ *
+ * <p>{@code perOwnerBatchSize} switches the claim to owner-fair mode:
+ * instead of the oldest {@code batchSize} due rows regardless of
+ * owner, the tick visits the owners with due rows oldest-first and
+ * takes at most this many rows from each per round, going round
+ * again until the batch is full or nothing is due. One slow or
+ * flooding destination then gets its share of a batch rather than
+ * all of it. {@code null} keeps the plain oldest-first claim.
  */
 public record OutboxConfig(
         String entryKind,
@@ -57,11 +65,12 @@ public record OutboxConfig(
         Duration deliveredRetention,
         Duration pendingMaxAge,
         Duration claimLease,
-        Duration tickBudget) {
+        Duration tickBudget,
+        Integer perOwnerBatchSize) {
 
     public static final Duration DEFAULT_CLAIM_LEASE = Duration.ofMinutes(5);
 
-    /** Default lease, unbounded tick. */
+    /** Default lease, unbounded tick, plain oldest-first claim. */
     public OutboxConfig(String entryKind,
                         int batchSize,
                         OutboxBackoff backoff,
@@ -69,10 +78,26 @@ public record OutboxConfig(
                         Duration deliveredRetention,
                         Duration pendingMaxAge) {
         this(entryKind, batchSize, backoff, deadLetterRetention, deliveredRetention, pendingMaxAge,
-                DEFAULT_CLAIM_LEASE, null);
+                DEFAULT_CLAIM_LEASE, null, null);
+    }
+
+    /** Plain oldest-first claim. */
+    public OutboxConfig(String entryKind,
+                        int batchSize,
+                        OutboxBackoff backoff,
+                        Duration deadLetterRetention,
+                        Duration deliveredRetention,
+                        Duration pendingMaxAge,
+                        Duration claimLease,
+                        Duration tickBudget) {
+        this(entryKind, batchSize, backoff, deadLetterRetention, deliveredRetention, pendingMaxAge,
+                claimLease, tickBudget, null);
     }
 
     public OutboxConfig {
+        if (perOwnerBatchSize != null && perOwnerBatchSize <= 0) {
+            throw new IllegalArgumentException("perOwnerBatchSize must be positive or null, got " + perOwnerBatchSize);
+        }
         if (claimLease == null || claimLease.isZero() || claimLease.isNegative()) {
             throw new IllegalArgumentException("claimLease must be positive, got " + claimLease);
         }
