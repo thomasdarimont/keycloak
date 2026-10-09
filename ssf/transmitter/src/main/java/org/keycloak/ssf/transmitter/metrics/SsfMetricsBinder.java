@@ -2,7 +2,6 @@ package org.keycloak.ssf.transmitter.metrics;
 
 import java.time.Duration;
 
-
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
