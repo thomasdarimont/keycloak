@@ -38,12 +38,10 @@ import org.jboss.logging.Logger;
  * </ul>
  *
  * <p>Emits the {@code keycloak.ssf.push.delivery} meter on every
- * outcome — DELIVERED / RETRY / ORPHANED. The DEAD_LETTER counter
- * is bumped here
- * when the handler can detect attempt-exhaustion ahead of time
- * (handler returns RETRY but knows the next attempt will be the
- * final one); the drainer's escalation path ensures the row's
- * transition matches.
+ * attempt — DELIVERED / RETRY / ORPHANED. The DEAD_LETTER outcome is
+ * a drainer decision (attempt budget exhausted) and is counted by
+ * {@link SsfOutboxMetricsListener} from the drainer's transition
+ * callback, together with the tick and outbox-depth meters.
  */
 public class SsfPushDeliveryHandler implements OutboxDeliveryHandler {
 

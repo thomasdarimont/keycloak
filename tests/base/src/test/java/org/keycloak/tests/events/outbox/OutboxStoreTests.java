@@ -800,6 +800,32 @@ public class OutboxStoreTests {
     }
 
     @Test
+    public void countStatusesGroupedByRealm_returnsCountsPerRealmAndStatusForTheKind() {
+        final String realmId = testRealmId;
+        final String otherRealmId = UUID.randomUUID().toString();
+        runOnServer.run(session -> {
+            try {
+                Instant now = Instant.now();
+                persistRaw(session, TEST_KIND, realmId, "o", null, "c1", OutboxEntryStatus.PENDING, 0, now, now);
+                persistRaw(session, TEST_KIND, realmId, "o", null, "c2", OutboxEntryStatus.PENDING, 0, now, now);
+                persistRaw(session, TEST_KIND, realmId, "o", null, "c3", OutboxEntryStatus.DEAD_LETTER, 1, now, now);
+                persistRaw(session, TEST_KIND, otherRealmId, "o", null, "c4", OutboxEntryStatus.HELD, 0, now, now);
+                persistRaw(session, OTHER_KIND, realmId, "o", null, "c5", OutboxEntryStatus.PENDING, 0, now, now);
+                em(session).flush();
+                em(session).clear();
+
+                Map<String, Map<OutboxEntryStatus, Long>> counts = new OutboxStore(session).countStatusesGroupedByRealm(TEST_KIND);
+                Assertions.assertEquals(2L, counts.get(realmId).get(OutboxEntryStatus.PENDING));
+                Assertions.assertEquals(1L, counts.get(realmId).get(OutboxEntryStatus.DEAD_LETTER));
+                Assertions.assertEquals(1L, counts.get(otherRealmId).get(OutboxEntryStatus.HELD));
+                Assertions.assertFalse(counts.get(realmId).containsKey(OutboxEntryStatus.HELD));
+            } finally {
+                new OutboxStore(session).deleteByRealm(TEST_KIND, otherRealmId);
+            }
+        });
+    }
+
+    @Test
     public void countStatusesForOwner_returnsGroupedCountsAndIgnoresOtherOwners() {
         final String realmId = testRealmId;
         runOnServer.run(session -> {

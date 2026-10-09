@@ -11,7 +11,9 @@ import org.keycloak.common.Profile;
 import org.keycloak.events.outbox.OutboxBackoff;
 import org.keycloak.events.outbox.OutboxCleanupTask;
 import org.keycloak.events.outbox.OutboxConfig;
+import org.keycloak.events.outbox.OutboxDrainerListener;
 import org.keycloak.events.outbox.OutboxDrainerTask;
+import org.keycloak.events.outbox.OutboxMetricsListener;
 import org.keycloak.events.outbox.OutboxStore;
 import org.keycloak.executors.ExecutorsProvider;
 import org.keycloak.models.ClientModel;
@@ -35,6 +37,7 @@ import org.keycloak.ssf.transmitter.event.SecurityEventTokenMapper;
 import org.keycloak.ssf.transmitter.metadata.TransmitterMetadataService;
 import org.keycloak.ssf.transmitter.metrics.SsfMetricsBinder;
 import org.keycloak.ssf.transmitter.outbox.SsfOutboxKinds;
+import org.keycloak.ssf.transmitter.outbox.SsfOutboxMetricsListener;
 import org.keycloak.ssf.transmitter.outbox.SsfPushDeliveryHandler;
 import org.keycloak.ssf.transmitter.stream.StreamVerificationService;
 import org.keycloak.ssf.transmitter.stream.storage.client.ClientStreamStore;
@@ -386,9 +389,8 @@ public class DefaultSsfTransmitterProviderFactory implements SsfTransmitterProvi
         }
         try {
             SsfMetricsBinder binder = new SsfMetricsBinder();
-            log.infof("SSF metrics binder installed; meters under prefix %s",
-                    SsfMetricsBinder.METER_OUTBOX_DEPTH.substring(0,
-                            SsfMetricsBinder.METER_OUTBOX_DEPTH.indexOf("outbox")));
+            log.infof("SSF metrics binder installed; meters under prefix %s (drainer meters under %s)",
+                    SsfMetricsBinder.PREFIX, OutboxMetricsListener.PREFIX);
             return binder;
         } catch (LinkageError micrometerUnavailable) {
             // Covers NoClassDefFoundError + all other linkage errors.
@@ -630,7 +632,20 @@ public class DefaultSsfTransmitterProviderFactory implements SsfTransmitterProvi
         return new OutboxDrainerTask(
                 createOutboxConfig(),
                 createSsfPushDeliveryHandler(),
-                this::createOutboxStore);
+                this::createOutboxStore,
+                createOutboxDrainerListener());
+    }
+
+    /**
+     * Drainer observer feeding the tick, dead-letter and outbox-depth
+     * meters. {@link OutboxDrainerListener#NOOP} when metrics are off,
+     * so the per-tick depth aggregate is not even queried.
+     */
+    protected OutboxDrainerListener createOutboxDrainerListener() {
+        if (metricsBinder == SsfMetricsBinder.NOOP) {
+            return OutboxDrainerListener.NOOP;
+        }
+        return new SsfOutboxMetricsListener(metricsBinder, this::createOutboxStore);
     }
 
     protected SsfPushDeliveryHandler createSsfPushDeliveryHandler() {

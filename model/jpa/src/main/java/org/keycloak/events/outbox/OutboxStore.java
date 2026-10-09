@@ -573,6 +573,26 @@ public class OutboxStore {
                 entryKind, "realmId", realmId);
     }
 
+    /**
+     * Row counts per {@code (realmId, status)} across the whole kind in
+     * one aggregate. Backs per-tick depth snapshots for metrics, where
+     * a {@code COUNT} per realm would not scale with the realm count.
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Map<OutboxEntryStatus, Long>> countStatusesGroupedByRealm(String entryKind) {
+        Objects.requireNonNull(entryKind, "entryKind");
+        List<Object[]> rows = getEntityManager()
+                .createNamedQuery("OutboxEntryEntity.countByEntryKindGroupedByRealmAndStatus")
+                .setParameter("entryKind", entryKind)
+                .getResultList();
+        Map<String, Map<OutboxEntryStatus, Long>> counts = new java.util.HashMap<>();
+        for (Object[] row : rows) {
+            counts.computeIfAbsent((String) row[0], k -> new EnumMap<>(OutboxEntryStatus.class))
+                    .put((OutboxEntryStatus) row[1], ((Number) row[2]).longValue());
+        }
+        return counts;
+    }
+
     public Map<OutboxEntryStatus, Long> countStatusesForOwner(String entryKind, String ownerId) {
         return groupedCountQuery("OutboxEntryEntity.countByEntryKindOwnerAndStatus",
                 entryKind, "ownerId", ownerId);

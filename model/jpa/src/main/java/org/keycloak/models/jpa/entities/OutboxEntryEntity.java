@@ -127,6 +127,13 @@ import org.hibernate.annotations.Nationalized;
                         + " WHERE e.entryKind = :entryKind"
                         + "   AND e.realmId = :realmId"
                         + " GROUP BY e.status"),
+        // Kind-wide depth snapshot (metrics): one aggregate per tick
+        // instead of a COUNT per realm.
+        @NamedQuery(
+                name = "OutboxEntryEntity.countByEntryKindGroupedByRealmAndStatus",
+                query = "SELECT e.realmId, e.status, COUNT(e) FROM OutboxEntryEntity e"
+                        + " WHERE e.entryKind = :entryKind"
+                        + " GROUP BY e.realmId, e.status"),
         @NamedQuery(
                 name = "OutboxEntryEntity.countByEntryKindOwnerAndStatus",
                 query = "SELECT e.status, COUNT(e) FROM OutboxEntryEntity e"
