@@ -255,6 +255,23 @@ public class OutboxStore {
         getEntityManager().merge(entity);
     }
 
+    /**
+     * Reschedules a PENDING row to {@code notBefore} without counting
+     * a delivery attempt — the counterpart of {@link #recordFailure}
+     * for conditions that are not a failed attempt (destination
+     * paused, back-off requested, dependency unavailable). Instants in
+     * the past are clamped to "now" so the row is due on the next tick
+     * rather than immediately re-locked by a sibling drainer.
+     */
+    public void deferUntil(OutboxEntryEntity entity, Instant notBefore, String reason) {
+        Objects.requireNonNull(entity, "entity");
+        Objects.requireNonNull(notBefore, "notBefore");
+        Instant now = Instant.now();
+        entity.setNextAttemptAt(notBefore.isBefore(now) ? now : notBefore);
+        entity.setLastError(truncateError(reason));
+        getEntityManager().merge(entity);
+    }
+
     public void markDeadLetter(OutboxEntryEntity entity, String lastError) {
         entity.setAttempts(entity.getAttempts() + 1);
         entity.setStatus(OutboxEntryStatus.DEAD_LETTER);

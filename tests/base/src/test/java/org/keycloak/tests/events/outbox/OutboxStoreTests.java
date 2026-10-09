@@ -298,6 +298,57 @@ public class OutboxStoreTests {
     }
 
     @Test
+    public void deferUntil_reschedulesWithoutCountingAnAttempt() {
+        final String realmId = testRealmId;
+        runOnServer.run(session -> {
+            Instant now = Instant.now();
+            OutboxEntryEntity row = persistRaw(session, TEST_KIND, realmId, "owner-d", null,
+                    "corr-defer", OutboxEntryStatus.PENDING, 2,
+                    now.minusSeconds(1), now);
+            em(session).flush();
+            em(session).clear();
+
+            Instant notBefore = now.plus(Duration.ofMinutes(5)).truncatedTo(ChronoUnit.MICROS);
+            new OutboxStore(session)
+                    .deferUntil(findById(session, row.getId()), notBefore, "receiver asked for back-off");
+            em(session).flush();
+            em(session).clear();
+
+            OutboxEntryEntity after = findById(session, row.getId());
+            Assertions.assertEquals(OutboxEntryStatus.PENDING, after.getStatus(),
+                    "deferUntil keeps the row in PENDING");
+            Assertions.assertEquals(2, after.getAttempts(), "deferUntil must not count an attempt");
+            Assertions.assertEquals(notBefore, after.getNextAttemptAt());
+            Assertions.assertEquals("receiver asked for back-off", after.getLastError());
+        });
+    }
+
+    @Test
+    public void deferUntil_clampsPastInstantsToNow() {
+        final String realmId = testRealmId;
+        runOnServer.run(session -> {
+            Instant now = Instant.now();
+            OutboxEntryEntity row = persistRaw(session, TEST_KIND, realmId, "owner-d", null,
+                    "corr-defer-past", OutboxEntryStatus.PENDING, 0,
+                    now.minusSeconds(60), now.minusSeconds(60));
+            em(session).flush();
+            em(session).clear();
+
+            Instant before = Instant.now().truncatedTo(ChronoUnit.MICROS);
+            new OutboxStore(session)
+                    .deferUntil(findById(session, row.getId()), now.minus(Duration.ofHours(1)), null);
+            em(session).flush();
+            em(session).clear();
+
+            OutboxEntryEntity after = findById(session, row.getId());
+            Assertions.assertEquals(0, after.getAttempts());
+            Assertions.assertFalse(after.getNextAttemptAt().isBefore(before),
+                    "a notBefore in the past must be clamped to now, not left in the past");
+            Assertions.assertNull(after.getLastError());
+        });
+    }
+
+    @Test
     public void markDeadLetter_setsStatusAndIncrementsAttemptsAndStoresError() {
         final String realmId = testRealmId;
         runOnServer.run(session -> {

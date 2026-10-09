@@ -58,6 +58,12 @@ public interface OutboxDeliveryHandler {
      * {@link OutboxDeliveryOutcome#RETRY} and records the exception
      * class + message in {@code last_error}.
      *
+     * <p>A condition that is not a failed delivery attempt — the
+     * destination asked for a back-off, is paused, or a dependency is
+     * temporarily unavailable — should be reported as
+     * {@link OutboxDeliveryResult#defer(java.time.Instant, String)}
+     * so the row is rescheduled without spending one of its attempts.
+     *
      * <p>The returned {@link OutboxDeliveryResult}'s
      * {@code errorMessage} (if any) is persisted into the row's
      * {@code last_error} column. Handlers should pack as much

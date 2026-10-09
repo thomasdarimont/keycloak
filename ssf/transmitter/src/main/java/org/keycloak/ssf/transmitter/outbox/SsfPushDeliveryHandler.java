@@ -91,13 +91,11 @@ public class SsfPushDeliveryHandler implements OutboxDeliveryHandler {
 
         SsfTransmitterProvider transmitter = session.getProvider(SsfTransmitterProvider.class);
         if (transmitter == null) {
-            // Feature unavailable mid-flight — leave the row pending,
-            // try again next tick. Returning RETRY without bumping
-            // attempts would be ideal, but the drainer always bumps;
-            // a feature-disabled scenario is rare enough that one
-            // wasted attempt is acceptable here.
-            log.warnf("SSF push handler: transmitter provider unavailable — retrying row %s next tick", row.getId());
-            return OutboxDeliveryResult.retry("transmitter provider unavailable");
+            // Feature unavailable mid-flight — not a failed delivery
+            // attempt, so defer to the next tick without spending one
+            // of the row's attempts.
+            log.warnf("SSF push handler: transmitter provider unavailable — deferring row %s to the next tick", row.getId());
+            return OutboxDeliveryResult.defer(Instant.now(), "transmitter provider unavailable");
         }
 
         String expectedStreamId = row.getContainerId();

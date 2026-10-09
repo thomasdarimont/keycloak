@@ -530,9 +530,9 @@ public class DefaultSsfTransmitterProviderFactory implements SsfTransmitterProvi
             OutboxDrainerTask task = createDrainerTask(session);
             ScheduledTaskRunner runner = createDrainerScheduledTaskRunner(factory, task);
             timer.schedule(runner, outboxDrainerIntervalMillis, outboxDrainerIntervalMillis,
-                    "SsfPushOutboxDrainerTask");
-            log.infof("SSF push outbox drainer scheduled: entryKind=%s, interval=%dms, batchSize=%d, maxAttempts=%d, deadLetterRetention=%s, deliveredRetention=%s, pendingMaxAge=%s",
-                    SsfOutboxKinds.PUSH, outboxDrainerIntervalMillis,
+                    task.getTaskName());
+            log.infof("SSF push outbox drainer scheduled: task=%s, entryKind=%s, interval=%dms, batchSize=%d, maxAttempts=%d, deadLetterRetention=%s, deliveredRetention=%s, pendingMaxAge=%s",
+                    task.getTaskName(), SsfOutboxKinds.PUSH, outboxDrainerIntervalMillis,
                     outboxDrainerBatchSize, outboxDrainerMaxAttempts,
                     outboxDeadLetterRetentionMillis > 0 ? outboxDeadLetterRetentionMillis + "ms" : "disabled",
                     outboxDeliveredRetentionMillis > 0 ? outboxDeliveredRetentionMillis + "ms" : "disabled",
@@ -541,7 +541,10 @@ public class DefaultSsfTransmitterProviderFactory implements SsfTransmitterProvi
     }
 
     protected ScheduledTaskRunner createDrainerScheduledTaskRunner(KeycloakSessionFactory factory, OutboxDrainerTask task) {
-        return new ClusterAwareScheduledTaskRunner(factory, task, outboxDrainerIntervalMillis);
+        // Lock key per entry kind: the runner's default key (the class
+        // name) is shared by every OutboxDrainerTask instance, so two
+        // kinds scheduled this way would exclude each other's ticks.
+        return new ClusterAwareScheduledTaskRunner(factory, task, outboxDrainerIntervalMillis, task.getTaskName());
     }
 
     protected OutboxDrainerTask createDrainerTask(KeycloakSession session) {

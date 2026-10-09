@@ -38,13 +38,17 @@ import org.jboss.logging.Logger;
  * <p>One drainer instance per registered kind. Each is wrapped in a
  * {@code ClusterAwareScheduledTaskRunner} at scheduling time so in an
  * HA deployment only one node drains a given kind per interval, even
- * though every node schedules the timer.
+ * though every node schedules the timer. The runner must be given
+ * {@link #getTaskName()} as its lock key: the key is unique per
+ * {@code entryKind}, whereas the runner's default (the class name) is
+ * shared by every drainer instance and would make them exclude each
+ * other.
  *
  * <p>Concurrency within a single tick is cheap because rows are locked
  * {@code PESSIMISTIC_WRITE} via {@code FOR UPDATE SKIP LOCKED} by the
- * store, and each row is transitioned to a terminal state (DELIVERED /
- * back to PENDING with a future {@code next_attempt_at} / DEAD_LETTER)
- * before the transaction commits.
+ * store, and each row is transitioned (DELIVERED / back to PENDING with
+ * a future {@code next_attempt_at}, with or without an attempt counted /
+ * DEAD_LETTER) before the transaction commits.
  *
  * <p>Per-tick housekeeping after the drain pass:
  * <ul>
@@ -58,6 +62,8 @@ import org.jboss.logging.Logger;
 public class OutboxDrainerTask implements ScheduledTask {
 
     private static final Logger log = Logger.getLogger(OutboxDrainerTask.class);
+
+    public static final String TASK_NAME_PREFIX = "outbox-drainer:";
 
     protected final OutboxConfig config;
     protected final OutboxDeliveryHandler handler;
@@ -74,6 +80,15 @@ public class OutboxDrainerTask implements ScheduledTask {
                     "config.entryKind=" + config.entryKind()
                             + " does not match handler.entryKind=" + handler.entryKind());
         }
+    }
+
+    /**
+     * Unique per {@code entryKind}; used as the cluster lock key and
+     * as the timer / tracing name.
+     */
+    @Override
+    public String getTaskName() {
+        return TASK_NAME_PREFIX + config.entryKind();
     }
 
     @Override
@@ -128,6 +143,11 @@ public class OutboxDrainerTask implements ScheduledTask {
                         row.getId(), row.getEntryKind(), row.getCorrelationId(), row.getAttempts());
             }
             case RETRY -> handleRetry(store, row, result.errorMessage());
+            case DEFER -> {
+                store.deferUntil(row, result.notBefore(), result.errorMessage());
+                log.debugf("Outbox deferred without counting an attempt. id=%s entryKind=%s correlationId=%s notBefore=%s reason=%s",
+                        row.getId(), row.getEntryKind(), row.getCorrelationId(), result.notBefore(), result.errorMessage());
+            }
             case DEAD_LETTER -> {
                 String reason = result.errorMessage() != null ? result.errorMessage()
                         : "handler returned DEAD_LETTER (attempt " + (row.getAttempts() + 1) + ")";
