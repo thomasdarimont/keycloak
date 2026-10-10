@@ -56,6 +56,12 @@ import java.time.Duration;
  * again until the batch is full or nothing is due. One slow or
  * flooding destination then gets its share of a batch rather than
  * all of it. {@code null} keeps the plain oldest-first claim.
+ *
+ * <p>{@code deliveryConcurrency} is the number of delivery workers a
+ * tick may use. Rows are grouped by owner; one owner's rows are always
+ * delivered in order by one worker, different owners in parallel.
+ * {@code null} or 1 delivers on the tick thread. Workers come from the
+ * {@code outbox-delivery-<kind>} executor of the {@code ExecutorsProvider}.
  */
 public record OutboxConfig(
         String entryKind,
@@ -66,7 +72,8 @@ public record OutboxConfig(
         Duration pendingMaxAge,
         Duration claimLease,
         Duration tickBudget,
-        Integer perOwnerBatchSize) {
+        Integer perOwnerBatchSize,
+        Integer deliveryConcurrency) {
 
     public static final Duration DEFAULT_CLAIM_LEASE = Duration.ofMinutes(5);
 
@@ -78,7 +85,7 @@ public record OutboxConfig(
                         Duration deliveredRetention,
                         Duration pendingMaxAge) {
         this(entryKind, batchSize, backoff, deadLetterRetention, deliveredRetention, pendingMaxAge,
-                DEFAULT_CLAIM_LEASE, null, null);
+                DEFAULT_CLAIM_LEASE, null, null, null);
     }
 
     /** Plain oldest-first claim. */
@@ -91,12 +98,29 @@ public record OutboxConfig(
                         Duration claimLease,
                         Duration tickBudget) {
         this(entryKind, batchSize, backoff, deadLetterRetention, deliveredRetention, pendingMaxAge,
-                claimLease, tickBudget, null);
+                claimLease, tickBudget, null, null);
+    }
+
+    /** Serial delivery on the tick thread. */
+    public OutboxConfig(String entryKind,
+                        int batchSize,
+                        OutboxBackoff backoff,
+                        Duration deadLetterRetention,
+                        Duration deliveredRetention,
+                        Duration pendingMaxAge,
+                        Duration claimLease,
+                        Duration tickBudget,
+                        Integer perOwnerBatchSize) {
+        this(entryKind, batchSize, backoff, deadLetterRetention, deliveredRetention, pendingMaxAge,
+                claimLease, tickBudget, perOwnerBatchSize, null);
     }
 
     public OutboxConfig {
         if (perOwnerBatchSize != null && perOwnerBatchSize <= 0) {
             throw new IllegalArgumentException("perOwnerBatchSize must be positive or null, got " + perOwnerBatchSize);
+        }
+        if (deliveryConcurrency != null && deliveryConcurrency <= 0) {
+            throw new IllegalArgumentException("deliveryConcurrency must be positive or null, got " + deliveryConcurrency);
         }
         if (claimLease == null || claimLease.isZero() || claimLease.isNegative()) {
             throw new IllegalArgumentException("claimLease must be positive, got " + claimLease);

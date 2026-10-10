@@ -192,8 +192,8 @@ public class OutboxStore {
                 .setParameter("metadata", metadata)
                 .setParameter("status", status)
                 .setParameter("attempts", 0)
-                .setParameter("nextAttemptAt", nextAttemptAt)
-                .setParameter("createdAt", now)
+                .setParameter("nextAttemptAt", nextAttemptAt.toEpochMilli())
+                .setParameter("createdAt", now.toEpochMilli())
                 .executeUpdate();
 
         if (inserted == 0) {
@@ -284,7 +284,7 @@ public class OutboxStore {
                 .createNamedQuery("OutboxEntryEntity.findDueForDrain", OutboxEntryEntity.class)
                 .setParameter("entryKind", entryKind)
                 .setParameter("status", OutboxEntryStatus.PENDING)
-                .setParameter("now", Instant.now())
+                .setParameter("now", Instant.now().toEpochMilli())
                 .setMaxResults(limit)
                 .setLockMode(LockModeType.PESSIMISTIC_WRITE);
         skipLocked(query, "outbox drain query");
@@ -307,7 +307,7 @@ public class OutboxStore {
                 .setParameter("entryKind", entryKind)
                 .setParameter("ownerId", ownerId)
                 .setParameter("status", OutboxEntryStatus.PENDING)
-                .setParameter("now", Instant.now())
+                .setParameter("now", Instant.now().toEpochMilli())
                 .setMaxResults(limit)
                 .setLockMode(LockModeType.PESSIMISTIC_WRITE);
         skipLocked(query, "owner drain query");
@@ -329,7 +329,7 @@ public class OutboxStore {
                 .createNamedQuery("OutboxEntryEntity.findOwnersWithDueRows")
                 .setParameter("entryKind", entryKind)
                 .setParameter("status", OutboxEntryStatus.PENDING)
-                .setParameter("now", Instant.now())
+                .setParameter("now", Instant.now().toEpochMilli())
                 .setMaxResults(limit)
                 .getResultList();
         List<String> owners = new ArrayList<>(rows.size());
@@ -356,11 +356,12 @@ public class OutboxStore {
     /**
      * Claims up to {@code limit} due PENDING rows for the calling tick:
      * locks them like {@link #lockDueForDrain}, stamps {@code token}
-     * and pushes {@code next_attempt_at} out by {@code lease} so no
-     * other tick sees them as due until the lease expires. Meant to
-     * run in a short transaction of its own; delivery then happens
-     * without any row lock and each outcome is recorded via
-     * {@link #findClaimed} in a transaction per row.
+     * and sets {@code claimed_until} to now plus {@code lease} so no
+     * other tick sees them as due until the lease expires.
+     * {@code next_attempt_at} is left alone and keeps meaning "when the
+     * row became due". Meant to run in a short transaction of its own;
+     * delivery then happens without any row lock and each outcome is
+     * recorded via {@link #findClaimed} in a transaction per row.
      *
      * <p>Rows whose lease has expired are due again and get
      * re-claimed with a new token, which makes the late tick's
@@ -388,7 +389,7 @@ public class OutboxStore {
         Instant leaseUntil = Instant.now().plus(lease);
         for (OutboxEntryEntity row : rows) {
             row.setClaimToken(token);
-            row.setNextAttemptAt(leaseUntil);
+            row.setClaimedUntil(leaseUntil);
         }
         getEntityManager().flush();
         log.debugf("Outbox claimed %d row(s) token=%s leaseUntil=%s", rows.size(), token, leaseUntil);
@@ -413,8 +414,10 @@ public class OutboxStore {
 
     /**
      * Hands claimed rows back unprocessed (tick budget exhausted):
-     * clears the token and makes them due now. Conditional on
-     * {@code token}, so rows re-claimed in the meantime are untouched.
+     * clears the token and the lease; the rows are due again
+     * immediately because their {@code next_attempt_at} was never
+     * touched. Conditional on {@code token}, so rows re-claimed in the
+     * meantime are untouched.
      *
      * @return the number of rows released.
      */
@@ -427,7 +430,6 @@ public class OutboxStore {
                 .createNamedQuery("OutboxEntryEntity.releaseClaims")
                 .setParameter("ids", ids)
                 .setParameter("token", token)
-                .setParameter("now", Instant.now())
                 .executeUpdate();
         if (released > 0) {
             log.debugf("Outbox released %d claimed row(s) for token=%s", released, token);
@@ -435,9 +437,33 @@ public class OutboxStore {
         return released;
     }
 
+    /**
+     * Makes an owner's deferred or backed-off PENDING rows due now —
+     * the admin "destination fixed, retry everything" operation for
+     * rows that are not dead-lettered. Rows in flight (claim token set)
+     * are left to their tick.
+     *
+     * @return the number of rows pulled forward.
+     */
+    public int makeDueForOwner(String entryKind, String ownerId) {
+        Objects.requireNonNull(entryKind, "entryKind");
+        Objects.requireNonNull(ownerId, "ownerId");
+        int updated = getEntityManager()
+                .createNamedQuery("OutboxEntryEntity.makeDueForOwner")
+                .setParameter("entryKind", entryKind)
+                .setParameter("ownerId", ownerId)
+                .setParameter("pending", OutboxEntryStatus.PENDING)
+                .setParameter("now", Instant.now().toEpochMilli())
+                .executeUpdate();
+        if (updated > 0) {
+            log.debugf("Outbox made %d row(s) due now for entryKind=%s ownerId=%s", updated, entryKind, ownerId);
+        }
+        return updated;
+    }
+
     // -- Row transitions ---------------------------------------------------
-    // Every transition clears the claim token: the row is no longer
-    // in flight once its outcome is recorded.
+    // Every transition clears the claim token and lease: the row is no
+    // longer in flight once its outcome is recorded.
 
     public void markDelivered(OutboxEntryEntity entity) {
         entity.setAttempts(entity.getAttempts() + 1);
@@ -445,6 +471,7 @@ public class OutboxStore {
         entity.setDeliveredAt(Instant.now());
         entity.setLastError(null);
         entity.setClaimToken(null);
+        entity.setClaimedUntil(null);
         getEntityManager().merge(entity);
     }
 
@@ -453,6 +480,7 @@ public class OutboxStore {
         entity.setNextAttemptAt(nextAttemptAt);
         entity.setLastError(truncateError(lastError));
         entity.setClaimToken(null);
+        entity.setClaimedUntil(null);
         getEntityManager().merge(entity);
     }
 
@@ -471,6 +499,7 @@ public class OutboxStore {
         entity.setNextAttemptAt(notBefore.isBefore(now) ? now : notBefore);
         entity.setLastError(truncateError(reason));
         entity.setClaimToken(null);
+        entity.setClaimedUntil(null);
         getEntityManager().merge(entity);
     }
 
@@ -479,6 +508,7 @@ public class OutboxStore {
         entity.setStatus(OutboxEntryStatus.DEAD_LETTER);
         entity.setLastError(truncateError(lastError));
         entity.setClaimToken(null);
+        entity.setClaimedUntil(null);
         getEntityManager().merge(entity);
     }
 
@@ -501,7 +531,7 @@ public class OutboxStore {
                 .setParameter("entryKind", entryKind)
                 .setParameter("dead", OutboxEntryStatus.DEAD_LETTER)
                 .setParameter("statuses", OutboxEntryStatus.QUEUED)
-                .setParameter("olderThan", cutoff)
+                .setParameter("olderThan", cutoff.toEpochMilli())
                 .setParameter("reason", truncateError(reason))
                 .executeUpdate();
     }
@@ -533,7 +563,7 @@ public class OutboxStore {
                 .setParameter("ids", ids)
                 .setParameter("pending", OutboxEntryStatus.PENDING)
                 .setParameter("fromStatuses", OutboxEntryStatus.TERMINAL)
-                .setParameter("now", Instant.now())
+                .setParameter("now", Instant.now().toEpochMilli())
                 .executeUpdate();
         if (requeued > 0) {
             log.debugf("Outbox requeued %d row(s) for entryKind=%s", requeued, entryKind);
@@ -557,7 +587,7 @@ public class OutboxStore {
                 .setParameter("ownerId", ownerId)
                 .setParameter("pending", OutboxEntryStatus.PENDING)
                 .setParameter("fromStatus", OutboxEntryStatus.DEAD_LETTER)
-                .setParameter("now", Instant.now())
+                .setParameter("now", Instant.now().toEpochMilli())
                 .executeUpdate();
         if (requeued > 0) {
             log.debugf("Outbox requeued %d dead-letter row(s) for entryKind=%s ownerId=%s", requeued, entryKind, ownerId);
@@ -636,7 +666,7 @@ public class OutboxStore {
                 .getResultList();
         Map<OutboxEntryStatus, Instant> oldest = new EnumMap<>(OutboxEntryStatus.class);
         for (Object[] row : rows) {
-            oldest.put((OutboxEntryStatus) row[0], (Instant) row[1]);
+            oldest.put((OutboxEntryStatus) row[0], Instant.ofEpochMilli(((Number) row[1]).longValue()));
         }
         return oldest;
     }
@@ -780,7 +810,7 @@ public class OutboxStore {
                 .setParameter("ownerId", ownerId)
                 .setParameter("pending", OutboxEntryStatus.PENDING)
                 .setParameter("held", OutboxEntryStatus.HELD)
-                .setParameter("now", Instant.now())
+                .setParameter("now", Instant.now().toEpochMilli())
                 .executeUpdate();
         if (released > 0) {
             log.debugf("Outbox released %d held row(s) for entryKind=%s ownerId=%s", released, entryKind, ownerId);
@@ -928,7 +958,7 @@ public class OutboxStore {
                 .setParameter("entryKind", entryKind)
                 .setParameter("realmId", realmId)
                 .setParameter("status", status)
-                .setParameter("olderThan", cutoff)
+                .setParameter("olderThan", cutoff.toEpochMilli())
                 .executeUpdate();
     }
 
@@ -951,7 +981,7 @@ public class OutboxStore {
                 .setParameter("entryKind", entryKind)
                 .setParameter("ownerId", ownerId)
                 .setParameter("status", status)
-                .setParameter("olderThan", cutoff)
+                .setParameter("olderThan", cutoff.toEpochMilli())
                 .executeUpdate();
     }
 
@@ -991,7 +1021,7 @@ public class OutboxStore {
                 .createNamedQuery("OutboxEntryEntity.purgeByEntryKindStatusOlderThanDelivered")
                 .setParameter("entryKind", entryKind)
                 .setParameter("status", OutboxEntryStatus.DELIVERED)
-                .setParameter("olderThan", cutoff)
+                .setParameter("olderThan", cutoff.toEpochMilli())
                 .executeUpdate();
         if (purged > 0) {
             log.debugf("Outbox purged %d DELIVERED row(s) older than %s for entryKind=%s", purged, cutoff, entryKind);
@@ -1006,7 +1036,7 @@ public class OutboxStore {
                 .createNamedQuery("OutboxEntryEntity.purgeByEntryKindStatusOlderThanCreated")
                 .setParameter("entryKind", entryKind)
                 .setParameter("status", OutboxEntryStatus.DEAD_LETTER)
-                .setParameter("olderThan", cutoff)
+                .setParameter("olderThan", cutoff.toEpochMilli())
                 .executeUpdate();
         if (purged > 0) {
             log.debugf("Outbox purged %d DEAD_LETTER row(s) older than %s for entryKind=%s", purged, cutoff, entryKind);

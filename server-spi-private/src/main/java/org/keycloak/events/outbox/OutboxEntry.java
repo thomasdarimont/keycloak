@@ -56,4 +56,10 @@ public interface OutboxEntry {
 
     /** Set once the row reached {@code DELIVERED}; {@code null} before. */
     Instant getDeliveredAt();
+
+    /** Token of the drainer tick currently delivering this row; {@code null} when not in flight. */
+    String getClaimToken();
+
+    /** End of that tick's lease; {@code null} when not in flight. */
+    Instant getClaimedUntil();
 }

@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.function.BiFunction;
 
+import org.keycloak.events.outbox.OutboxDelivery;
 import org.keycloak.events.outbox.OutboxDeliveryHandler;
 import org.keycloak.events.outbox.OutboxDeliveryResult;
 import org.keycloak.events.outbox.OutboxEntry;
@@ -22,11 +23,13 @@ import org.keycloak.ssf.transmitter.stream.StreamConfig;
 import org.jboss.logging.Logger;
 
 /**
- * SSF push handler for the generic outbox. The drainer looks up this
- * handler by {@code entryKind = "ssf-push"} and invokes
- * {@link #deliver(KeycloakSession, OutboxEntry)} for each due
- * row; this implementation resolves the realm/client/stream the row
- * targets and hands the encoded SET to {@link PushDeliveryService}.
+ * SSF push handler for the generic outbox. The drainer invokes
+ * {@link #prepare(KeycloakSession, OutboxEntry)} for each claimed row
+ * inside a short transaction; this implementation resolves the
+ * realm/client/stream the row targets there and returns a delivery
+ * that hands the encoded SET to {@link PushDeliveryService} outside
+ * any transaction. {@link PushDeliveryService} captures the HTTP
+ * client at construction and needs no session during the call.
  *
  * <p>Resolve-then-deliver-then-classify behavior:
  *
@@ -65,7 +68,7 @@ public class SsfPushDeliveryHandler implements OutboxDeliveryHandler {
     }
 
     @Override
-    public OutboxDeliveryResult deliver(KeycloakSession session, OutboxEntry row) {
+    public OutboxDelivery prepare(KeycloakSession session, OutboxEntry row) {
         Instant rowStart = Instant.now();
 
         RealmModel realm = session.realms().getRealm(row.getRealmId());
@@ -74,7 +77,7 @@ public class SsfPushDeliveryHandler implements OutboxDeliveryHandler {
                     row.getId(), row.getRealmId(), row.getCorrelationId());
             metricsBinder.recordPushDelivery(row.getRealmId(), row.getOwnerId(),
                     SsfMetricsBinder.PushOutcome.ORPHANED, Duration.between(rowStart, Instant.now()));
-            return OutboxDeliveryResult.orphaned("unknown realm: " + row.getRealmId());
+            return OutboxDelivery.settled(OutboxDeliveryResult.orphaned("unknown realm: " + row.getRealmId()));
         }
         String realmLabel = realm.getName();
 
@@ -84,8 +87,9 @@ public class SsfPushDeliveryHandler implements OutboxDeliveryHandler {
                     row.getId(), row.getOwnerId(), row.getCorrelationId());
             metricsBinder.recordPushDelivery(realmLabel, row.getOwnerId(),
                     SsfMetricsBinder.PushOutcome.ORPHANED, Duration.between(rowStart, Instant.now()));
-            return OutboxDeliveryResult.orphaned("unknown client: " + row.getOwnerId());
+            return OutboxDelivery.settled(OutboxDeliveryResult.orphaned("unknown client: " + row.getOwnerId()));
         }
+        String clientLabel = receiverClient.getClientId();
 
         SsfTransmitterProvider transmitter = session.getProvider(SsfTransmitterProvider.class);
         if (transmitter == null) {
@@ -93,7 +97,7 @@ public class SsfPushDeliveryHandler implements OutboxDeliveryHandler {
             // attempt, so defer to the next tick without spending one
             // of the row's attempts.
             log.warnf("SSF push handler: transmitter provider unavailable — deferring row %s to the next tick", row.getId());
-            return OutboxDeliveryResult.defer(Instant.now(), "transmitter provider unavailable");
+            return OutboxDelivery.settled(OutboxDeliveryResult.defer(Instant.now(), "transmitter provider unavailable"));
         }
 
         String expectedStreamId = row.getContainerId();
@@ -103,39 +107,50 @@ public class SsfPushDeliveryHandler implements OutboxDeliveryHandler {
             log.warnf("SSF push handler: row's stream is gone — orphaning. id=%s ownerId=%s pendingStreamId=%s currentStreamId=%s",
                     row.getId(), row.getOwnerId(), expectedStreamId,
                     stream == null ? "<none>" : stream.getStreamId());
-            metricsBinder.recordPushDelivery(realmLabel, receiverClient.getClientId(),
+            metricsBinder.recordPushDelivery(realmLabel, clientLabel,
                     SsfMetricsBinder.PushOutcome.ORPHANED, Duration.between(rowStart, Instant.now()));
-            return OutboxDeliveryResult.orphaned(
-                    stream == null ? "stream removed" : "stream replaced (current=" + stream.getStreamId() + ")");
+            return OutboxDelivery.settled(OutboxDeliveryResult.orphaned(
+                    stream == null ? "stream removed" : "stream replaced (current=" + stream.getStreamId() + ")"));
         }
 
-        PushDeliveryOutcome push = deliverEncoded(session, stream, row);
-        if (push.delivered()) {
+        // Everything below runs outside the transaction: the push
+        // service holds the HTTP client, the stream config and the row
+        // are plain values.
+        PushDeliveryService push = pushDeliveryServiceFactory.apply(session, context);
+        return () -> deliver(push, stream, row, realmLabel, clientLabel, rowStart);
+    }
+
+    /**
+     * Phase two: the HTTP push and its classification. No session, no
+     * transaction.
+     */
+    protected OutboxDeliveryResult deliver(PushDeliveryService push, StreamConfig stream, OutboxEntry row,
+                                           String realmLabel, String clientLabel, Instant rowStart) {
+        PushDeliveryOutcome outcome = deliverEncoded(push, stream, row);
+        if (outcome.delivered()) {
             log.debugf("SSF push handler delivered. id=%s ownerId=%s streamId=%s correlationId=%s attempts=%d",
                     row.getId(), row.getOwnerId(), stream.getStreamId(), row.getCorrelationId(), row.getAttempts() + 1);
-            metricsBinder.recordPushDelivery(realmLabel, receiverClient.getClientId(),
+            metricsBinder.recordPushDelivery(realmLabel, clientLabel,
                     SsfMetricsBinder.PushOutcome.DELIVERED, Duration.between(rowStart, Instant.now()));
             return OutboxDeliveryResult.delivered();
         }
 
         // Push failed: the drainer will compute next_attempt_at or
-        // dead-letter based on attempt budget. Emit the metric here
-        // with RETRY semantics; if the drainer escalates to
-        // DEAD_LETTER on exhaustion, that's a separate metric path
-        // the drainer can hook in a follow-up.
-        String lastError = formatLastError(push);
+        // dead-letter based on attempt budget; the terminal DEAD_LETTER
+        // outcome is counted by SsfOutboxMetricsListener.
+        String lastError = formatLastError(outcome);
         log.debugf("SSF push handler delivery failed. id=%s ownerId=%s streamId=%s correlationId=%s lastError=%s",
                 row.getId(), row.getOwnerId(), stream.getStreamId(), row.getCorrelationId(), lastError);
-        metricsBinder.recordPushDelivery(realmLabel, receiverClient.getClientId(),
+        metricsBinder.recordPushDelivery(realmLabel, clientLabel,
                 SsfMetricsBinder.PushOutcome.RETRY, Duration.between(rowStart, Instant.now()));
         return OutboxDeliveryResult.retry(lastError);
     }
 
     /**
-     * Delivers the row's stored encoded SET via a fresh
-     * {@link PushDeliveryService}. {@code PushDeliveryService} is
-     * stateless beyond its captured HTTP client + transmitter config,
-     * so per-row construction is cheap. A minimal stub
+     * Delivers the row's stored encoded SET via the
+     * {@link PushDeliveryService} built in {@code prepare}. The service
+     * is stateless beyond its captured HTTP client + transmitter
+     * config, so per-row construction is cheap. A minimal stub
      * {@link SsfSecurityEventToken} carries the correlation id (jti)
      * so the push service's logging stays useful — the actual payload
      * on the wire is the row's {@code payload} (signed encoded SET).
@@ -144,8 +159,7 @@ public class SsfPushDeliveryHandler implements OutboxDeliveryHandler {
      * stays the only way out — the drainer's own catch-all would
      * otherwise erase the {@link PushDeliveryOutcome} detail.
      */
-    protected PushDeliveryOutcome deliverEncoded(KeycloakSession session, StreamConfig stream, OutboxEntry row) {
-        PushDeliveryService push = pushDeliveryServiceFactory.apply(session, context);
+    protected PushDeliveryOutcome deliverEncoded(PushDeliveryService push, StreamConfig stream, OutboxEntry row) {
         SsfSecurityEventToken stub = new SsfSecurityEventToken();
         stub.setJti(row.getCorrelationId());
         try {

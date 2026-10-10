@@ -82,7 +82,8 @@ import org.hibernate.annotations.Nationalized;
                         + " WHERE e.entryKind = :entryKind"
                         + "   AND e.status = :status"
                         + "   AND e.nextAttemptAt <= :now"
-                        + " ORDER BY e.nextAttemptAt ASC"),
+                        + "   AND (e.claimedUntil IS NULL OR e.claimedUntil <= :now)"
+                        + " ORDER BY e.nextAttemptAt ASC, e.createdAt ASC, e.id ASC"),
         // Owner-fair drain: which owners have due rows (oldest first),
         // then the due rows of one owner. Both use IDX_OUTBOX_OWNER /
         // IDX_OUTBOX_DRAIN.
@@ -92,6 +93,7 @@ import org.hibernate.annotations.Nationalized;
                         + " WHERE e.entryKind = :entryKind"
                         + "   AND e.status = :status"
                         + "   AND e.nextAttemptAt <= :now"
+                        + "   AND (e.claimedUntil IS NULL OR e.claimedUntil <= :now)"
                         + " GROUP BY e.ownerId"
                         + " ORDER BY MIN(e.nextAttemptAt) ASC, e.ownerId ASC"),
         @NamedQuery(
@@ -101,7 +103,8 @@ import org.hibernate.annotations.Nationalized;
                         + "   AND e.ownerId = :ownerId"
                         + "   AND e.status = :status"
                         + "   AND e.nextAttemptAt <= :now"
-                        + " ORDER BY e.nextAttemptAt ASC"),
+                        + "   AND (e.claimedUntil IS NULL OR e.claimedUntil <= :now)"
+                        + " ORDER BY e.nextAttemptAt ASC, e.createdAt ASC, e.id ASC"),
         @NamedQuery(
                 name = "OutboxEntryEntity.findByOwnerAndCorrelationId",
                 query = "SELECT e FROM OutboxEntryEntity e"
@@ -285,12 +288,24 @@ import org.hibernate.annotations.Nationalized;
         // Drainer lease: hands back rows a tick claimed but could not
         // process within its budget. Conditional on the token so a
         // row re-claimed by another tick in the meantime is left alone.
+        // next_attempt_at is untouched: the row is still due.
         @NamedQuery(
                 name = "OutboxEntryEntity.releaseClaims",
                 query = "UPDATE OutboxEntryEntity e"
-                        + "    SET e.claimToken = NULL, e.nextAttemptAt = :now"
+                        + "    SET e.claimToken = NULL, e.claimedUntil = NULL"
                         + "  WHERE e.id IN :ids"
                         + "    AND e.claimToken = :token"),
+        // Admin "destination fixed": pull an owner's deferred / backed-off
+        // rows forward. Rows in flight (token set) are left to their tick.
+        @NamedQuery(
+                name = "OutboxEntryEntity.makeDueForOwner",
+                query = "UPDATE OutboxEntryEntity e"
+                        + "    SET e.nextAttemptAt = :now"
+                        + "  WHERE e.entryKind = :entryKind"
+                        + "    AND e.ownerId = :ownerId"
+                        + "    AND e.status = :pending"
+                        + "    AND e.claimToken IS NULL"
+                        + "    AND e.nextAttemptAt > :now"),
         @NamedQuery(
                 name = "OutboxEntryEntity.countByEntryKindOwnerStatus",
                 query = "SELECT COUNT(e) FROM OutboxEntryEntity e"
@@ -390,17 +405,20 @@ public class OutboxEntryEntity implements OutboxEntry {
     @Column(name = "ATTEMPTS", nullable = false)
     protected int attempts;
 
+    /** Epoch milliseconds. Exposed as {@link Instant} through the accessors. */
     @Column(name = "NEXT_ATTEMPT_AT", nullable = false)
-    protected Instant nextAttemptAt;
+    protected Long nextAttemptAt;
 
     @Column(name = "LAST_ERROR", length = 2048)
     protected String lastError;
 
+    /** Epoch milliseconds. Exposed as {@link Instant} through the accessors. */
     @Column(name = "CREATED_AT", nullable = false)
-    protected Instant createdAt;
+    protected Long createdAt;
 
+    /** Epoch milliseconds. Exposed as {@link Instant} through the accessors. */
     @Column(name = "DELIVERED_AT")
-    protected Instant deliveredAt;
+    protected Long deliveredAt;
 
     /**
      * Token of the drainer tick that currently holds this row for
@@ -411,6 +429,16 @@ public class OutboxEntryEntity implements OutboxEntry {
      */
     @Column(name = "CLAIM_TOKEN", length = 36)
     protected String claimToken;
+
+    /**
+     * End of the lease the holder of {@link #claimToken} has on this
+     * row, epoch milliseconds; {@code null} when the row is not in
+     * flight. Rows with a live lease are not due for other ticks;
+     * once it has passed the row is re-claimable and the late holder's
+     * record is skipped.
+     */
+    @Column(name = "CLAIMED_UNTIL")
+    protected Long claimedUntil;
 
     public String getId() {
         return id;
@@ -501,11 +529,11 @@ public class OutboxEntryEntity implements OutboxEntry {
     }
 
     public Instant getNextAttemptAt() {
-        return nextAttemptAt;
+        return nextAttemptAt == null ? null : Instant.ofEpochMilli(nextAttemptAt);
     }
 
     public void setNextAttemptAt(Instant nextAttemptAt) {
-        this.nextAttemptAt = nextAttemptAt;
+        this.nextAttemptAt = nextAttemptAt == null ? null : nextAttemptAt.toEpochMilli();
     }
 
     public String getLastError() {
@@ -517,19 +545,19 @@ public class OutboxEntryEntity implements OutboxEntry {
     }
 
     public Instant getCreatedAt() {
-        return createdAt;
+        return createdAt == null ? null : Instant.ofEpochMilli(createdAt);
     }
 
     public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
+        this.createdAt = createdAt == null ? null : createdAt.toEpochMilli();
     }
 
     public Instant getDeliveredAt() {
-        return deliveredAt;
+        return deliveredAt == null ? null : Instant.ofEpochMilli(deliveredAt);
     }
 
     public void setDeliveredAt(Instant deliveredAt) {
-        this.deliveredAt = deliveredAt;
+        this.deliveredAt = deliveredAt == null ? null : deliveredAt.toEpochMilli();
     }
 
     public String getClaimToken() {
@@ -538,6 +566,14 @@ public class OutboxEntryEntity implements OutboxEntry {
 
     public void setClaimToken(String claimToken) {
         this.claimToken = claimToken;
+    }
+
+    public Instant getClaimedUntil() {
+        return claimedUntil == null ? null : Instant.ofEpochMilli(claimedUntil);
+    }
+
+    public void setClaimedUntil(Instant claimedUntil) {
+        this.claimedUntil = claimedUntil == null ? null : claimedUntil.toEpochMilli();
     }
 
     @Override

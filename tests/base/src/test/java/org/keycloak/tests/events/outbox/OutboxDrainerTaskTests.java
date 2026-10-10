@@ -4,9 +4,12 @@ import java.io.Serializable;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 
 import jakarta.persistence.EntityManager;
@@ -14,6 +17,7 @@ import jakarta.persistence.EntityManager;
 import org.keycloak.connections.jpa.JpaConnectionProvider;
 import org.keycloak.events.outbox.OutboxBackoff;
 import org.keycloak.events.outbox.OutboxConfig;
+import org.keycloak.events.outbox.OutboxDelivery;
 import org.keycloak.events.outbox.OutboxDeliveryHandler;
 import org.keycloak.events.outbox.OutboxDeliveryResult;
 import org.keycloak.events.outbox.OutboxDrainerListener;
@@ -74,6 +78,7 @@ public class OutboxDrainerTaskTests {
             persistRow(session, realmId, "dead", 0, due);
             persistRow(session, realmId, "orphan", 0, due);
             persistRow(session, realmId, "throw", 0, due);
+            persistRow(session, realmId, "throw-prepare", 0, due);
             persistRow(session, realmId, "not-due", 0, Instant.now().plus(Duration.ofHours(1)));
         });
 
@@ -112,14 +117,17 @@ public class OutboxDrainerTaskTests {
         Assertions.assertEquals("DEAD_LETTER", result.get("status.dead"));
         Assertions.assertEquals("DEAD_LETTER", result.get("status.orphan"));
 
-        Assertions.assertEquals("PENDING", result.get("status.throw"), "a throwing handler is treated as RETRY");
+        Assertions.assertEquals("PENDING", result.get("status.throw"), "a throwing delivery is treated as RETRY");
         Assertions.assertEquals(1, result.get("attempts.throw"));
         Assertions.assertTrue(((String) result.get("lastError.throw")).startsWith("IllegalStateException"));
+
+        Assertions.assertEquals("PENDING", result.get("status.throw-prepare"), "a throwing prepare is treated as RETRY");
+        Assertions.assertEquals(1, result.get("attempts.throw-prepare"));
 
         Assertions.assertEquals("PENDING", result.get("status.not-due"));
         Assertions.assertEquals(0, result.get("attempts.not-due"), "rows that are not due are not touched");
 
-        for (String corr : List.of("deliver", "retry", "retry-last", "defer", "dead", "orphan", "throw", "not-due")) {
+        for (String corr : List.of("deliver", "retry", "retry-last", "defer", "dead", "orphan", "throw", "throw-prepare", "not-due")) {
             Assertions.assertNull(result.get("claimToken." + corr), "no row stays claimed after the tick: " + corr);
         }
 
@@ -129,6 +137,7 @@ public class OutboxDrainerTaskTests {
         Assertions.assertTrue(events.contains("delivered:deliver"), events.toString());
         Assertions.assertTrue(events.contains("retry:retry"), events.toString());
         Assertions.assertTrue(events.contains("retry:throw"), events.toString());
+        Assertions.assertTrue(events.contains("retry:throw-prepare"), events.toString());
         Assertions.assertTrue(events.contains("deferred:defer"), events.toString());
         Assertions.assertTrue(events.contains("deadLetter:retry-last:ATTEMPTS_EXHAUSTED"), events.toString());
         Assertions.assertTrue(events.contains("deadLetter:dead:HANDLER"), events.toString());
@@ -137,10 +146,10 @@ public class OutboxDrainerTaskTests {
 
         Map<String, Object> summary = (Map<String, Object>) result.get("summary");
         Assertions.assertEquals(TEST_KIND, summary.get("entryKind"));
-        Assertions.assertEquals(7, summary.get("claimed"));
-        Assertions.assertEquals(7, summary.get("processed"));
+        Assertions.assertEquals(8, summary.get("claimed"));
+        Assertions.assertEquals(8, summary.get("processed"));
         Assertions.assertEquals(1, summary.get("delivered"));
-        Assertions.assertEquals(2, summary.get("retried"));
+        Assertions.assertEquals(3, summary.get("retried"));
         Assertions.assertEquals(1, summary.get("deferred"));
         Assertions.assertEquals(3, summary.get("deadLettered"));
         Assertions.assertEquals(0, summary.get("released"));
@@ -325,6 +334,50 @@ public class OutboxDrainerTaskTests {
         Assertions.assertEquals(0, summary.get("processed"));
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    public void tick_deliversOwnersInParallelAndKeepsEachOwnersOrder() {
+        final String realmId = testRealmId;
+        runOnServer.run(session -> {
+            Instant base = Instant.now().minusSeconds(100);
+            for (String owner : List.of("owner-p1", "owner-p2", "owner-p3")) {
+                persistRow(session, realmId, owner, "deliver-slow-0", 0, base);
+                persistRow(session, realmId, owner, "deliver-slow-1", 0, base.plusSeconds(1));
+            }
+        });
+
+        Map<String, Object> result = runOnServer.fetch(session -> {
+            ScriptedHandler handler = new ScriptedHandler();
+            OutboxConfig config = new OutboxConfig(TEST_KIND, 50, new OutboxBackoff(), null, null, null,
+                    Duration.ofMinutes(5), null, null, 3);
+            new OutboxDrainerTask(config, handler, OutboxStore::new).run(session);
+
+            em(session).clear();
+            OutboxStore store = new OutboxStore(session);
+            Map<String, Object> out = new LinkedHashMap<>();
+            for (String owner : List.of("owner-p1", "owner-p2", "owner-p3")) {
+                out.put(owner + ".delivered", store.countForOwnerByStatus(TEST_KIND, owner, OutboxEntryStatus.DELIVERED));
+                for (OutboxEntryEntity r : store.listByOwner(TEST_KIND, owner, OutboxEntryStatus.DELIVERED, 0, 10)) {
+                    out.put(owner + "." + r.getCorrelationId(), r.getDeliveredAt().toEpochMilli());
+                }
+            }
+            out.put("threads", new ArrayList<>(handler.threads));
+            out.put("summary", handler.summary);
+            return out;
+        }, Map.class);
+
+        Map<String, Object> summary = (Map<String, Object>) result.get("summary");
+        Assertions.assertEquals(6, summary.get("delivered"));
+        for (String owner : List.of("owner-p1", "owner-p2", "owner-p3")) {
+            Assertions.assertEquals(2, result.get(owner + ".delivered"));
+            long first = ((Number) result.get(owner + ".deliver-slow-0")).longValue();
+            long second = ((Number) result.get(owner + ".deliver-slow-1")).longValue();
+            Assertions.assertTrue(first <= second, "an owner's rows are delivered in order: " + owner + " " + first + " " + second);
+        }
+        List<String> threads = (List<String>) result.get("threads");
+        Assertions.assertTrue(threads.size() >= 2, "deliveries ran on more than one worker thread: " + threads);
+    }
+
     /**
      * Reads every row of the test owner back through a fresh query
      * (the drainer committed in its own transactions) into a flat,
@@ -351,7 +404,8 @@ public class OutboxDrainerTaskTests {
      */
     public static class ScriptedHandler implements OutboxDeliveryHandler, OutboxDrainerListener, Serializable {
 
-        final List<String> events = new ArrayList<>();
+        final List<String> events = Collections.synchronizedList(new ArrayList<>());
+        final Set<String> threads = Collections.synchronizedSet(new TreeSet<>());
         final Map<String, Object> summary = new LinkedHashMap<>();
 
         @Override
@@ -360,39 +414,55 @@ public class OutboxDrainerTaskTests {
         }
 
         @Override
-        public OutboxDeliveryResult deliver(KeycloakSession session, OutboxEntry row) {
-            if (row.getCorrelationId().startsWith("deliver-")) {
-                return OutboxDeliveryResult.delivered();
+        public OutboxDelivery prepare(KeycloakSession session, OutboxEntry row) {
+            String corr = row.getCorrelationId();
+            if ("throw-prepare".equals(corr)) {
+                throw new IllegalStateException("scripted throw in prepare");
             }
-            return switch (row.getCorrelationId()) {
-                case "deliver" -> OutboxDeliveryResult.delivered();
-                case "retry", "retry-last" -> OutboxDeliveryResult.retry("scripted retry");
-                case "defer" -> OutboxDeliveryResult.defer(Duration.ofMinutes(10), "scripted defer");
-                case "dead" -> OutboxDeliveryResult.deadLetter("scripted dead letter");
-                case "orphan" -> OutboxDeliveryResult.orphaned("scripted orphan");
-                case "throw" -> throw new IllegalStateException("scripted throw");
-                case "slow-1", "slow-2", "slow-3" -> {
-                    try {
-                        Thread.sleep(150);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
+            if ("takeover".equals(corr)) {
+                // Another tick (or an admin re-arm) takes the row over
+                // while we are preparing: committed in a transaction of
+                // its own, like a sibling node would.
+                String id = row.getId();
+                KeycloakModelUtils.runJobInTransaction(session.getKeycloakSessionFactory(), s -> {
+                    OutboxEntryEntity current = s.getProvider(JpaConnectionProvider.class)
+                            .getEntityManager().find(OutboxEntryEntity.class, id);
+                    current.setClaimToken("other-tick");
+                });
+                return OutboxDelivery.settled(OutboxDeliveryResult.delivered());
+            }
+            if (corr.startsWith("deliver-")) {
+                return () -> {
+                    threads.add(Thread.currentThread().getName());
+                    if (corr.startsWith("deliver-slow")) {
+                        sleep(150);
                     }
-                    yield OutboxDeliveryResult.delivered();
-                }
-                case "takeover" -> {
-                    // Another tick (or an admin re-arm) takes the row
-                    // over while we are delivering: committed in a
-                    // transaction of its own, like a sibling node would.
-                    String id = row.getId();
-                    KeycloakModelUtils.runJobInTransaction(session.getKeycloakSessionFactory(), s -> {
-                        OutboxEntryEntity current = s.getProvider(JpaConnectionProvider.class)
-                                .getEntityManager().find(OutboxEntryEntity.class, id);
-                        current.setClaimToken("other-tick");
-                    });
-                    yield OutboxDeliveryResult.delivered();
-                }
-                default -> throw new AssertionError("unexpected row " + row.getCorrelationId());
+                    return OutboxDeliveryResult.delivered();
+                };
+            }
+            return switch (corr) {
+                case "deliver" -> OutboxDelivery.settled(OutboxDeliveryResult.delivered());
+                case "retry", "retry-last" -> OutboxDelivery.settled(OutboxDeliveryResult.retry("scripted retry"));
+                case "defer" -> OutboxDelivery.settled(OutboxDeliveryResult.defer(Duration.ofMinutes(10), "scripted defer"));
+                case "dead" -> OutboxDelivery.settled(OutboxDeliveryResult.deadLetter("scripted dead letter"));
+                case "orphan" -> OutboxDelivery.settled(OutboxDeliveryResult.orphaned("scripted orphan"));
+                case "throw" -> () -> {
+                    throw new IllegalStateException("scripted throw");
+                };
+                case "slow-1", "slow-2", "slow-3" -> () -> {
+                    sleep(150);
+                    return OutboxDeliveryResult.delivered();
+                };
+                default -> throw new AssertionError("unexpected row " + corr);
             };
+        }
+
+        private static void sleep(long millis) {
+            try {
+                Thread.sleep(millis);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
 
         @Override

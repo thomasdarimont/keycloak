@@ -168,7 +168,7 @@ public class OutboxStoreTests {
         final String realmId = testRealmId;
         runOnServer.run(session -> {
             OutboxStore store = new OutboxStore(session);
-            Instant notBefore = Instant.now().plus(Duration.ofMinutes(10)).truncatedTo(ChronoUnit.MICROS);
+            Instant notBefore = Instant.now().plus(Duration.ofMinutes(10)).truncatedTo(ChronoUnit.MILLIS);
             String id = store.enqueuePending(TEST_KIND, realmId, "owner-nb", null,
                     "corr-nb", "test.event", "payload", null, notBefore);
             em(session).flush();
@@ -251,7 +251,7 @@ public class OutboxStoreTests {
             em(session).flush();
             em(session).clear();
 
-            Instant before = Instant.now().truncatedTo(ChronoUnit.MICROS);
+            Instant before = Instant.now().truncatedTo(ChronoUnit.MILLIS);
             int requeued = new OutboxStore(session).requeue(TEST_KIND, List.of(
                     dead.getId(), delivered.getId(), pending.getId(), held.getId(), otherKind.getId(), "no-such-id"));
             em(session).flush();
@@ -406,8 +406,10 @@ public class OutboxStoreTests {
             Assertions.assertEquals("tick-a", after.getClaimToken());
             Assertions.assertEquals(OutboxEntryStatus.PENDING, after.getStatus(), "a claim is not a transition");
             Assertions.assertEquals(0, after.getAttempts());
-            Assertions.assertTrue(after.getNextAttemptAt().isAfter(now.plus(Duration.ofMinutes(4))),
-                    "the lease pushes next_attempt_at out");
+            Assertions.assertTrue(after.getClaimedUntil().isAfter(now.plus(Duration.ofMinutes(4))),
+                    "the lease end is recorded in claimed_until");
+            Assertions.assertTrue(after.getNextAttemptAt().isBefore(now),
+                    "next_attempt_at keeps meaning 'when the row became due'");
 
             Assertions.assertTrue(store.claimDueForDrain(TEST_KIND, 10, "tick-b", Duration.ofMinutes(5)).isEmpty(),
                     "a leased row is not due for another tick");
@@ -497,7 +499,8 @@ public class OutboxStoreTests {
             Assertions.assertEquals(1, released);
             OutboxEntryEntity aAfter = findById(session, a.getId());
             Assertions.assertNull(aAfter.getClaimToken());
-            Assertions.assertFalse(aAfter.getNextAttemptAt().isAfter(Instant.now()), "released rows are due now");
+            Assertions.assertNull(aAfter.getClaimedUntil());
+            Assertions.assertFalse(aAfter.getNextAttemptAt().isAfter(Instant.now()), "released rows are due again");
             Assertions.assertEquals("tick-b", findById(session, b.getId()).getClaimToken());
 
             Assertions.assertEquals(0, store.releaseClaims(List.of(), "tick-a"));
@@ -514,6 +517,7 @@ public class OutboxStoreTests {
                 OutboxEntryEntity row = persistRaw(session, TEST_KIND, realmId, "owner-t", null,
                         "corr-" + i, OutboxEntryStatus.PENDING, 0, now.minusSeconds(1), now);
                 row.setClaimToken("tick-a");
+                row.setClaimedUntil(now.plusSeconds(300));
                 ids[i] = row.getId();
             }
             em(session).flush();
@@ -529,6 +533,7 @@ public class OutboxStoreTests {
 
             for (String id : ids) {
                 Assertions.assertNull(findById(session, id).getClaimToken(), "transition must clear the token: " + id);
+                Assertions.assertNull(findById(session, id).getClaimedUntil(), "transition must clear the lease: " + id);
             }
         });
     }
@@ -569,11 +574,9 @@ public class OutboxStoreTests {
             em(session).flush();
             em(session).clear();
 
-            // Truncate to microseconds up front — PostgreSQL TIMESTAMP
-            // stores micros and rounds half-up, while H2 preserves
-            // nanos. Truncating before the write means every backend
-            // reads back the exact same Instant we persisted.
-            Instant nextAttempt = now.plus(Duration.ofMinutes(5)).truncatedTo(ChronoUnit.MICROS);
+            // The columns store epoch milliseconds; truncate up front so
+            // the Instant we compare with is the one that is persisted.
+            Instant nextAttempt = now.plus(Duration.ofMinutes(5)).truncatedTo(ChronoUnit.MILLIS);
             String hugeError = "x".repeat(3000);
             new OutboxStore(session)
                     .recordFailure(findById(session, row.getId()), nextAttempt, hugeError);
@@ -604,7 +607,7 @@ public class OutboxStoreTests {
             em(session).flush();
             em(session).clear();
 
-            Instant notBefore = now.plus(Duration.ofMinutes(5)).truncatedTo(ChronoUnit.MICROS);
+            Instant notBefore = now.plus(Duration.ofMinutes(5)).truncatedTo(ChronoUnit.MILLIS);
             new OutboxStore(session)
                     .deferUntil(findById(session, row.getId()), notBefore, "receiver asked for back-off");
             em(session).flush();
@@ -630,7 +633,7 @@ public class OutboxStoreTests {
             em(session).flush();
             em(session).clear();
 
-            Instant before = Instant.now().truncatedTo(ChronoUnit.MICROS);
+            Instant before = Instant.now().truncatedTo(ChronoUnit.MILLIS);
             new OutboxStore(session)
                     .deferUntil(findById(session, row.getId()), now.minus(Duration.ofHours(1)), null);
             em(session).flush();
@@ -740,6 +743,38 @@ public class OutboxStoreTests {
     // -- Stats -----------------------------------------------------------
 
     @Test
+    public void makeDueForOwner_pullsDeferredPendingRowsForwardButNotInFlightOnes() {
+        final String realmId = testRealmId;
+        runOnServer.run(session -> {
+            Instant now = Instant.now();
+            OutboxEntryEntity deferred = persistRaw(session, TEST_KIND, realmId, "owner-md", null,
+                    "corr-deferred", OutboxEntryStatus.PENDING, 1, now.plusSeconds(3600), now);
+            OutboxEntryEntity inFlight = persistRaw(session, TEST_KIND, realmId, "owner-md", null,
+                    "corr-in-flight", OutboxEntryStatus.PENDING, 0, now.plusSeconds(3600), now);
+            inFlight.setClaimToken("tick-x");
+            inFlight.setClaimedUntil(now.plusSeconds(300));
+            OutboxEntryEntity held = persistRaw(session, TEST_KIND, realmId, "owner-md", null,
+                    "corr-held", OutboxEntryStatus.HELD, 0, now.plusSeconds(3600), now);
+            OutboxEntryEntity other = persistRaw(session, TEST_KIND, realmId, "owner-else", null,
+                    "corr-else", OutboxEntryStatus.PENDING, 0, now.plusSeconds(3600), now);
+            em(session).flush();
+            em(session).clear();
+
+            int made = new OutboxStore(session).makeDueForOwner(TEST_KIND, "owner-md");
+            em(session).flush();
+            em(session).clear();
+
+            Assertions.assertEquals(1, made);
+            Assertions.assertFalse(findById(session, deferred.getId()).getNextAttemptAt().isAfter(Instant.now()));
+            Assertions.assertEquals(1, findById(session, deferred.getId()).getAttempts(), "attempts are untouched");
+            Assertions.assertTrue(findById(session, inFlight.getId()).getNextAttemptAt().isAfter(Instant.now()),
+                    "rows in flight belong to their tick");
+            Assertions.assertTrue(findById(session, held.getId()).getNextAttemptAt().isAfter(Instant.now()));
+            Assertions.assertTrue(findById(session, other.getId()).getNextAttemptAt().isAfter(Instant.now()));
+        });
+    }
+
+    @Test
     public void countStatusesForRealm_returnsGroupedCountsAndIgnoresOtherRealms() {
         final String realmId = testRealmId;
         final String otherRealmId = UUID.randomUUID().toString();
@@ -777,9 +812,9 @@ public class OutboxStoreTests {
         final String realmId = testRealmId;
         runOnServer.run(session -> {
             Instant now = Instant.now();
-            Instant oldPending = now.minus(Duration.ofDays(3)).truncatedTo(ChronoUnit.MICROS);
-            Instant midPending = now.minus(Duration.ofHours(6)).truncatedTo(ChronoUnit.MICROS);
-            Instant freshDelivered = now.minusSeconds(120).truncatedTo(ChronoUnit.MICROS);
+            Instant oldPending = now.minus(Duration.ofDays(3)).truncatedTo(ChronoUnit.MILLIS);
+            Instant midPending = now.minus(Duration.ofHours(6)).truncatedTo(ChronoUnit.MILLIS);
+            Instant freshDelivered = now.minusSeconds(120).truncatedTo(ChronoUnit.MILLIS);
 
             persistRaw(session, TEST_KIND, realmId, "o", null, "old",
                     OutboxEntryStatus.PENDING, 0, now, oldPending);
@@ -855,9 +890,9 @@ public class OutboxStoreTests {
         final String realmId = testRealmId;
         runOnServer.run(session -> {
             Instant now = Instant.now();
-            Instant oldPending = now.minus(Duration.ofDays(2)).truncatedTo(ChronoUnit.MICROS);
-            Instant midPending = now.minus(Duration.ofHours(3)).truncatedTo(ChronoUnit.MICROS);
-            Instant otherOwnerPending = now.minus(Duration.ofDays(5)).truncatedTo(ChronoUnit.MICROS);
+            Instant oldPending = now.minus(Duration.ofDays(2)).truncatedTo(ChronoUnit.MILLIS);
+            Instant midPending = now.minus(Duration.ofHours(3)).truncatedTo(ChronoUnit.MILLIS);
+            Instant otherOwnerPending = now.minus(Duration.ofDays(5)).truncatedTo(ChronoUnit.MILLIS);
 
             persistRaw(session, TEST_KIND, realmId, "owner-old", null, "co-old",
                     OutboxEntryStatus.PENDING, 0, now, oldPending);
