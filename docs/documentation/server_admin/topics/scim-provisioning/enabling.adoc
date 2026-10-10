@@ -1,0 +1,26 @@
+[id="scim-provisioning-enabling_{context}"]
+
+[[_scim_provisioning_enabling_]]
+= Enabling SCIM provisioning
+[role="_abstract"]
+
+SCIM provisioning is disabled by default. To enable it, start the server with the `scim-provisioning` feature:
+
+[source,bash]
+----
+bin/kc.[sh|bat] start --features=scim-provisioning
+----
+
+For more details, see the https://www.keycloak.org/server/features[Enabling and disabling features] {section}.
+
+The feature adds two tables to the {project_name} database, `SCIM_PROV_LINK` (the account each user or group has in each
+application) and `SCIM_PROV_HEALTH` (the health of each destination). Outbox entries are stored in {project_name}'s
+outbox table, `OUTBOX_ENTRY`, under the entry kind `scim-provisioning`. No additional service or database is needed.
+
+There is no per-realm switch. SCIM provisioning listens to changes in every realm through the global `scim-provisioning`
+event listener, which does not need to be added to a realm's event listeners. A realm without destinations is not affected.
+
+The <<_scim_provisioning_workflow_steps_,workflow steps>> additionally require the `workflows` feature, which is enabled by default.
+
+To stop capturing changes on a node while still delivering, resynchronizing, and reconciling, set the node option
+`capture-events` to `false`. See <<_scim_provisioning_node_options_,Configuring the nodes>>.

@@ -11,3 +11,15 @@ The `UPDATE_CREDENTIAL` events emitted by built-in required actions now carry th
 The generic transactional outbox that backs the push delivery of the experimental SSF transmitter can now be shared by several consumers, such as an outbound SCIM provisioning extension.
 Every consumer's drainer holds its own cluster lock, deliveries run outside of database transactions under a per-entry lease, different destinations are delivered in parallel with a per-destination batch cap, and a generic Micrometer listener publishes `keycloak.outbox.*` meters.
 The `OUTBOX_ENTRY` timestamps are converted to epoch milliseconds; see the upgrading guide.
+
+= Administration
+
+== SCIM provisioning (experimental)
+
+The SCIM API lets other systems provision users into {project_name}. SCIM provisioning adds the opposite direction: {project_name} can now push the users and groups of a realm out to applications that expose a SCIM 2.0 endpoint, creating, updating, and deprovisioning their accounts as users change.
+
+Each application is configured as a destination under *User federation*, with its scope (groups or everyone in the realm) and its deprovision mode. Changes are recorded in {project_name}'s outbox in the same transaction as the change and delivered by a cluster-aware background drainer, so no SCIM request is made on a login or admin request thread, and an unavailable application is retried without losing changes. Users are rendered from the realm's user profile SCIM attribute mappings, the same as for the SCIM API. A periodic reconciliation, Admin REST endpoints for status, dead letters and replay, metrics, and workflow steps for offboarding are included.
+
+To try it out, start {project_name} with the feature `scim-provisioning` enabled.
+
+For more details, see the link:{adminguide_link}#_scim_provisioning[Provisioning users and groups to applications through SCIM] documentation.

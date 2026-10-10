@@ -1,0 +1,48 @@
+[id="scim-provisioning-deprovisioning_{context}"]
+
+[[_scim_provisioning_deprovisioning_]]
+= Deprovisioning users
+[role="_abstract"]
+
+A user's account in an application is deprovisioned when the user leaves the destination's scope, when the user is deleted in
+{project_name}, or when deprovisioning is requested explicitly. The destination's *Deprovision* setting decides what
+deprovisioning does.
+
+`deactivate` (default)::
+The account is deactivated with `PATCH` setting `active` to `false`. For applications that do not implement `PATCH`,
+{project_name} falls back to reading the account and writing it back with `PUT`. The account and its data stay in the application.
+
+`delete`::
+The account is deleted with `DELETE`. Choose this mode only when the application documents `DELETE` as a reversible action,
+or when you are certain that the account's data must be removed.
+
+In both modes, {project_name} marks its link to the account as deprovisioned. Deprovisioning the same user again does nothing.
+If the user later returns to the scope, the account is looked up again by `userName`: a deactivated account is reactivated,
+and a deleted account is created again. {project_name} never writes to a stale account ID.
+
+A disabled user who is still in scope is not deprovisioned: the account stays, with `active` set to `false`.
+
+== Deprovisioning a user immediately
+
+To take a user's accounts away on every destination of the realm at once, regardless of the user's groups, use the
+`deprovision` endpoint:
+
+[source,bash]
+----
+kcadm.sh create scim-provisioning/deprovision -r myrealm -q user=<user id>
+----
+
+This is a *forced* deprovision. It is delivered within seconds, with each destination's own deprovision mode. A change to
+the user that is recorded before it is delivered does not cancel it: the forced deprovision is carried over to the newer change. To follow its progress, poll the `deliveries`
+endpoint until every destination reports `"done" : true`:
+
+[source,bash]
+----
+kcadm.sh get scim-provisioning/deliveries -r myrealm -q user=<user id>
+----
+
+A forced deprovision is one-shot. If the user is still in the scope of a destination, the user's next change provisions the
+account again. To make it permanent, also disable the user in {project_name} or remove the user from the groups in scope.
+
+The same operation is available as the `scim-provisioning-deprovision` workflow step. See
+<<_scim_provisioning_workflow_steps_,Workflow steps>>.

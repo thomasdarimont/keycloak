@@ -29,5 +29,6 @@
     <modules>
         <module>base</module>
         <module>scim-client</module>
+        <module>provisioning</module>
     </modules>
 </project>

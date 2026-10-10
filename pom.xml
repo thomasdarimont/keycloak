@@ -1371,6 +1371,11 @@
                 <artifactId>keycloak-scim-model</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.keycloak</groupId>
+                <artifactId>keycloak-scim-provisioning</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <!-- SSF -->
             <dependency>

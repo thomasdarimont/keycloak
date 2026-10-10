@@ -53,6 +53,14 @@
             <artifactId>keycloak-ssf-core</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-scim-provisioning</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-model-jpa</artifactId>
+        </dependency>
+        <dependency>
              <groupId>org.keycloak</groupId>
             <artifactId>keycloak-model-storage</artifactId>
         </dependency>

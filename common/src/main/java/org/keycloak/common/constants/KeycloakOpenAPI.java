@@ -59,6 +59,7 @@ public class KeycloakOpenAPI {
             public static final String ORGANIZATIONS = "Organizations";
             public static final String WORKFLOWS = "Workflows";
             public static final String SSF = "SSF";
+            public static final String SCIM_PROVISIONING = "SCIM Provisioning";
             private Tags() { }
         }
 

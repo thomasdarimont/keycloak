@@ -1,0 +1,26 @@
+[id="scim-provisioning-groups_{context}"]
+
+[[_scim_provisioning_groups_]]
+= Provisioning groups
+[role="_abstract"]
+
+By default, a destination provisions users only. When *Provision groups* (`supportsGroups`) is switched on, the groups in the
+destination's scope are also created in the application, and their memberships are kept up to date.
+
+* Every group listed in *Groups in scope* and each of its subgroups is created as a separate group in the application.
+  Nested groups are not flattened.
+* Each group carries its direct members that are enabled, referenced by their account IDs in the application.
+* A group is never sent with a reference to an account that does not exist yet. It waits for its members to be provisioned,
+  for a bounded number of attempts (see the `group-deferral-millis` and `max-group-deferrals`
+  <<_scim_provisioning_node_options_,node options>>), and is then sent without the missing members. They are added when
+  their accounts exist.
+* A group that already exists in the application with the same name is adopted rather than duplicated.
+* Renaming a group and changing its members are delivered to the application.
+* Groups are never deleted in the application.
+
+Deleting a group in {project_name} deprovisions those of its members who are no longer in scope by any other rule, one by
+one, and leaves the group in the application unchanged. A mistaken group deletion in {project_name} cannot remove an
+entire group, and its memberships, from the application.
+
+*Everyone in the realm* does not provision any groups. Workflows act on users only, so groups are provisioned by change
+capture, resynchronization, and reconciliation.

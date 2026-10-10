@@ -20,6 +20,7 @@
         <module>core</module>
         <module>model</module>
         <module>client</module>
+        <module>provisioning</module>
         <module>services</module>
         <module>tests</module>
     </modules>
