@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -268,7 +269,11 @@ public class SamlProtocol implements LoginProtocol {
         SamlClient samlClient = new SamlClient(client);
         boolean postBinding = samlClient.forcePostBinding() || SamlProtocol.SAML_POST_BINDING.equals(clientData.getResponseMode());
         event.detail(Details.REDIRECT_URI, clientData.getRedirectUri());
-        String validRedirectUri = RedirectUtils.verifyRedirectUri(session, clientData.getRedirectUri(), client);
+        String redirectUri = clientData.getRedirectUri();
+        String validRedirectUri = null;
+        if (client != null) {
+            validRedirectUri = RedirectUtils.verifyRedirectUri(session, client.getRootUrl(), redirectUri, client.getRedirectUris(), true, Collections.emptySet());
+        }
         if (validRedirectUri == null) {
             event.error(Errors.INVALID_REDIRECT_URI);
             throw new ErrorPageException(session, Response.Status.BAD_REQUEST, Messages.INVALID_REDIRECT_URI);

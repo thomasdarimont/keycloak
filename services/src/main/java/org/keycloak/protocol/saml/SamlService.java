@@ -472,7 +472,7 @@ public class SamlService extends AuthorizationEndpointBase {
             String redirect;
             URI redirectUri = requestAbstractType.getAssertionConsumerServiceURL();
             if (redirectUri != null && ! "null".equals(redirectUri.toString())) { // "null" is for testing purposes
-                redirect = RedirectUtils.verifyRedirectUri(session, redirectUri.toString(), client);
+                redirect = RedirectUtils.verifyRedirectUri(session, client.getRootUrl(), redirectUri.toString(), client.getRedirectUris(), true, Collections.emptySet());
             } else {
                 if ((requestAbstractType.getProtocolBinding() != null
                         && JBossSAMLURIConstants.SAML_HTTP_ARTIFACT_BINDING.getUri()
