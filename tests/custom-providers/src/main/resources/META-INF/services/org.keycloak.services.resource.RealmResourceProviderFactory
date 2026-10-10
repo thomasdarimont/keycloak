@@ -2,3 +2,4 @@ org.keycloak.tests.providers.rest.ErrorTestingRealmResourceProviderFactory
 org.keycloak.tests.providers.rest.CookieTestingRealmResourceProviderFactory
 org.keycloak.tests.providers.broker.oidc.MissingUseJwksRealmResourceProviderFactory
 org.keycloak.tests.providers.broker.oidc.UnsupportedKeyJwksRealmResourceProviderFactory
+org.keycloak.tests.providers.scim.provisioning.ScimProvisioningTestResourceProviderFactory

@@ -1,0 +1,348 @@
+[id="scim-provisioning-monitoring_{context}"]
+
+[[_scim_provisioning_monitoring_]]
+= Monitoring and operating destinations
+[role="_abstract"]
+
+SCIM provisioning provides Admin REST API endpoints to follow the state of each destination, handle changes that applications
+refused, and resynchronize, reconcile, or preview a destination. It also publishes metrics on the {project_name} metrics endpoint.
+
+== Admin REST API endpoints
+
+The endpoints are available under the following path:
+
+----
+/admin/realms/{realm}/scim-provisioning
+----
+
+Reading requires the `view-users` role of the realm, and all other operations require `manage-users`. Operations that change
+state are recorded as admin events with the resource type `COMPONENT` and the resource path
+`components/{destination id}/scim-provisioning/{action}`. The `destination` parameter is the name or ID of a destination.
+The examples in this section use the Admin CLI.
+
+[cols="1,2,2,3",options="header"]
+|===
+| Method | Path | Query parameters | Description
+
+| `GET`
+| `status`
+|
+| The state of every destination of the realm.
+
+| `GET`
+| `dead-letters`
+| `destination`, `first`, `max`
+| The changes that an application refused on every attempt, paged.
+
+| `POST`
+| `replay`
+| `destination`, `subject`
+| Retries a dead letter.
+
+| `POST`
+| `deprovision`
+| `user`
+| Deprovisions a user's accounts on every destination, once. See <<_scim_provisioning_deprovisioning_,Deprovisioning users>>.
+
+| `GET`
+| `deliveries`
+| `user`
+| Where each of a user's accounts stands, per destination.
+
+| `POST`
+| `resync`
+| `destination`
+| Resynchronizes a destination. Returns `202 Accepted`.
+
+| `POST`
+| `reconcile`
+| `destination`
+| Runs a reconciliation now. Returns `202 Accepted`.
+
+| `GET`
+| `reconcile`
+| `destination`
+| The report of the last reconciliation.
+
+| `GET`
+| `preview`
+| `destination`, `user`
+| The SCIM resource that would be sent for a user, without sending it.
+|===
+
+[[_scim_provisioning_status_]]
+== Checking the status of destinations
+
+[source,bash]
+----
+kcadm.sh get scim-provisioning/status -r myrealm
+----
+
+[source,json]
+----
+[ {
+  "destination" : "slack",
+  "id" : "6f1c...",
+  "state" : "healthy",
+  "backlog" : 0,
+  "dead" : 0,
+  "lastSuccessAt" : 1790946223000,
+  "lastReconcileAt" : 1790931812000,
+  "lastReconcileStatus" : "ok",
+  "mismatches" : 0,
+  "consecutiveFailures" : 0
+}, {
+  "destination" : "notion",
+  "id" : "0b9e...",
+  "state" : "failing",
+  "backlog" : 7,
+  "dead" : 2,
+  "lastSuccessAt" : 1790939011000,
+  "lastProblem" : "auth_rejected: HTTP 401: invalid token",
+  "lastProblemClass" : "auth_rejected",
+  "failingSince" : 1790939012000,
+  "retryAt" : 1790946500000,
+  "consecutiveFailures" : 9
+} ]
+----
+
+Times are in milliseconds since the epoch. `backlog` is the number of changes waiting for delivery and `dead` the number of
+dead letters. The `state` is one of the following:
+
+[cols="1,2,2",options="header"]
+|===
+| State | Meaning | Action
+
+| `healthy`
+| Nothing is waiting and no failure is in force.
+| None.
+
+| `catching_up`
+| Changes are being delivered.
+| None. The backlog decreases.
+
+| `failing`
+| The destination is backed off after a failure of the application. It is retried at `retryAt`.
+| If `lastProblemClass` is `auth_rejected`, replace the token and save the destination. Otherwise, wait: the destination is
+  retried indefinitely and no change is lost.
+
+| `off`
+| The destination is disabled.
+| None. Changes are still recorded and are delivered when the destination is enabled.
+|===
+
+== Understanding failures
+
+Each failed request is classified. The class decides how it is retried:
+
+[cols="1,2,2",options="header"]
+|===
+| Class | Cause | Retry
+
+| `unreachable`
+| Connection refused, DNS failure, timeout, or I/O error.
+.5+| The whole destination backs off and is retried indefinitely. The changes waiting for it are deferred until the end of
+  the backoff and do not consume attempts.
+
+| `rate_limited`
+| HTTP `429`. A `Retry-After` header is honored.
+
+| `server_error`
+| HTTP `408` or `5xx`.
+
+| `auth_rejected`
+| HTTP `401`, or `403` when the connection check fails too.
+
+| `misconfigured`
+| HTTP `404` on a collection such as `/Users`, or a redirect.
+
+| `conflict`
+| HTTP `409` that could not be resolved by adopting the existing account.
+.3+| Only this change is retried, up to the destination's *Attempts before dead-lettering*. It then becomes a dead letter.
+  Other changes to the destination are not affected.
+
+| `rejected`
+| Any other `4xx` response.
+
+| `protocol`
+| A response that cannot be parsed or makes no sense.
+|===
+
+[[_scim_provisioning_dead_letters_]]
+== Handling dead letters
+
+Dead letters are the changes that an application refused on every attempt. They are kept, never dropped, and are the only
+part of SCIM provisioning that needs a person to act:
+
+[source,bash]
+----
+kcadm.sh get scim-provisioning/dead-letters -r myrealm -q destination=notion
+----
+
+[source,json]
+----
+[ {
+  "subject" : "user:8f3b...",
+  "name" : "ana",
+  "forced" : false,
+  "attempts" : 5,
+  "lastErrorClass" : "rejected",
+  "lastError" : "rejected: HTTP 400: userName must be a verified email address",
+  "deadSince" : 1790940123000
+} ]
+----
+
+If the data in {project_name} is at fault, fix it. The change itself records the user for delivery again, with fresh attempts.
+If the application was at fault, replay the dead letter with its destination and subject:
+
+[source,bash]
+----
+kcadm.sh create scim-provisioning/replay -r myrealm -q destination=notion -q subject=user:8f3b...
+----
+
+[[_scim_provisioning_reconcile_]]
+== Reconciling a destination
+
+A reconciliation lists the application's accounts and compares them with the users in the destination's scope. It runs every
+*Reconcile every (hours)* hours, 24 by default. The first run of a new destination is delayed by a random time of up to one hour,
+so that destinations do not all reconcile at the same moment. A failed reconciliation is recorded with its error class and runs
+again at the next scheduled time.
+
+To run a reconciliation now and read its report:
+
+[source,bash]
+----
+kcadm.sh create scim-provisioning/reconcile -r myrealm -q destination=notion
+kcadm.sh get scim-provisioning/reconcile -r myrealm -q destination=notion
+----
+
+[source,json]
+----
+{
+  "destination" : "notion",
+  "status" : "ok",
+  "at" : 1790946301000,
+  "mismatches" : 1,
+  "report" : {
+    "inScope" : 118, "accounts" : 121,
+    "missing" : 0, "linked" : 2, "mismatched" : 1, "unmanaged" : 1,
+    "details" : {
+      "mismatched" : [ { "subject" : "user:5d0a...", "userName" : "ana", "expectedActive" : true, "actualActive" : false } ]
+    }
+  }
+}
+----
+
+[cols="1,2,2",options="header"]
+|===
+| Finding | Meaning | Result
+
+| `missing`
+| A user in scope has no account in the application.
+| The account is created.
+
+| `linked`
+| An account that {project_name} did not know about matches a user in scope, by `externalId` or else by `userName`.
+| The account is adopted and updated, never duplicated.
+
+| `mismatched`
+| The account's `active` flag differs from {project_name}.
+| The next delivery corrects it.
+
+| `unmanaged`
+| An account matches no user in scope.
+| It is counted only. It is never changed.
+|===
+
+A reconciliation compares whether accounts exist and their `active` flag. It does not compare other attributes.
+
+[[_scim_provisioning_resync_]]
+== Resynchronizing a destination
+
+A resynchronization checks every user in the destination's scope. Only users whose rendered state differs from what was
+last delivered cause a request. Saving a destination resynchronizes it. To resynchronize it without saving:
+
+[source,bash]
+----
+kcadm.sh create scim-provisioning/resync -r myrealm -q destination=notion
+----
+
+After restoring the database from a backup, no special action is needed: users whose state did not change render to the
+state that was last delivered and cause no request.
+
+[[_scim_provisioning_preview_]]
+== Previewing a user's resource
+
+To see the SCIM resource that would be sent for a user, without sending anything:
+
+[source,bash]
+----
+kcadm.sh get scim-provisioning/preview -r myrealm -q destination=notion -q user=<user id>
+----
+
+The response contains the rendered `resource` and an `action`: `upsert` when the resource differs from what was last
+delivered, `deprovision` when the user's account would be deprovisioned, or `none` when nothing would be sent.
+
+== Metrics
+
+When metrics are enabled (`--metrics-enabled=true`), SCIM provisioning publishes the following metrics on the {project_name}
+metrics endpoint. No additional configuration is needed. Every metric has the tags `realm` (the realm ID) and `destination`
+(the destination's name).
+
+[cols="2,1,3",options="header"]
+|===
+| Metric | Type | Description
+
+| `keycloak_scim_provisioning_backlog`
+| Gauge
+| Changes waiting for delivery.
+
+| `keycloak_scim_provisioning_delivered_total`
+| Counter
+| Changes delivered.
+
+| `keycloak_scim_provisioning_failed_total`
+| Counter
+| Failed deliveries, tagged with the failure `class`.
+
+| `keycloak_scim_provisioning_dead_total`
+| Counter
+| Changes that became dead letters, tagged with `op` (`upsert` or `deprovision`).
+
+| `keycloak_scim_provisioning_reconcile_mismatches`
+| Gauge
+| Mismatches found by the last reconciliation.
+
+| `keycloak_scim_provisioning_delivery_seconds`
+| Timer
+| Duration of deliveries.
+|===
+
+== Logging
+
+A destination that starts failing, recovers, or dead-letters a change logs a `WARN` message with the error class and HTTP
+status, under the log category `org.keycloak.scim.provisioning`. The text of an application's error response can contain
+personal data, so it is logged only at `DEBUG` level. Tokens and whole SCIM resources are never logged.
+
+== Common situations
+
+[cols="1,3",options="header"]
+|===
+| Situation | What to do
+
+| A token expires or is rotated
+| The destination's state becomes `failing` with the class `auth_rejected`, and no change is lost. Update the token and save
+  the destination. Saving lifts the backoff and the backlog is delivered.
+
+| The users who should get an account change
+| Edit the destination's scope and save it. Saving resynchronizes the destination.
+
+| An account was deactivated in the application by hand
+| The next reconciliation reports it as `mismatched`, and the next delivery corrects it.
+
+| A user must lose access immediately
+| Use the `deprovision` endpoint, and disable the user in {project_name}. See <<_scim_provisioning_deprovisioning_,Deprovisioning users>>.
+
+| The backlog is very large
+| This is expected after a destination is added or resynchronized. It is delivered in batches.
+|===

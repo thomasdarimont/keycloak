@@ -1,0 +1,15 @@
+
+[id="assembly-scim-provisioning_{context}"]
+[[_scim_provisioning]]
+== Provisioning users and groups to applications through SCIM
+
+include::scim-provisioning/intro.adoc[leveloffset=+2]
+include::scim-provisioning/enabling.adoc[leveloffset=+2]
+include::scim-provisioning/adding-destinations.adoc[leveloffset=+2]
+include::scim-provisioning/mapping-attributes.adoc[leveloffset=+2]
+include::scim-provisioning/provisioning-groups.adoc[leveloffset=+2]
+include::scim-provisioning/deprovisioning.adoc[leveloffset=+2]
+include::scim-provisioning/workflow-steps.adoc[leveloffset=+2]
+include::scim-provisioning/monitoring.adoc[leveloffset=+2]
+include::scim-provisioning/configuring-nodes.adoc[leveloffset=+2]
+include::scim-provisioning/limitations.adoc[leveloffset=+2]

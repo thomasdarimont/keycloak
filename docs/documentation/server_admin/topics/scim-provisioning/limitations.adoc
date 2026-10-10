@@ -1,0 +1,25 @@
+[id="scim-provisioning-limitations_{context}"]
+
+[[_scim_provisioning_limitations_]]
+= Limitations
+[role="_abstract"]
+
+SCIM provisioning has the following limitations in the current release:
+
+* Change capture alone is not complete. Some changes, such as user federation synchronization and some mappers, do not emit
+  the events that SCIM provisioning listens to. The periodic reconciliation is what makes the accounts correct, and change
+  capture is what makes them fast. Do not turn off the reconciliation.
+* A reconciliation detects missing accounts and a wrong `active` flag. It does not detect an attribute that was changed in the
+  application. The user's next change in {project_name}, or a change of the mapping, sends the user's full state again.
+* Group provisioning creates groups, renames them, and replaces their members. Groups are never deleted in the application.
+* Roles cannot be used to define the scope of a destination. Only groups and everyone in the realm can.
+* One destination addresses one SCIM endpoint. To provision several endpoints, add several destinations.
+* Attribute mapping is one-directional and one-to-one. Nothing is read back from the application, and there is no scripting.
+* The only application profile is `generic`. Settings that a specific application needs, such as `userName=email` in the
+  mapping or the `delete` deprovision mode, are configured on the destination.
+
+The following are not goals of SCIM provisioning:
+
+* Inbound SCIM. To let other systems manage users in {project_name}, use the <<_managing_scim,SCIM API>>.
+* SCIM 1.1 as a protocol. SCIM 1.x extension URNs are supported in attribute mappings.
+* Identity governance features, such as access reviews.

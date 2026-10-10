@@ -14,7 +14,9 @@ import org.keycloak.scim.resource.ResourceTypeRepresentation;
 import org.keycloak.scim.resource.config.ServiceProviderConfig;
 
 import org.apache.http.HttpHeaders;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
 
 /**
  * <p>A client for interacting with a SCIM 2.0 compliant server. This client provides methods for performing
@@ -40,6 +42,7 @@ import org.apache.http.client.HttpClient;
 public final class ScimClient implements AutoCloseable {
 
     private static final String APPLICATION_SCIM_JSON = "application/scim+json";
+    private static final String ACCEPT = APPLICATION_SCIM_JSON + ", application/json";
 
     private final SimpleHttp http;
     private String baseUrl;
@@ -47,6 +50,10 @@ public final class ScimClient implements AutoCloseable {
 
     private ScimClient(HttpClient http) {
         this.http = SimpleHttp.create(http);
+    }
+
+    private void setRequestConfig(RequestConfig requestConfig) {
+        http.withRequestConfig(requestConfig);
     }
 
     public static Builder create(HttpClient httpClient) {
@@ -92,16 +99,19 @@ public final class ScimClient implements AutoCloseable {
         try {
             SimpleHttpResponse response = request.asResponse();
 
-            if (!Status.Family.familyOf(response.getStatus()).equals(Status.Family.SUCCESSFUL)) {
+            int status = response.getStatus();
+
+            if (!Status.Family.familyOf(status).equals(Status.Family.SUCCESSFUL)) {
+                String retryAfter = response.getFirstHeader(HttpHeaders.RETRY_AFTER);
                 String payload = response.asString();
 
                 try (response) {
                     ErrorResponse error = response.asJson(ErrorResponse.class);
-                    throw new ScimClientException("Error response from SCIM server", error);
+                    throw new ScimClientException("Error response from SCIM server", error, status, retryAfter);
                 } catch (ScimClientException sce) {
                     throw sce;
                 } catch (Exception e) {
-                    throw new ScimClientException("Unexpected error response from SCIM server", new ErrorResponse(payload, response.getStatus()));
+                    throw new ScimClientException("Unexpected error response from SCIM server", new ErrorResponse(payload, status), status, retryAfter);
                 }
             }
 
@@ -115,27 +125,29 @@ public final class ScimClient implements AutoCloseable {
 
     SimpleHttpRequest doGet(String path) {
         return beforeRequest(http.doGet(baseUrl + path))
-                .header(HttpHeaders.ACCEPT, APPLICATION_SCIM_JSON);
+                .header(HttpHeaders.ACCEPT, ACCEPT);
     }
 
     SimpleHttpRequest doGet(Class<? extends ResourceTypeRepresentation> resourceType, String path) {
         return beforeRequest(http.doGet(baseUrl + getResourceTypePath(resourceType) + path))
-                .header(HttpHeaders.ACCEPT, APPLICATION_SCIM_JSON);
+                .header(HttpHeaders.ACCEPT, ACCEPT);
     }
 
     SimpleHttpRequest doGet(Class<? extends ResourceTypeRepresentation> resourceType) {
         return beforeRequest(http.doGet(baseUrl + getResourceTypePath(resourceType)))
-                .header(HttpHeaders.ACCEPT, APPLICATION_SCIM_JSON);
+                .header(HttpHeaders.ACCEPT, ACCEPT);
     }
 
     SimpleHttpRequest doPost(Class<? extends ResourceTypeRepresentation> resourceType) {
         return beforeRequest(http.doPost(baseUrl + getResourceTypePath(resourceType)))
-                .header(HttpHeaders.CONTENT_TYPE, APPLICATION_SCIM_JSON);
+                .header(HttpHeaders.CONTENT_TYPE, APPLICATION_SCIM_JSON)
+                .header(HttpHeaders.ACCEPT, ACCEPT);
     }
 
     SimpleHttpRequest doPost(Class<? extends ResourceTypeRepresentation> resourceType, String path) {
         return beforeRequest(http.doPost(baseUrl + getResourceTypePath(resourceType) + path))
-                .header(HttpHeaders.CONTENT_TYPE, APPLICATION_SCIM_JSON);
+                .header(HttpHeaders.CONTENT_TYPE, APPLICATION_SCIM_JSON)
+                .header(HttpHeaders.ACCEPT, ACCEPT);
     }
 
     private String getResourceTypePath(Class<? extends ResourceTypeRepresentation> resourceType) {
@@ -154,17 +166,19 @@ public final class ScimClient implements AutoCloseable {
 
     SimpleHttpRequest doPut(Class<? extends ResourceTypeRepresentation> resourceType, String id) {
         return beforeRequest(http.doPut(baseUrl + getResourceTypePath(resourceType) + "/" + id))
-                .header(HttpHeaders.CONTENT_TYPE, APPLICATION_SCIM_JSON);
+                .header(HttpHeaders.CONTENT_TYPE, APPLICATION_SCIM_JSON)
+                .header(HttpHeaders.ACCEPT, ACCEPT);
     }
 
     SimpleHttpRequest doPatch(Class<? extends ResourceTypeRepresentation> resourceType, String id) {
         return beforeRequest(http.doPatch(baseUrl + getResourceTypePath(resourceType) + "/" + id))
-                .header(HttpHeaders.CONTENT_TYPE, APPLICATION_SCIM_JSON);
+                .header(HttpHeaders.CONTENT_TYPE, APPLICATION_SCIM_JSON)
+                .header(HttpHeaders.ACCEPT, ACCEPT);
     }
 
     <T> T execute(SimpleHttpRequest request, Class<T> responseType) {
         try (SimpleHttpResponse response = execute(request)) {
-            if (responseType == null) {
+            if (responseType == null || response.getStatus() == HttpStatus.SC_NO_CONTENT) {
                 return null;
             }
             return response.asJson(responseType);
@@ -200,6 +214,33 @@ public final class ScimClient implements AutoCloseable {
          */
         public Builder withBaseUrl(String baseUrl) {
             client.setBaseUrl(baseUrl + DEFAULT_API_PATH);
+            return this;
+        }
+
+        /**
+         * The URL of the SCIM service itself, used as given (no API path is appended), e.g.
+         * "https://app.example.com/scim/v2". Trailing slashes are ignored.
+         *
+         * @param endpoint the SCIM service URL
+         * @return this builder for chaining
+         */
+        public Builder withEndpoint(String endpoint) {
+            String url = endpoint;
+            while (url.endsWith("/")) {
+                url = url.substring(0, url.length() - 1);
+            }
+            client.setBaseUrl(url);
+            return this;
+        }
+
+        /**
+         * Request settings such as timeouts and redirect handling, applied to every request.
+         *
+         * @param requestConfig the request configuration
+         * @return this builder for chaining
+         */
+        public Builder withRequestConfig(RequestConfig requestConfig) {
+            client.setRequestConfig(requestConfig);
             return this;
         }
 
