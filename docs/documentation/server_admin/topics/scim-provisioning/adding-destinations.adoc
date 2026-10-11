@@ -1,0 +1,145 @@
+[id="scim-provisioning-adding-destinations_{context}"]
+
+[[_scim_provisioning_destinations_]]
+= Adding a destination
+[role="_abstract"]
+
+A destination connects a realm to one application's SCIM endpoint. It is a <<_user-storage-federation,user federation>>
+provider with the provider ID `scim-provisioning`, so it is listed on the *User federation* page next to any LDAP or Kerberos
+providers and has its own *Enabled* switch.
+
+.Prerequisites
+* The `scim-provisioning` feature is enabled. See <<_scim_provisioning_enabling_,Enabling SCIM provisioning>>.
+* You have the application's SCIM 2.0 base URL and a bearer token issued by the application.
+
+.Procedure
+. Click *User federation* in the menu.
+. Click *Add new provider* and select *scim-provisioning*.
+. Enter a *UI display name* for the destination, for example `slack`. This name identifies the destination in the
+  REST API, in workflow steps, and in metrics.
+. Enter the *SCIM base URL* and the *Bearer token*.
+. Choose who gets an account: enter one or more *Groups in scope*, switch *Everyone in the realm* on, or both.
+. Configure the remaining settings as needed. See <<Destination settings>>.
+. Click *Save*.
+
+The form also shows a *Cache policy* setting, which is common to all user federation providers. It has no effect on a destination.
+
+You can also create a destination with the Admin REST API, for example with the Admin CLI:
+
+[source,bash]
+----
+kcadm.sh create components -r myrealm \
+  -s name=slack \
+  -s providerId=scim-provisioning \
+  -s providerType=org.keycloak.storage.UserStorageProvider \
+  -s 'config.baseUrl=["https://api.example.com/scim/v2"]' \
+  -s 'config.token=["${vault.slack-scim-token}"]' \
+  -s 'config.scopeGroups=["Engineering","Design"]' \
+  -s 'config.deprovision=["deactivate"]'
+----
+
+When a destination is created or saved, every user in its scope is checked and those whose state differs from what was last
+delivered are sent. See <<_scim_provisioning_resync_,Resynchronizing a destination>>.
+
+== Destination settings
+
+[cols="1,1,3",options="header"]
+|===
+| Setting (configuration name) | Default | Description
+
+| *SCIM base URL* (`baseUrl`)
+| -
+| The application's SCIM 2.0 base URL, for example `\https://api.example.com/scim/v2`. Required. Redirects are never followed.
+
+| *Bearer token* (`token`)
+| -
+| The token sent in the `Authorization` header of every request. Required. This is a secret: it is masked in the Admin
+  Console and in admin responses, and it is never logged. It accepts a vault reference such as `${vault.slack-scim-token}`
+  instead of a literal value. See <<_vault-administration,Using a vault to obtain secrets>>.
+
+| *Groups in scope* (`scopeGroups`)
+| -
+| Members of these groups, including members of their subgroups, get an account. See <<Who gets an account>>.
+
+| *Everyone in the realm* (`scopeEveryone`)
+| Off
+| Every user of the realm gets an account. See <<Who gets an account>>.
+
+| *Attribute mapping* (`mapping`)
+| -
+| Lines of the form `scimPath=field` that override how individual SCIM attributes are rendered. See
+  <<_scim_provisioning_mapping_attributes_,Mapping user attributes>>.
+
+| *Deprovision* (`deprovision`)
+| `deactivate`
+| What happens to the account when a user leaves the scope or is deleted: `deactivate` sends `active=false`, `delete` deletes
+  the account. See <<_scim_provisioning_deprovisioning_,Deprovisioning users>>.
+
+| *Provision groups* (`supportsGroups`)
+| Off
+| Also create the groups in scope in the application and keep their members up to date. See
+  <<_scim_provisioning_groups_,Provisioning groups>>.
+
+| *Profile* (`profile`)
+| `generic`
+| The SCIM dialect of the application. The only profile is `generic`: plain SCIM 2.0 with `application/scim+json`, `PUT`
+  for updates, and `PATCH` for deactivation and group membership. The application's `/ServiceProviderConfig` is not read.
+
+| *Request timeout (seconds)* (`requestTimeoutSeconds`)
+| `15`
+| The timeout of each SCIM request.
+
+| *Attempts before dead-lettering* (`maxAttempts`)
+| `5`
+| How many times a change that the application refuses is attempted before it becomes a dead letter. See
+  <<_scim_provisioning_dead_letters_,Handling dead letters>>.
+
+| *Reconcile every (hours)* (`reconcileHours`)
+| `24`
+| How often the application's accounts are compared with {project_name}. `0` turns the scheduled reconciliation off. See
+  <<_scim_provisioning_reconcile_,Reconciling a destination>>.
+
+| *Skip connection check* (`skipConnectionCheck`)
+| Off
+| Do not call the application when the destination is saved. Use it when the application is not reachable yet, for example
+  for a realm import behind an egress proxy.
+|===
+
+== Checking the connection
+
+When you save a destination, {project_name} makes an authenticated `GET /Users?count=1` request to the application, with a
+timeout of 5 seconds. A wrong URL, a base URL that is not a SCIM endpoint, a redirect, or a rejected token fails the save
+with the reason, instead of failing in the background later. To save a destination without the check, switch
+*Skip connection check* on.
+
+== Who gets an account
+
+A user gets an account in the application when the user is in the destination's scope:
+
+Groups in scope::
+Members of the listed groups, including members of their subgroups. Each value is a group path (for example
+`/Engineering/Platform`), the name of a top-level group, or a group ID. A path or a name is resolved by name: if the group is
+renamed or moved, it leaves the scope together with its members. Use the group ID if group names change.
+
+Everyone in the realm::
+Every user of the realm. Disabled users get an account with `active` set to `false`. Service account users never get an account.
+
+Both rules can be combined: a user who is in scope by any rule is in scope. A disabled user who is in scope keeps an inactive
+account. A user who leaves the scope is deprovisioned. Roles are not a scope rule.
+
+== Enabling and disabling a destination
+
+A disabled destination continues to record which users and groups need delivering, but sends nothing. When the destination is
+enabled again, the changes recorded in the meantime are delivered.
+
+Saving a destination lifts any backoff that is in force for it and makes its waiting changes due immediately. After
+replacing an expired token, saving the destination is all that is needed for the backlog to drain.
+
+Deleting a destination deletes its outbox entries and leaves the accounts in the application as they are.
+
+== Exporting and importing destinations
+
+Destinations are components, so they are part of a realm export and import. The token is masked in admin responses and in a
+partial export, but a full export with `kc.sh export` writes component secrets as they are stored. Use a vault reference for
+the token if exports leave your environment. A destination created by a realm import is resynchronized by the next
+housekeeping run.

@@ -70,4 +70,69 @@
         </createIndex>
     </changeSet>
 
+    <!--
+        SCIM provisioning: what each destination holds for a subject (the
+        link), and each destination's health (backoff, last error, last
+        reconcile). Outbox entries live in OUTBOX_ENTRY under entry kind
+        scim-provisioning. No foreign keys: rows are removed with their
+        realm or destination by the provider. Times are epoch milliseconds.
+    -->
+    <changeSet author="keycloak" id="27.0.0-scim-provisioning">
+        <createTable tableName="SCIM_PROV_LINK">
+            <column name="REALM_ID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="DESTINATION_ID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="SUBJECT" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="REMOTE_ID" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PAYLOAD_HASH" type="VARCHAR(64)"/>
+            <column name="ACTIVE" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="DEPROVISIONED" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="USER_NAME" type="VARCHAR(255)"/>
+            <column name="SYNCED_AT" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="SCIM_PROV_LINK" columnNames="REALM_ID, DESTINATION_ID, SUBJECT"
+                       constraintName="PK_SCIM_PROV_LINK"/>
+
+        <createTable tableName="SCIM_PROV_HEALTH">
+            <column name="REALM_ID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="DESTINATION_ID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CREATED_AT" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LAST_SUCCESS_AT" type="BIGINT"/>
+            <column name="LAST_ERROR_CLASS" type="VARCHAR(32)"/>
+            <column name="LAST_ERROR" type="VARCHAR(300)"/>
+            <column name="FAILING_SINCE" type="BIGINT"/>
+            <column name="RETRY_AT" type="BIGINT"/>
+            <column name="CONSECUTIVE_FAILURES" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LAST_RECONCILE_AT" type="BIGINT"/>
+            <column name="LAST_RECONCILE_STATUS" type="VARCHAR(16)"/>
+            <column name="LAST_RECONCILE_REPORT" type="NCLOB"/>
+            <column name="MISMATCHES" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="SCIM_PROV_HEALTH" columnNames="REALM_ID, DESTINATION_ID"
+                       constraintName="PK_SCIM_PROV_HEALTH"/>
+    </changeSet>
+
 </databaseChangeLog>

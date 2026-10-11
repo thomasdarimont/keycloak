@@ -1,0 +1,80 @@
+[id="scim-provisioning-workflow-steps_{context}"]
+
+[[_scim_provisioning_workflow_steps_]]
+= Workflow steps
+[role="_abstract"]
+
+SCIM provisioning provides four <<_managing_workflows,workflow>> steps, so that offboarding and other lifecycle processes can
+include the user's accounts in applications without custom code. The steps require both the `scim-provisioning` and the
+`workflows` features. When the `workflows` feature is disabled, the steps are not available and the rest of SCIM
+provisioning works as usual.
+
+Each step acts on the workflow's user. Each step accepts an optional `destination` parameter, the name or ID of a destination
+(several values are allowed). Without it, the step acts on every destination of the realm. Saving a workflow fails if a
+`destination` value does not match any destination of the realm.
+
+[cols="1,3",options="header"]
+|===
+| Step | Description
+
+| `scim-provisioning-deprovision`
+| Deprovisions the user's accounts, with each destination's deprovision mode. This is the same one-shot operation as the
+  `deprovision` endpoint. See <<_scim_provisioning_deprovisioning_,Deprovisioning users>>.
+
+| `scim-provisioning-delete`
+| Deletes the user's accounts, whatever the destination's deprovision mode, including accounts that an earlier step only
+  deactivated. A `404 Not Found` response counts as deleted.
+
+| `scim-provisioning-resync-user`
+| Sends the user's current state again. A destination that already holds exactly that state receives no request.
+
+| `scim-provisioning-await-deprovision`
+| Waits until the user's accounts are gone (no pending change and no active account) before the workflow continues.
+|===
+
+The steps only record what must happen. The drainer delivers it, as for any other change, so the steps complete quickly and
+are safe for the workflow engine to retry.
+
+== Waiting for deprovisioning
+
+The `scim-provisioning-await-deprovision` step must have an `after` duration; saving the workflow fails otherwise. The
+workflow engine runs a failed scheduled step again on each pass of its step runner, but never runs a failed immediate step
+again. The step checks the user's accounts on each pass until all of them are gone, so the steps after it start within one
+step runner interval of the last confirmation. See <<_understanding_workflows_engine_>> for how to configure that interval.
+
+A deprovision that the application refused on every attempt (a dead letter) holds the step until it is fixed or replayed.
+To continue the workflow instead, set the `onDeadLetter` parameter to `continue` (the default is `wait`).
+
+== Example
+
+The following workflow is started when a user is removed from the `/Employees` group. It deprovisions the user everywhere,
+waits for every application to confirm, disables the user in {project_name}, and deletes the user's account in the `slack`
+destination 90 days later:
+
+```yaml
+name: Offboard leavers
+on: user-group-membership-removed(/Employees)
+steps:
+  - uses: scim-provisioning-deprovision
+  - uses: scim-provisioning-await-deprovision
+    after: 10m
+  - uses: disable-user
+  - uses: scim-provisioning-delete
+    after: 90d
+    with:
+      destination: slack
+```
+
+The same steps can be created with the Admin CLI, as JSON:
+
+[source,bash]
+----
+kcadm.sh create workflows -r myrealm -s name=offboard -s 'steps=[
+    {"uses":"scim-provisioning-deprovision"},
+    {"uses":"scim-provisioning-await-deprovision","after":"10m"},
+    {"uses":"disable-user"},
+    {"uses":"scim-provisioning-delete","after":"90d","with":{"destination":["slack"]}}]'
+----
+
+Scheduled steps run when the workflow engine's step runner picks them up, so a step scheduled after 90 days runs after
+90 days plus up to one step runner interval.
