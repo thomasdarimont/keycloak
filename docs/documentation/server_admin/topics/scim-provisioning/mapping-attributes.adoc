@@ -1,0 +1,124 @@
+[id="scim-provisioning-mapping-attributes_{context}"]
+
+[[_scim_provisioning_mapping_attributes_]]
+= Mapping user attributes
+[role="_abstract"]
+
+The SCIM `User` resource sent to an application is rendered from the realm's user profile, in the same way as the
+<<_managing_scim,SCIM API>> renders users. A destination's *Attribute mapping* can override individual SCIM attributes for
+that application.
+
+== Rendering from the user profile
+
+A user is rendered with the SCIM core User schema (`urn:ietf:params:scim:schemas:core:2.0:User`) and, when attributes are
+mapped to it, the Enterprise User extension (`urn:ietf:params:scim:schemas:extension:enterprise:2.0:User`). Which user
+attribute becomes which SCIM attribute is defined by the *SCIM attribute* of each user profile attribute, the same setting
+that the SCIM API uses. Without any configuration, the following attributes are sent:
+
+[cols="1,1",options="header"]
+|===
+| {project_name} attribute | SCIM attribute
+
+| `username`
+| `userName`
+
+| `email`
+| `emails` (one value, of type `work`, marked as primary)
+
+| `firstName`
+| `name.givenName`
+
+| `lastName`
+| `name.familyName`
+
+| `enabled`
+| `active`
+|===
+
+To send more attributes, for example `name.middleName` or the Enterprise User `department`, configure a SCIM attribute on
+the corresponding user profile attribute. The mapping is configured once for the realm and is used both by the SCIM API and
+by every destination. For the procedure, the supported attributes, and the attribute permissions that apply, see
+<<_scim_mapping_attributes_,Mapping user attributes to SCIM schemas>> and
+<<_scim_managing_schema_extensions_,Managing schema extensions>>.
+
+In addition, the following attributes are always sent, unless the user profile or the destination's mapping already provides them:
+
+`externalId`::
+The {project_name} user ID.
+
+`displayName`::
+The user's first and last name, or the username when the user has neither.
+
+The `active` attribute always follows the user's *Enabled* flag and cannot be mapped. The `id` and `meta` attributes are
+assigned by the application and are never sent. Group memberships are not sent on the user: they are delivered on the groups
+themselves. See <<_scim_provisioning_groups_,Provisioning groups>>.
+
+== Overriding attributes for a destination
+
+Applications differ in what they expect. Some require the email address as the `userName`, and some only accept the
+SCIM 1.x form of the Enterprise extension. A destination's *Attribute mapping* (`mapping`) adjusts the rendered resource for
+that application only. Each line has the form `scimPath=field` and replaces the value of one SCIM attribute, or adds one;
+all other attributes are rendered from the user profile as described above.
+
+For example:
+
+[source,bash]
+----
+kcadm.sh update components/<destination id> -r myrealm \
+  -s 'config.mapping=["userName=email","urn:scim:schemas:extension:enterprise:1.0.department=attr:department"]'
+----
+
+The left side of `=` is a SCIM attribute path:
+
+* a simple attribute, for example `userName` or `title`
+* a sub-attribute, for example `name.givenName`
+* a multivalued attribute filtered by type, for example `emails[type eq "work"].value`
+* an extension attribute, either in the SCIM 2.0 form (`urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:department`)
+  or in the dotted SCIM 1.x form (`urn:scim:schemas:extension:enterprise:1.0.department`) that some applications still require
+
+The right side of `=` is one of the following fields:
+
+[cols="1,2",options="header"]
+|===
+| Field | Value
+
+| `id`
+| The {project_name} user ID.
+
+| `username`, `email`, `firstName`, `lastName`
+| The stored value.
+
+| `fullName`
+| The first and last name, separated by a space.
+
+| `displayName`
+| The first and last name, or the username when the user has neither.
+
+| `enabled`
+| The *Enabled* flag, as a JSON boolean.
+
+| `attr:<name>`
+| The user attribute `<name>`, for example `attr:department`. When the attribute has several values, the smallest value is sent.
+
+| `const:<value>`
+| The same literal value for every user.
+|===
+
+A field without a value for a user, for example an empty `attr:` field, leaves the attribute as the user profile renders it.
+
+Saving the destination validates the mapping and names every line that cannot be used, for example a line with an unknown
+field, two lines for the same path, a line for `id`, `meta`, `schemas`, or `groups`, a line that maps `active` to anything
+other than `enabled`, or a line for a multivalued attribute such as `emails` without a `[type eq "..."]` filter.
+
+[NOTE]
+====
+A user attribute is only stored when the realm's user profile declares it, or when unmanaged attributes are enabled.
+An `attr:` field that names an undeclared attribute is always empty. When a destination is saved, {project_name} logs a
+warning for each `attr:` field whose attribute the user profile does not declare. See <<user-profile,Managing user attributes>>.
+====
+
+Changing the mapping changes the rendered state of the users in scope. Saving the destination resynchronizes it, so the
+new state is sent to every user whose resource differs from what was last delivered.
+
+To see the resource that would be sent for a user without sending it, use the
+<<_scim_provisioning_preview_,preview endpoint>>.

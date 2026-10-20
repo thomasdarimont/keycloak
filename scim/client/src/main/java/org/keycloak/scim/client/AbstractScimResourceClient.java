@@ -1,17 +1,22 @@
 package org.keycloak.scim.client;
 
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.keycloak.http.simple.SimpleHttpRequest;
+import org.keycloak.http.simple.SimpleHttpResponse;
 import org.keycloak.scim.protocol.request.PatchRequest;
 import org.keycloak.scim.protocol.request.SearchRequest;
 import org.keycloak.scim.protocol.response.ErrorResponse;
 import org.keycloak.scim.protocol.response.ListResponse;
 import org.keycloak.scim.resource.ResourceTypeRepresentation;
+import org.keycloak.util.JsonSerialization;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.http.HttpStatus;
 
 import static java.util.Objects.requireNonNull;
@@ -116,6 +121,62 @@ public abstract class AbstractScimResourceClient<R extends ResourceTypeRepresent
         }
 
         return client.execute(request, ListResponse.class);
+    }
+
+    /**
+     * One page of {@code GET /<resource type>}, optionally filtered. Unlike {@link #doFilter}, every
+     * element of {@code Resources} is read as this client's resource type, so servers that leave out
+     * {@code schemas} on list elements are understood too.
+     *
+     * @param filterExpression SCIM filter expression, or {@code null} for no filter
+     * @param startIndex 1-based index of the first result, or {@code null} for the server's default
+     * @param count maximum number of results, or {@code null} for the server's default
+     * @return the page
+     */
+    public ListResponse<R> list(String filterExpression, Integer startIndex, Integer count) {
+        SimpleHttpRequest request = doGet("");
+        Map<String, String> params = new HashMap<>();
+        if (filterExpression != null) {
+            params.put("filter", filterExpression);
+        }
+        if (startIndex != null) {
+            params.put("startIndex", startIndex.toString());
+        }
+        if (count != null) {
+            params.put("count", count.toString());
+        }
+        if (!params.isEmpty()) {
+            request = request.params(params);
+        }
+        try (SimpleHttpResponse response = client.execute(request)) {
+            JsonNode body = response.asJson();
+            if (body == null || !body.isObject()) {
+                throw new ScimClientException("List response is not a JSON object", (String) null);
+            }
+            ListResponse<R> page = new ListResponse<>();
+            List<R> resources = new ArrayList<>();
+            JsonNode elements = body.get("Resources");
+            if (elements != null && elements.isArray()) {
+                for (JsonNode element : elements) {
+                    resources.add(JsonSerialization.mapper.treeToValue(element, resourceTypeClass));
+                }
+            } else if (elements != null && !elements.isNull()) {
+                throw new ScimClientException("Resources is not an array", (String) null);
+            }
+            page.setResources(resources);
+            if (body.hasNonNull("totalResults")) {
+                page.setTotalResults(body.get("totalResults").asInt());
+            }
+            if (body.hasNonNull("startIndex")) {
+                page.setStartIndex(body.get("startIndex").asInt());
+            }
+            if (body.hasNonNull("itemsPerPage")) {
+                page.setItemsPerPage(body.get("itemsPerPage").asInt());
+            }
+            return page;
+        } catch (IOException e) {
+            throw new ScimClientException("Error reading list response", e);
+        }
     }
 
     protected SimpleHttpRequest doGet(String path) {

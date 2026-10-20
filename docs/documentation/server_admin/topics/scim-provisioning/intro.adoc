@@ -1,0 +1,53 @@
+[id="scim-provisioning-introduction_{context}"]
+[role="_abstract"]
+
+WARNING: This feature is *experimental* and may introduce breaking changes in future versions of {project_name}. Do not use this feature in production environments.
+
+SCIM provisioning pushes the users and groups of a realm *out* to the applications your users work in, over
+https://datatracker.ietf.org/doc/html/rfc7644[SCIM 2.0]. When a user is created, updated, added to a group, disabled,
+or deleted in {project_name}, the user's account in each connected application is created, updated, or deprovisioned to match.
+
+This is the outbound counterpart of the <<_managing_scim,SCIM API>>. The SCIM API lets other systems manage users *in*
+{project_name}; SCIM provisioning lets {project_name} manage accounts *in* other systems. The two features are independent
+and can be used together.
+
+Each application is configured as a *destination*: a provider under *User federation* that holds the application's SCIM base
+URL, a bearer token, which users and groups are in scope, and how users are deprovisioned. Destinations are outbound only.
+Nothing is read from an application when a user logs in.
+
+[[_scim_provisioning_how_it_works_]]
+= How it works
+
+SCIM provisioning is built on three rules:
+
+Events are hints, never data::
+When something changes, {project_name} records only that a user or group needs delivering to a destination. It does not
+record what changed. When the change is delivered, {project_name} reads the user or group as it is at that moment and sends
+that state. An application that was unreachable for a day receives each user's final state once, not every
+intermediate change.
+
+The outbox is part of the change::
+By default, the record that a user needs delivering is written to {project_name}'s outbox table in the same database
+transaction as the change itself. Either both commit or neither does, so a change cannot be committed without the
+record that it must be delivered.
+
+No HTTP call is made on a request thread::
+Logins and administrative requests never wait for an application. All SCIM requests are made by a background drainer,
+by a resynchronization or reconciliation, or by the connection check when a destination is saved. A slow or unavailable
+application slows down only its own deliveries.
+
+The drainer runs on the {project_name} nodes, on one node of the cluster at a time. It claims due outbox entries, computes the
+desired state of each user or group, and sends the SCIM requests that bring the application to that state:
+
+* Before creating an account for the first time, it looks the account up by `userName`. An account that already exists in
+the application is adopted rather than duplicated.
+* It keeps a hash of the state it last delivered to each application, and sends nothing for a user whose state has not changed.
+* When several changes to the same user are waiting, the older ones are settled without a request and only the latest state is sent.
+* Failures are classified. When an application is unreachable, rate-limiting, failing, or rejecting the token, the whole
+destination backs off and retries indefinitely, losing nothing. When an application refuses one particular change, that
+change is retried a limited number of times and is then kept as a *dead letter*, without blocking changes to other users.
+
+Event capture alone is not enough to keep applications correct, because some changes, such as user federation
+synchronization, do not emit the events that SCIM provisioning listens to. Saving a destination therefore resynchronizes
+it, and a periodic *reconciliation* lists the application's accounts and corrects missing accounts and accounts whose
+`active` flag differs from {project_name}.

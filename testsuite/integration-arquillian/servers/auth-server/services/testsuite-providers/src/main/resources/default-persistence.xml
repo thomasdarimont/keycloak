@@ -55,6 +55,8 @@
         <class>org.keycloak.models.jpa.session.PersistentClientSessionEntity</class>
         <class>org.keycloak.models.jpa.entities.RevokedTokenEntity</class>
         <class>org.keycloak.models.jpa.entities.OutboxEntryEntity</class>
+        <class>org.keycloak.models.jpa.entities.ScimProvisioningLinkEntity</class>
+        <class>org.keycloak.models.jpa.entities.ScimProvisioningHealthEntity</class>
         <class>org.keycloak.models.jpa.entities.GroupEntity</class>
         <class>org.keycloak.models.jpa.entities.GroupAttributeEntity</class>
         <class>org.keycloak.models.jpa.entities.GroupRoleMappingEntity</class>

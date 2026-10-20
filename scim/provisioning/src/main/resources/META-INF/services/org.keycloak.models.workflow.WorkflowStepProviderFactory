@@ -1,0 +1,4 @@
+org.keycloak.scim.provisioning.workflow.AwaitDeprovisionedStepProviderFactory
+org.keycloak.scim.provisioning.workflow.DeleteStepProviderFactory
+org.keycloak.scim.provisioning.workflow.DeprovisionStepProviderFactory
+org.keycloak.scim.provisioning.workflow.ResyncUserStepProviderFactory

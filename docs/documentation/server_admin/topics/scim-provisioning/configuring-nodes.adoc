@@ -1,0 +1,110 @@
+[id="scim-provisioning-configuring-nodes_{context}"]
+
+[[_scim_provisioning_node_options_]]
+= Configuring the nodes
+[role="_abstract"]
+
+Change capture and delivery are configured per {project_name} node, with options of the `scim-provisioning` event listener:
+
+[source,bash]
+----
+bin/kc.[sh|bat] start --features=scim-provisioning --spi-events-listener--scim-provisioning--<option>=<value>
+----
+
+Each node reads these options once, at startup. Settings that belong to one application, such as the request timeout, the
+number of attempts, and the reconciliation interval, are configured on the destination instead. See
+<<_scim_provisioning_destinations_,Adding a destination>>.
+
+[cols="2,1,4",options="header"]
+|===
+| Option | Default | Description
+
+| `capture-events`
+| `true`
+| Whether changes are captured on this node. With `false`, changes are no longer recorded, but delivery, resynchronization,
+  and reconciliation continue.
+
+| `enqueue-mode`
+| `transactional`
+| When the record that a user or group needs delivering is written. `transactional` writes it inside the change's own
+  transaction: it commits together with the change, and if it cannot be written, the change fails too. `after-commit` writes it
+  just after the change commits: a change can never fail because of SCIM provisioning, but a crash at that moment loses the
+  record until the next reconciliation.
+
+| `drain-interval-millis`
+| `5000`
+| How often the drainer looks for changes that are due. Changes recorded on the node also wake it immediately.
+
+| `drain-batch`
+| `100`
+| The number of outbox entries one drainer run claims, across all destinations.
+
+| `drain-per-destination`
+| `20`
+| The maximum number of entries claimed for one destination in each round of a batch, so that one slow or busy application
+  cannot take a whole run.
+
+| `delivery-concurrency`
+| `4`
+| The number of destinations that one drainer run delivers to in parallel. The changes of one destination are always
+  delivered in order. The workers come from the `outbox-delivery-scim-provisioning` executor.
+
+| `lock-ttl-seconds`
+| `60`
+| The minimum time to live of the drainer's cluster lock. The lock is held at least as long as the claim lease of the entries a tick delivers (five minutes, or twice `run-time-box-millis` if that is longer).
+
+| `run-time-box-millis`
+| `30000`
+| The time budget of one drainer run. Claimed entries that the run does not reach are returned to the queue for the next run.
+
+| `transient-backoff-base-millis`
+| `2000`
+.2+| The initial and maximum backoff of a destination while its application is unreachable, rate-limiting, failing, or
+  rejecting the token.
+
+| `transient-backoff-max-millis`
+| `600000`
+
+| `terminal-backoff-base-millis`
+| `30000`
+.2+| The initial and maximum spacing of the retries of a change that the application refused.
+
+| `terminal-backoff-max-millis`
+| `3600000`
+
+| `group-deferral-millis`
+| `5000`
+.2+| How long, and how many times, a group waits for its members' accounts before it is sent without them. See
+  <<_scim_provisioning_groups_,Provisioning groups>>.
+
+| `max-group-deferrals`
+| `10`
+
+| `sweep-interval-millis`
+| `300000`
+| How often housekeeping runs. Housekeeping resynchronizes destinations that were created without the Admin Console or the
+  Admin REST API, for example by a realm import, and removes outbox entries whose destination no longer exists.
+
+| `reconcile-lock-ttl-seconds`
+| `3600`
+| The time to live of the cluster lock held by a reconciliation of one destination.
+|===
+
+== Running in a cluster
+
+No additional configuration is needed in a cluster. The drainer runs on one node at a time, under the cluster lock
+`outbox-drainer:scim-provisioning`. Each outbox entry it claims is leased: if a node stops during a run, the entries it claimed
+become due again when their lease ends, and a run that outlives its lease cannot overwrite a newer attempt. A reconciliation of
+a destination runs under its own cluster lock, so it runs on one node at a time.
+
+== Capacity and tuning
+
+The drainer runs on the {project_name} nodes, which also serve logins. It is designed to stay out of their way:
+
+* Requests have short timeouts, each drainer run is time-boxed, and each destination backs off on its own.
+* Up to `delivery-concurrency` applications are called in parallel. A slow application occupies one worker, not the others.
+* No database connection is held while an application is being called.
+
+A resynchronization of tens of thousands of users is still real work for the nodes. Schedule large resynchronizations
+outside peak hours and keep `drain-batch` moderate. A reconciliation pages through every account of the application, so for
+applications with hundreds of thousands of accounts, use a longer *Reconcile every (hours)* interval.
