@@ -103,7 +103,7 @@ import org.jboss.resteasy.reactive.NoCache;
 @Extension(name = KeycloakOpenAPI.Profiles.ADMIN , value = "")
 public class ServerInfoAdminResource {
 
-    private static final Map<String, List<String>> ENUMS = createEnumsMap(EventType.class, OperationType.class, ResourceType.class, GroupModel.Type.class);
+    private static final Map<String, List<String>> ENUMS = createEnumsMap(OperationType.class, ResourceType.class, GroupModel.Type.class);
 
     private final KeycloakSession session;
     private final AdminAuth auth;
@@ -169,7 +169,7 @@ public class ServerInfoAdminResource {
         setBuiltinProtocolMappers(info);
         setClientInstallations(info);
         setPasswordPolicies(info);
-        info.setEnums(ENUMS);
+        info.setEnums(createEnums());
         info.setParameterizedScopeTypes(buildParameterizedScopeTypesList());
         return info;
     }
@@ -435,6 +435,13 @@ public class ServerInfoAdminResource {
 
     private static <T> List<T> listCombiner(List<T> list1, List<T> list2) {
         return Stream.concat(list1.stream(), list2.stream()).collect(Collectors.toList());
+    }
+
+    private static Map<String, List<String>> createEnums() {
+        // EventType is not an enum, extensions can provide custom event types
+        Map<String, List<String>> enums = new HashMap<>(ENUMS);
+        enums.put("eventType", Arrays.stream(EventType.values()).map(EventType::name).sorted().collect(Collectors.toList()));
+        return enums;
     }
 
     private static Map<String, List<String>> createEnumsMap(Class... enums) {

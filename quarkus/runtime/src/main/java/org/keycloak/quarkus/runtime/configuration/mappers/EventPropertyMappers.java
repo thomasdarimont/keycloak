@@ -30,7 +30,7 @@ final class EventPropertyMappers implements PropertyMapperGrouping {
                         .paramLabel("tags")
                         .isEnabled(EventPropertyMappers::userEventsMetricsTags, "user event metrics are enabled")
                         .build(),
-                fromOption(USER_EVENT_METRICS_EVENTS.toBuilder().expectedValues(expectedUserMetricEvents()).build())
+                fromOption(USER_EVENT_METRICS_EVENTS.toBuilder().expectedValues(expectedUserMetricEvents()).strictExpectedValues(false).build())
                         .to("kc.spi-events-listener--micrometer-user-event-metrics--events")
                         .paramLabel("events")
                         .isEnabled(EventPropertyMappers::userEventsMetricsTags, "user event metrics are enabled")
@@ -39,6 +39,7 @@ final class EventPropertyMappers implements PropertyMapperGrouping {
     }
 
     private static List<String> expectedUserMetricEvents() {
+        // only the built-in event types are known here, custom event types are accepted as the expected values are not strict
         List<String> values = new ArrayList<>();
         for (EventType event : EventType.values()) {
             if (event.name().endsWith("_ERROR")) {

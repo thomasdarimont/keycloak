@@ -39,6 +39,9 @@ import org.keycloak.common.util.MultivaluedHashMap;
 import org.keycloak.component.ComponentFactoryProvider;
 import org.keycloak.component.ComponentFactoryProviderFactory;
 import org.keycloak.component.ComponentModel;
+import org.keycloak.events.EventTypeProvider;
+import org.keycloak.events.EventTypeProviderFactory;
+import org.keycloak.events.EventTypeRegistry;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.ThemeManager;
@@ -99,6 +102,9 @@ public abstract class DefaultKeycloakSessionFactory implements KeycloakSessionFa
     }
 
     protected void initProviderFactories(boolean updateComponentFactory, Map<Class<? extends Provider>, Map<String, ProviderFactory>> factories) {
+        // custom event types must be known before postInit, so that factories can resolve them from their configuration
+        registerEventTypes();
+
         if (updateComponentFactory) {
             // Component factory must be initialized first, so that postInit in other factories can use component factories
             updateComponentFactoryProviderFactory();
@@ -113,6 +119,12 @@ public abstract class DefaultKeycloakSessionFactory implements KeycloakSessionFa
         for(Map.Entry<Class<? extends Provider>, Map<String, ProviderFactory>>  f : factories.entrySet()) {
             initializeProviders(f.getKey(), factories, initializedProviders, recursionPrevention);
         }
+    }
+
+    private void registerEventTypes() {
+        EventTypeRegistry.register(factoriesMap.getOrDefault(EventTypeProvider.class, Map.of()).values().stream()
+                .map(EventTypeProviderFactory.class::cast)
+                .toList());
     }
 
     private void initializeProviders(Class<? extends Provider> provider, Map<Class<? extends Provider>, Map<String, ProviderFactory>> factories, Set<Class<? extends Provider>> initializedProviders, Stack<ProviderFactory> recursionPrevention) {

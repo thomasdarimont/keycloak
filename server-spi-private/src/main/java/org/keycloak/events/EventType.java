@@ -17,224 +17,228 @@
 
 package org.keycloak.events;
 
-import java.util.Map;
-
-import org.keycloak.util.EnumWithStableIndex;
-
 /**
+ * The type of a user {@link Event}.
+ * <p>
+ * The event types that ship with Keycloak are defined in {@link BuiltinEventType} and are re-exported here as
+ * constants, so that {@code EventType.LOGIN} keeps working. Extensions can define additional event types by
+ * implementing this interface, usually with an enum, and registering them through an {@link EventTypeProviderFactory}.
+ * <p>
+ * Event types are identified by their {@link #name()}, which must be unique across all registered event types.
+ * The type that is emitted for a failed event is, by convention, the type whose name is the name of the success
+ * type followed by {@code _ERROR}.
+ * <p>
+ * Implementation note: this interface must not declare default methods. Initializing {@link BuiltinEventType} would
+ * then also initialize this interface, whose constants would observe the not yet initialized enum constants as
+ * {@code null}.
+ *
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
  */
-public enum EventType implements EnumWithStableIndex {
+@SuppressWarnings("deprecation")
+public interface EventType {
 
-    LOGIN(0, true),
-    LOGIN_ERROR(0x10000 + LOGIN.getStableIndex(), true),
-    REGISTER(1, true),
-    REGISTER_ERROR(0x10000 + REGISTER.getStableIndex(), true),
-    LOGOUT(2, true),
-    LOGOUT_ERROR(0x10000 + LOGOUT.getStableIndex(), true),
+    EventType LOGIN = BuiltinEventType.LOGIN;
+    EventType LOGIN_ERROR = BuiltinEventType.LOGIN_ERROR;
+    EventType REGISTER = BuiltinEventType.REGISTER;
+    EventType REGISTER_ERROR = BuiltinEventType.REGISTER_ERROR;
+    EventType LOGOUT = BuiltinEventType.LOGOUT;
+    EventType LOGOUT_ERROR = BuiltinEventType.LOGOUT_ERROR;
 
-    CODE_TO_TOKEN(3, true),
-    CODE_TO_TOKEN_ERROR(0x10000 + CODE_TO_TOKEN.getStableIndex(), true),
+    EventType CODE_TO_TOKEN = BuiltinEventType.CODE_TO_TOKEN;
+    EventType CODE_TO_TOKEN_ERROR = BuiltinEventType.CODE_TO_TOKEN_ERROR;
 
-    CLIENT_LOGIN(4, true),
-    CLIENT_LOGIN_ERROR(0x10000 + CLIENT_LOGIN.getStableIndex(), true),
+    EventType CLIENT_LOGIN = BuiltinEventType.CLIENT_LOGIN;
+    EventType CLIENT_LOGIN_ERROR = BuiltinEventType.CLIENT_LOGIN_ERROR;
 
-    REFRESH_TOKEN(5, false),
-    REFRESH_TOKEN_ERROR(0x10000 + REFRESH_TOKEN.getStableIndex(), false),
-
-    /**
-     * @deprecated see KEYCLOAK-2266
-     */
-    @Deprecated
-    VALIDATE_ACCESS_TOKEN(6, false),
-    @Deprecated
-    VALIDATE_ACCESS_TOKEN_ERROR(0x10000 + VALIDATE_ACCESS_TOKEN.getStableIndex(), false),
-    INTROSPECT_TOKEN(7, false),
-    INTROSPECT_TOKEN_ERROR(0x10000 + INTROSPECT_TOKEN.getStableIndex(), false),
-
-    FEDERATED_IDENTITY_LINK(8, true),
-    FEDERATED_IDENTITY_LINK_ERROR(0x10000 + FEDERATED_IDENTITY_LINK.getStableIndex(), true),
-    REMOVE_FEDERATED_IDENTITY(9, true),
-    REMOVE_FEDERATED_IDENTITY_ERROR(0x10000 + REMOVE_FEDERATED_IDENTITY.getStableIndex(), true),
-
-
-    UPDATE_EMAIL(10, true),
-    UPDATE_EMAIL_ERROR(0x10000 + UPDATE_EMAIL.getStableIndex(), true),
-    UPDATE_PROFILE(11, true),
-    UPDATE_PROFILE_ERROR(0x10000 + UPDATE_PROFILE.getStableIndex(), true),
+    EventType REFRESH_TOKEN = BuiltinEventType.REFRESH_TOKEN;
+    EventType REFRESH_TOKEN_ERROR = BuiltinEventType.REFRESH_TOKEN_ERROR;
 
     @Deprecated
-    UPDATE_PASSWORD(12, true),
+    EventType VALIDATE_ACCESS_TOKEN = BuiltinEventType.VALIDATE_ACCESS_TOKEN;
     @Deprecated
-    UPDATE_PASSWORD_ERROR(0x10000 + UPDATE_PASSWORD.getStableIndex(), true),
+    EventType VALIDATE_ACCESS_TOKEN_ERROR = BuiltinEventType.VALIDATE_ACCESS_TOKEN_ERROR;
+    EventType INTROSPECT_TOKEN = BuiltinEventType.INTROSPECT_TOKEN;
+    EventType INTROSPECT_TOKEN_ERROR = BuiltinEventType.INTROSPECT_TOKEN_ERROR;
+
+    EventType FEDERATED_IDENTITY_LINK = BuiltinEventType.FEDERATED_IDENTITY_LINK;
+    EventType FEDERATED_IDENTITY_LINK_ERROR = BuiltinEventType.FEDERATED_IDENTITY_LINK_ERROR;
+    EventType REMOVE_FEDERATED_IDENTITY = BuiltinEventType.REMOVE_FEDERATED_IDENTITY;
+    EventType REMOVE_FEDERATED_IDENTITY_ERROR = BuiltinEventType.REMOVE_FEDERATED_IDENTITY_ERROR;
+
+
+    EventType UPDATE_EMAIL = BuiltinEventType.UPDATE_EMAIL;
+    EventType UPDATE_EMAIL_ERROR = BuiltinEventType.UPDATE_EMAIL_ERROR;
+    EventType UPDATE_PROFILE = BuiltinEventType.UPDATE_PROFILE;
+    EventType UPDATE_PROFILE_ERROR = BuiltinEventType.UPDATE_PROFILE_ERROR;
 
     @Deprecated
-    UPDATE_TOTP(13, true),
+    EventType UPDATE_PASSWORD = BuiltinEventType.UPDATE_PASSWORD;
     @Deprecated
-    UPDATE_TOTP_ERROR(0x10000 + UPDATE_TOTP.getStableIndex(), true),
-    VERIFY_EMAIL(14, true),
-    VERIFY_EMAIL_ERROR(0x10000 + VERIFY_EMAIL.getStableIndex(), true),
-    VERIFY_PROFILE(15, true),
-    VERIFY_PROFILE_ERROR(0x10000 + VERIFY_PROFILE.getStableIndex(), true),
+    EventType UPDATE_PASSWORD_ERROR = BuiltinEventType.UPDATE_PASSWORD_ERROR;
 
     @Deprecated
-    REMOVE_TOTP(16, true),
+    EventType UPDATE_TOTP = BuiltinEventType.UPDATE_TOTP;
     @Deprecated
-    REMOVE_TOTP_ERROR(0x10000 + REMOVE_TOTP.getStableIndex(), true),
+    EventType UPDATE_TOTP_ERROR = BuiltinEventType.UPDATE_TOTP_ERROR;
+    EventType VERIFY_EMAIL = BuiltinEventType.VERIFY_EMAIL;
+    EventType VERIFY_EMAIL_ERROR = BuiltinEventType.VERIFY_EMAIL_ERROR;
+    EventType VERIFY_PROFILE = BuiltinEventType.VERIFY_PROFILE;
+    EventType VERIFY_PROFILE_ERROR = BuiltinEventType.VERIFY_PROFILE_ERROR;
 
-    GRANT_CONSENT(17, true),
-    GRANT_CONSENT_ERROR(0x10000 + GRANT_CONSENT.getStableIndex(), true),
-    UPDATE_CONSENT(18, true),
-    UPDATE_CONSENT_ERROR(0x10000 + UPDATE_CONSENT.getStableIndex(), true),
-    REVOKE_GRANT(19, true),
-    REVOKE_GRANT_ERROR(0x10000 + REVOKE_GRANT.getStableIndex(), true),
+    @Deprecated
+    EventType REMOVE_TOTP = BuiltinEventType.REMOVE_TOTP;
+    @Deprecated
+    EventType REMOVE_TOTP_ERROR = BuiltinEventType.REMOVE_TOTP_ERROR;
 
-    SEND_VERIFY_EMAIL(20, true),
-    SEND_VERIFY_EMAIL_ERROR(0x10000 + SEND_VERIFY_EMAIL.getStableIndex(), true),
-    SEND_RESET_PASSWORD(21, true),
-    SEND_RESET_PASSWORD_ERROR(0x10000 + SEND_RESET_PASSWORD.getStableIndex(), true),
-    SEND_IDENTITY_PROVIDER_LINK(22, true),
-    SEND_IDENTITY_PROVIDER_LINK_ERROR(0x10000 + SEND_IDENTITY_PROVIDER_LINK.getStableIndex(), true),
-    RESET_PASSWORD(23, true),
-    RESET_PASSWORD_ERROR(0x10000 + RESET_PASSWORD.getStableIndex(), true),
+    EventType GRANT_CONSENT = BuiltinEventType.GRANT_CONSENT;
+    EventType GRANT_CONSENT_ERROR = BuiltinEventType.GRANT_CONSENT_ERROR;
+    EventType UPDATE_CONSENT = BuiltinEventType.UPDATE_CONSENT;
+    EventType UPDATE_CONSENT_ERROR = BuiltinEventType.UPDATE_CONSENT_ERROR;
+    EventType REVOKE_GRANT = BuiltinEventType.REVOKE_GRANT;
+    EventType REVOKE_GRANT_ERROR = BuiltinEventType.REVOKE_GRANT_ERROR;
 
-    RESTART_AUTHENTICATION(24, true),
-    RESTART_AUTHENTICATION_ERROR(0x10000 + RESTART_AUTHENTICATION.getStableIndex(), true),
+    EventType SEND_VERIFY_EMAIL = BuiltinEventType.SEND_VERIFY_EMAIL;
+    EventType SEND_VERIFY_EMAIL_ERROR = BuiltinEventType.SEND_VERIFY_EMAIL_ERROR;
+    EventType SEND_RESET_PASSWORD = BuiltinEventType.SEND_RESET_PASSWORD;
+    EventType SEND_RESET_PASSWORD_ERROR = BuiltinEventType.SEND_RESET_PASSWORD_ERROR;
+    EventType SEND_IDENTITY_PROVIDER_LINK = BuiltinEventType.SEND_IDENTITY_PROVIDER_LINK;
+    EventType SEND_IDENTITY_PROVIDER_LINK_ERROR = BuiltinEventType.SEND_IDENTITY_PROVIDER_LINK_ERROR;
+    EventType RESET_PASSWORD = BuiltinEventType.RESET_PASSWORD;
+    EventType RESET_PASSWORD_ERROR = BuiltinEventType.RESET_PASSWORD_ERROR;
 
-    INVALID_SIGNATURE(25, false),
-    INVALID_SIGNATURE_ERROR(0x10000 + INVALID_SIGNATURE.getStableIndex(), false),
-    REGISTER_NODE(26, false),
-    REGISTER_NODE_ERROR(0x10000 + REGISTER_NODE.getStableIndex(), false),
-    UNREGISTER_NODE(27, false),
-    UNREGISTER_NODE_ERROR(0x10000 + UNREGISTER_NODE.getStableIndex(), false),
+    EventType RESTART_AUTHENTICATION = BuiltinEventType.RESTART_AUTHENTICATION;
+    EventType RESTART_AUTHENTICATION_ERROR = BuiltinEventType.RESTART_AUTHENTICATION_ERROR;
 
-    USER_INFO_REQUEST(28, false),
-    USER_INFO_REQUEST_ERROR(0x10000 + USER_INFO_REQUEST.getStableIndex(), false),
+    EventType INVALID_SIGNATURE = BuiltinEventType.INVALID_SIGNATURE;
+    EventType INVALID_SIGNATURE_ERROR = BuiltinEventType.INVALID_SIGNATURE_ERROR;
+    EventType REGISTER_NODE = BuiltinEventType.REGISTER_NODE;
+    EventType REGISTER_NODE_ERROR = BuiltinEventType.REGISTER_NODE_ERROR;
+    EventType UNREGISTER_NODE = BuiltinEventType.UNREGISTER_NODE;
+    EventType UNREGISTER_NODE_ERROR = BuiltinEventType.UNREGISTER_NODE_ERROR;
 
-    IDENTITY_PROVIDER_LINK_ACCOUNT(29, true),
-    IDENTITY_PROVIDER_LINK_ACCOUNT_ERROR(0x10000 + IDENTITY_PROVIDER_LINK_ACCOUNT.getStableIndex(), true),
-    IDENTITY_PROVIDER_LOGIN(30, true),
-    IDENTITY_PROVIDER_LOGIN_ERROR(0x10000 + IDENTITY_PROVIDER_LOGIN.getStableIndex(), true),
-    IDENTITY_PROVIDER_FIRST_LOGIN(31, true),
-    IDENTITY_PROVIDER_FIRST_LOGIN_ERROR(0x10000 + IDENTITY_PROVIDER_FIRST_LOGIN.getStableIndex(), true),
-    IDENTITY_PROVIDER_POST_LOGIN(32, true),
-    IDENTITY_PROVIDER_POST_LOGIN_ERROR(0x10000 + IDENTITY_PROVIDER_POST_LOGIN.getStableIndex(), true),
-    IDENTITY_PROVIDER_RESPONSE(33, false),
-    IDENTITY_PROVIDER_RESPONSE_ERROR(0x10000 + IDENTITY_PROVIDER_RESPONSE.getStableIndex(), false),
-    IDENTITY_PROVIDER_RETRIEVE_TOKEN(34, false),
-    IDENTITY_PROVIDER_RETRIEVE_TOKEN_ERROR(0x10000 + IDENTITY_PROVIDER_RETRIEVE_TOKEN.getStableIndex(), false),
-    IMPERSONATE(35, true),
-    IMPERSONATE_ERROR(0x10000 + IMPERSONATE.getStableIndex(), true),
-    CUSTOM_REQUIRED_ACTION(36, true),
-    CUSTOM_REQUIRED_ACTION_ERROR(0x10000 + CUSTOM_REQUIRED_ACTION.getStableIndex(), true),
-    EXECUTE_ACTIONS(37, true),
-    EXECUTE_ACTIONS_ERROR(0x10000 + EXECUTE_ACTIONS.getStableIndex(), true),
+    EventType USER_INFO_REQUEST = BuiltinEventType.USER_INFO_REQUEST;
+    EventType USER_INFO_REQUEST_ERROR = BuiltinEventType.USER_INFO_REQUEST_ERROR;
 
-    /**
-     * Marks a request to the {@code action-token} endpoint before the token has been parsed and the action
-     * identified. Only {@link #EXECUTE_ACTION_TOKEN_ERROR} is ever emitted, covering failures that occur
-     * before an action-specific type is known. Once the handler is resolved the event is retyped to the type
-     * declared by that handler, so this type itself is never emitted: it reaches neither the event store
-     * nor any {@link EventListenerProvider}.
-     */
-    EXECUTE_ACTION_TOKEN(38, false),
-    EXECUTE_ACTION_TOKEN_ERROR(0x10000 + EXECUTE_ACTION_TOKEN.getStableIndex(), true),
+    EventType IDENTITY_PROVIDER_LINK_ACCOUNT = BuiltinEventType.IDENTITY_PROVIDER_LINK_ACCOUNT;
+    EventType IDENTITY_PROVIDER_LINK_ACCOUNT_ERROR = BuiltinEventType.IDENTITY_PROVIDER_LINK_ACCOUNT_ERROR;
+    EventType IDENTITY_PROVIDER_LOGIN = BuiltinEventType.IDENTITY_PROVIDER_LOGIN;
+    EventType IDENTITY_PROVIDER_LOGIN_ERROR = BuiltinEventType.IDENTITY_PROVIDER_LOGIN_ERROR;
+    EventType IDENTITY_PROVIDER_FIRST_LOGIN = BuiltinEventType.IDENTITY_PROVIDER_FIRST_LOGIN;
+    EventType IDENTITY_PROVIDER_FIRST_LOGIN_ERROR = BuiltinEventType.IDENTITY_PROVIDER_FIRST_LOGIN_ERROR;
+    EventType IDENTITY_PROVIDER_POST_LOGIN = BuiltinEventType.IDENTITY_PROVIDER_POST_LOGIN;
+    EventType IDENTITY_PROVIDER_POST_LOGIN_ERROR = BuiltinEventType.IDENTITY_PROVIDER_POST_LOGIN_ERROR;
+    EventType IDENTITY_PROVIDER_RESPONSE = BuiltinEventType.IDENTITY_PROVIDER_RESPONSE;
+    EventType IDENTITY_PROVIDER_RESPONSE_ERROR = BuiltinEventType.IDENTITY_PROVIDER_RESPONSE_ERROR;
+    EventType IDENTITY_PROVIDER_RETRIEVE_TOKEN = BuiltinEventType.IDENTITY_PROVIDER_RETRIEVE_TOKEN;
+    EventType IDENTITY_PROVIDER_RETRIEVE_TOKEN_ERROR = BuiltinEventType.IDENTITY_PROVIDER_RETRIEVE_TOKEN_ERROR;
+    EventType IMPERSONATE = BuiltinEventType.IMPERSONATE;
+    EventType IMPERSONATE_ERROR = BuiltinEventType.IMPERSONATE_ERROR;
+    EventType CUSTOM_REQUIRED_ACTION = BuiltinEventType.CUSTOM_REQUIRED_ACTION;
+    EventType CUSTOM_REQUIRED_ACTION_ERROR = BuiltinEventType.CUSTOM_REQUIRED_ACTION_ERROR;
+    EventType EXECUTE_ACTIONS = BuiltinEventType.EXECUTE_ACTIONS;
+    EventType EXECUTE_ACTIONS_ERROR = BuiltinEventType.EXECUTE_ACTIONS_ERROR;
 
-    CLIENT_INFO(39, false),
-    CLIENT_INFO_ERROR(0x10000 + CLIENT_INFO.getStableIndex(), false),
-    CLIENT_REGISTER(40, true),
-    CLIENT_REGISTER_ERROR(0x10000 + CLIENT_REGISTER.getStableIndex(), true),
-    CLIENT_UPDATE(41, true),
-    CLIENT_UPDATE_ERROR(0x10000 + CLIENT_UPDATE.getStableIndex(), true),
-    CLIENT_DELETE(42, true),
-    CLIENT_DELETE_ERROR(0x10000 + CLIENT_DELETE.getStableIndex(), true),
+    EventType EXECUTE_ACTION_TOKEN = BuiltinEventType.EXECUTE_ACTION_TOKEN;
+    EventType EXECUTE_ACTION_TOKEN_ERROR = BuiltinEventType.EXECUTE_ACTION_TOKEN_ERROR;
 
-    CLIENT_INITIATED_ACCOUNT_LINKING(43, true),
-    CLIENT_INITIATED_ACCOUNT_LINKING_ERROR(0x10000 + CLIENT_INITIATED_ACCOUNT_LINKING.getStableIndex(), true),
-    TOKEN_EXCHANGE(44, true),
-    TOKEN_EXCHANGE_ERROR(0x10000 + TOKEN_EXCHANGE.getStableIndex(), true),
+    EventType CLIENT_INFO = BuiltinEventType.CLIENT_INFO;
+    EventType CLIENT_INFO_ERROR = BuiltinEventType.CLIENT_INFO_ERROR;
+    EventType CLIENT_REGISTER = BuiltinEventType.CLIENT_REGISTER;
+    EventType CLIENT_REGISTER_ERROR = BuiltinEventType.CLIENT_REGISTER_ERROR;
+    EventType CLIENT_UPDATE = BuiltinEventType.CLIENT_UPDATE;
+    EventType CLIENT_UPDATE_ERROR = BuiltinEventType.CLIENT_UPDATE_ERROR;
+    EventType CLIENT_DELETE = BuiltinEventType.CLIENT_DELETE;
+    EventType CLIENT_DELETE_ERROR = BuiltinEventType.CLIENT_DELETE_ERROR;
 
-    OAUTH2_DEVICE_AUTH(45, true),
-    OAUTH2_DEVICE_AUTH_ERROR(0x10000 + OAUTH2_DEVICE_AUTH.getStableIndex(), true),
-    OAUTH2_DEVICE_VERIFY_USER_CODE(46, true),
-    OAUTH2_DEVICE_VERIFY_USER_CODE_ERROR(0x10000 + OAUTH2_DEVICE_VERIFY_USER_CODE.getStableIndex(), true),
-    OAUTH2_DEVICE_CODE_TO_TOKEN(47, true),
-    OAUTH2_DEVICE_CODE_TO_TOKEN_ERROR(0x10000 + OAUTH2_DEVICE_CODE_TO_TOKEN.getStableIndex(), true),
+    EventType CLIENT_INITIATED_ACCOUNT_LINKING = BuiltinEventType.CLIENT_INITIATED_ACCOUNT_LINKING;
+    EventType CLIENT_INITIATED_ACCOUNT_LINKING_ERROR = BuiltinEventType.CLIENT_INITIATED_ACCOUNT_LINKING_ERROR;
+    EventType TOKEN_EXCHANGE = BuiltinEventType.TOKEN_EXCHANGE;
+    EventType TOKEN_EXCHANGE_ERROR = BuiltinEventType.TOKEN_EXCHANGE_ERROR;
 
-    AUTHREQID_TO_TOKEN(48, true),
-    AUTHREQID_TO_TOKEN_ERROR(0x10000 + AUTHREQID_TO_TOKEN.getStableIndex(), true),
+    EventType OAUTH2_DEVICE_AUTH = BuiltinEventType.OAUTH2_DEVICE_AUTH;
+    EventType OAUTH2_DEVICE_AUTH_ERROR = BuiltinEventType.OAUTH2_DEVICE_AUTH_ERROR;
+    EventType OAUTH2_DEVICE_VERIFY_USER_CODE = BuiltinEventType.OAUTH2_DEVICE_VERIFY_USER_CODE;
+    EventType OAUTH2_DEVICE_VERIFY_USER_CODE_ERROR = BuiltinEventType.OAUTH2_DEVICE_VERIFY_USER_CODE_ERROR;
+    EventType OAUTH2_DEVICE_CODE_TO_TOKEN = BuiltinEventType.OAUTH2_DEVICE_CODE_TO_TOKEN;
+    EventType OAUTH2_DEVICE_CODE_TO_TOKEN_ERROR = BuiltinEventType.OAUTH2_DEVICE_CODE_TO_TOKEN_ERROR;
 
-    PERMISSION_TOKEN(49, true),
-    PERMISSION_TOKEN_ERROR(0x10000 + PERMISSION_TOKEN.getStableIndex(), false),
+    EventType AUTHREQID_TO_TOKEN = BuiltinEventType.AUTHREQID_TO_TOKEN;
+    EventType AUTHREQID_TO_TOKEN_ERROR = BuiltinEventType.AUTHREQID_TO_TOKEN_ERROR;
 
-    DELETE_ACCOUNT(50, true),
-    DELETE_ACCOUNT_ERROR(0x10000 + DELETE_ACCOUNT.getStableIndex(), true),
+    EventType PERMISSION_TOKEN = BuiltinEventType.PERMISSION_TOKEN;
+    EventType PERMISSION_TOKEN_ERROR = BuiltinEventType.PERMISSION_TOKEN_ERROR;
+
+    EventType DELETE_ACCOUNT = BuiltinEventType.DELETE_ACCOUNT;
+    EventType DELETE_ACCOUNT_ERROR = BuiltinEventType.DELETE_ACCOUNT_ERROR;
 
     // PAR request.
-    PUSHED_AUTHORIZATION_REQUEST(51, false),
-    PUSHED_AUTHORIZATION_REQUEST_ERROR(0x10000 + PUSHED_AUTHORIZATION_REQUEST.getStableIndex(), false),
+    EventType PUSHED_AUTHORIZATION_REQUEST = BuiltinEventType.PUSHED_AUTHORIZATION_REQUEST;
+    EventType PUSHED_AUTHORIZATION_REQUEST_ERROR = BuiltinEventType.PUSHED_AUTHORIZATION_REQUEST_ERROR;
 
-    USER_DISABLED_BY_PERMANENT_LOCKOUT(52, true),
-    USER_DISABLED_BY_PERMANENT_LOCKOUT_ERROR(0x10000 + USER_DISABLED_BY_PERMANENT_LOCKOUT.getStableIndex(), false),
+    EventType USER_DISABLED_BY_PERMANENT_LOCKOUT = BuiltinEventType.USER_DISABLED_BY_PERMANENT_LOCKOUT;
+    EventType USER_DISABLED_BY_PERMANENT_LOCKOUT_ERROR = BuiltinEventType.USER_DISABLED_BY_PERMANENT_LOCKOUT_ERROR;
 
-    USER_DISABLED_BY_TEMPORARY_LOCKOUT(53,true),
-    USER_DISABLED_BY_TEMPORARY_LOCKOUT_ERROR(0x10000 + USER_DISABLED_BY_TEMPORARY_LOCKOUT.getStableIndex(), false),
+    EventType USER_DISABLED_BY_TEMPORARY_LOCKOUT = BuiltinEventType.USER_DISABLED_BY_TEMPORARY_LOCKOUT;
+    EventType USER_DISABLED_BY_TEMPORARY_LOCKOUT_ERROR = BuiltinEventType.USER_DISABLED_BY_TEMPORARY_LOCKOUT_ERROR;
 
-    OAUTH2_EXTENSION_GRANT(54, true),
-    OAUTH2_EXTENSION_GRANT_ERROR(0x10000 + OAUTH2_EXTENSION_GRANT.getStableIndex(), true),
+    EventType OAUTH2_EXTENSION_GRANT = BuiltinEventType.OAUTH2_EXTENSION_GRANT;
+    EventType OAUTH2_EXTENSION_GRANT_ERROR = BuiltinEventType.OAUTH2_EXTENSION_GRANT_ERROR;
 
-    FEDERATED_IDENTITY_OVERRIDE_LINK(55, true),
-    FEDERATED_IDENTITY_OVERRIDE_LINK_ERROR(0x10000 + FEDERATED_IDENTITY_OVERRIDE_LINK.getStableIndex(), true),
+    EventType FEDERATED_IDENTITY_OVERRIDE_LINK = BuiltinEventType.FEDERATED_IDENTITY_OVERRIDE_LINK;
+    EventType FEDERATED_IDENTITY_OVERRIDE_LINK_ERROR = BuiltinEventType.FEDERATED_IDENTITY_OVERRIDE_LINK_ERROR;
 
-    UPDATE_CREDENTIAL(56, true),
-    UPDATE_CREDENTIAL_ERROR(0x10000 + UPDATE_CREDENTIAL.getStableIndex(), true),
+    EventType UPDATE_CREDENTIAL = BuiltinEventType.UPDATE_CREDENTIAL;
+    EventType UPDATE_CREDENTIAL_ERROR = BuiltinEventType.UPDATE_CREDENTIAL_ERROR;
 
-    REMOVE_CREDENTIAL(57, true),
-    REMOVE_CREDENTIAL_ERROR(0x10000 + REMOVE_CREDENTIAL.getStableIndex(), true),
+    EventType REMOVE_CREDENTIAL = BuiltinEventType.REMOVE_CREDENTIAL;
+    EventType REMOVE_CREDENTIAL_ERROR = BuiltinEventType.REMOVE_CREDENTIAL_ERROR;
 
-    INVITE_ORG(60, true),
-    INVITE_ORG_ERROR(0x10000 + INVITE_ORG.getStableIndex(), true),
+    EventType INVITE_ORG = BuiltinEventType.INVITE_ORG;
+    EventType INVITE_ORG_ERROR = BuiltinEventType.INVITE_ORG_ERROR;
 
-    USER_SESSION_DELETED(61, false),
-    USER_SESSION_DELETED_ERROR(0x10000 + USER_SESSION_DELETED.getStableIndex(), false),
+    EventType USER_SESSION_DELETED = BuiltinEventType.USER_SESSION_DELETED;
+    EventType USER_SESSION_DELETED_ERROR = BuiltinEventType.USER_SESSION_DELETED_ERROR;
 
-    VERIFIABLE_CREDENTIAL_REQUEST(62, true),
-    VERIFIABLE_CREDENTIAL_REQUEST_ERROR(0x10000 + VERIFIABLE_CREDENTIAL_REQUEST.getStableIndex(), true),
-    VERIFIABLE_CREDENTIAL_OFFER_REQUEST(63, true),
-    VERIFIABLE_CREDENTIAL_OFFER_REQUEST_ERROR(0x10000 + VERIFIABLE_CREDENTIAL_OFFER_REQUEST.getStableIndex(), true),
-    VERIFIABLE_CREDENTIAL_NONCE_REQUEST(64, false),
-    VERIFIABLE_CREDENTIAL_NONCE_REQUEST_ERROR(0x10000 + VERIFIABLE_CREDENTIAL_NONCE_REQUEST.getStableIndex(), false),
-    VERIFIABLE_CREDENTIAL_CREATE_OFFER(65, true),
-    VERIFIABLE_CREDENTIAL_CREATE_OFFER_ERROR(0x10000 + VERIFIABLE_CREDENTIAL_CREATE_OFFER.getStableIndex(), true),
-    VERIFIABLE_CREDENTIAL_PRE_AUTHORIZED_GRANT(66, true),
-    VERIFIABLE_CREDENTIAL_PRE_AUTHORIZED_GRANT_ERROR(0x10000 + VERIFIABLE_CREDENTIAL_PRE_AUTHORIZED_GRANT.getStableIndex(), true),
+    EventType VERIFIABLE_CREDENTIAL_REQUEST = BuiltinEventType.VERIFIABLE_CREDENTIAL_REQUEST;
+    EventType VERIFIABLE_CREDENTIAL_REQUEST_ERROR = BuiltinEventType.VERIFIABLE_CREDENTIAL_REQUEST_ERROR;
+    EventType VERIFIABLE_CREDENTIAL_OFFER_REQUEST = BuiltinEventType.VERIFIABLE_CREDENTIAL_OFFER_REQUEST;
+    EventType VERIFIABLE_CREDENTIAL_OFFER_REQUEST_ERROR = BuiltinEventType.VERIFIABLE_CREDENTIAL_OFFER_REQUEST_ERROR;
+    EventType VERIFIABLE_CREDENTIAL_NONCE_REQUEST = BuiltinEventType.VERIFIABLE_CREDENTIAL_NONCE_REQUEST;
+    EventType VERIFIABLE_CREDENTIAL_NONCE_REQUEST_ERROR = BuiltinEventType.VERIFIABLE_CREDENTIAL_NONCE_REQUEST_ERROR;
+    EventType VERIFIABLE_CREDENTIAL_CREATE_OFFER = BuiltinEventType.VERIFIABLE_CREDENTIAL_CREATE_OFFER;
+    EventType VERIFIABLE_CREDENTIAL_CREATE_OFFER_ERROR = BuiltinEventType.VERIFIABLE_CREDENTIAL_CREATE_OFFER_ERROR;
+    EventType VERIFIABLE_CREDENTIAL_PRE_AUTHORIZED_GRANT = BuiltinEventType.VERIFIABLE_CREDENTIAL_PRE_AUTHORIZED_GRANT;
+    EventType VERIFIABLE_CREDENTIAL_PRE_AUTHORIZED_GRANT_ERROR = BuiltinEventType.VERIFIABLE_CREDENTIAL_PRE_AUTHORIZED_GRANT_ERROR;
 
-    JWT_AUTHORIZATION_GRANT(70, true),
-    JWT_AUTHORIZATION_GRANT_ERROR(0x10000 + JWT_AUTHORIZATION_GRANT.getStableIndex(), true),
-    ;
+    EventType JWT_AUTHORIZATION_GRANT = BuiltinEventType.JWT_AUTHORIZATION_GRANT;
+    EventType JWT_AUTHORIZATION_GRANT_ERROR = BuiltinEventType.JWT_AUTHORIZATION_GRANT_ERROR;
 
-    private final int stableIndex;
-    private final boolean saveByDefault;
-    private static final Map<Integer, EventType> BY_ID = EnumWithStableIndex.getReverseIndex(values());
-
-    EventType(int stableIndex, boolean saveByDefault) {
-        this.stableIndex = stableIndex;
-        this.saveByDefault = saveByDefault;
-    }
-
-    @Override
-    public int getStableIndex() {
-        return stableIndex;
-    }
+    /**
+     * The unique name of this event type, as it is stored, shown in the admin console and used in configuration.
+     */
+    String name();
 
     /**
      * Determines whether this event is stored when the admin has not set a specific set of event types to save.
      */
-    public boolean isSaveByDefault() {
-        return saveByDefault;
+    boolean isSaveByDefault();
+
+    /**
+     * Returns the event type with the given name, considering the built-in event types as well as the custom event
+     * types. Custom event types are only known once the Keycloak session factory has loaded the provider factories,
+     * so they cannot be resolved from {@link org.keycloak.provider.ProviderFactory#init}.
+     *
+     * @throws IllegalArgumentException if there is no event type with the given name
+     */
+    static EventType valueOf(String name) {
+        return EventTypeRegistry.valueOf(name);
     }
 
-    public static EventType valueOfInteger(Integer id) {
-        return id == null ? null : BY_ID.get(id);
+    /**
+     * Returns all known event types: the built-in event types followed by the custom event types, see
+     * {@link #valueOf(String)} for when those are available.
+     */
+    static EventType[] values() {
+        return EventTypeRegistry.values();
     }
 }

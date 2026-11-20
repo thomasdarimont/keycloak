@@ -12,6 +12,7 @@ import org.keycloak.authorization.fgap.AdminPermissionsSchema;
 import org.keycloak.common.util.SecretGenerator;
 import org.keycloak.common.util.Time;
 import org.keycloak.credential.CredentialModel;
+import org.keycloak.events.BuiltinEventType;
 import org.keycloak.events.Details;
 import org.keycloak.events.Event;
 import org.keycloak.events.EventType;
@@ -890,7 +891,11 @@ public class SecurityEventTokenMapper {
         if (event == null || shouldIgnoreEvent(event)) {
             return false;
         }
-        return switch (event.getType()) {
+        // custom event types have no SSF mapping
+        if (!(event.getType() instanceof BuiltinEventType type)) {
+            return false;
+        }
+        return switch (type) {
             case LOGOUT -> !shouldIgnoreLogout(event);
             // Only the shape check here; whether the revocation actually ended
             // the session needs store lookups, which toSecurityEventToken does
@@ -1042,7 +1047,11 @@ public class SecurityEventTokenMapper {
 
     public SsfSecurityEventToken toSecurityEventToken(Event event, AdminEvent adminEvent, StreamConfig stream) {
 
-        SsfSecurityEventToken securityEvent = switch (event.getType()) {
+        if (!(event.getType() instanceof BuiltinEventType type)) {
+            return toGenericSecurityEventToken(event, stream);
+        }
+
+        SsfSecurityEventToken securityEvent = switch (type) {
 
             case LOGOUT -> {
 
@@ -1134,18 +1143,18 @@ public class SecurityEventTokenMapper {
             // REMOVE_CREDENTIAL. Mapping them here would emit a
             // duplicate SET per real change.
 
-            default -> {
-
-                if (shouldIgnoreEvent(event)) {
-                    yield null;
-                }
-
-                yield generateSecurityEventTokenFromEvent(event, stream);
-            }
+            default -> toGenericSecurityEventToken(event, stream);
         };
         // Map Keycloak events to SSF events
 
         return securityEvent;
+    }
+
+    private SsfSecurityEventToken toGenericSecurityEventToken(Event event, StreamConfig stream) {
+        if (shouldIgnoreEvent(event)) {
+            return null;
+        }
+        return generateSecurityEventTokenFromEvent(event, stream);
     }
 
     protected boolean shouldIgnoreCredentialChange(Event event) {

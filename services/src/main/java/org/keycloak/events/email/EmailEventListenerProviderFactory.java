@@ -48,6 +48,9 @@ public class EmailEventListenerProviderFactory implements EventListenerProviderF
 
     private Set<EventType> includedEvents = new HashSet<>();
 
+    private String[] include;
+    private String[] exclude;
+
     @Override
     public EventListenerProvider create(KeycloakSession session) {
         return new EmailEventListenerProvider(session, includedEvents);
@@ -63,7 +66,13 @@ public class EmailEventListenerProviderFactory implements EventListenerProviderF
 
     @Override
     public void init(Config.Scope config) {
-        String[] include = config.getArray("include-events");
+        include = config.getArray("include-events");
+        exclude = config.getArray("exclude-events");
+    }
+
+    @Override
+    public void postInit(KeycloakSessionFactory factory) {
+        // resolved here and not in init, as custom event types are only known once all provider factories are loaded
         if (include != null) {
             for (String i : include) {
                 includedEvents.add(EventType.valueOf(i.toUpperCase()));
@@ -72,17 +81,11 @@ public class EmailEventListenerProviderFactory implements EventListenerProviderF
             includedEvents.addAll(SUPPORTED_EVENTS);
         }
 
-        String[] exclude = config.getArray("exclude-events");
         if (exclude != null) {
             for (String e : exclude) {
                 includedEvents.remove(EventType.valueOf(e.toUpperCase()));
             }
         }
-    }
-
-    @Override
-    public void postInit(KeycloakSessionFactory factory) {
-
     }
 
     @Override
